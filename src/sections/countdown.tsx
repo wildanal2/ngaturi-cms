@@ -75,7 +75,20 @@ export function CountdownMinimal({ props }: SectionRenderProps) {
   );
 }
 
-/* 2. flip — flip-clock cards (CSS module) */
+/* 2. flip — flip-clock cards (CSS module).
+   `key` on the card remounts it whenever the digit changes, replaying the
+   CSS flip animation. Unchanged digits keep the same key → no replay. */
+function FlipCard({ value }: { value: number }) {
+  const text = String(value).padStart(2, "0");
+  return (
+    <div className={styles.flipScene}>
+      <div key={text} className={`${styles.flipCard} ${styles.flipping}`}>
+        {text}
+      </div>
+    </div>
+  );
+}
+
 export function CountdownFlip({ props }: SectionRenderProps) {
   const p = props as { target_date?: string; message_expired?: string };
   const t = useCountdown(p.target_date);
@@ -90,9 +103,7 @@ export function CountdownFlip({ props }: SectionRenderProps) {
         <div className="inv-stagger flex justify-center gap-3">
           {UNITS.map(([label, k]) => (
             <div key={label} className={styles.flipUnit}>
-              <div className={styles.flipCard}>
-                {String(t[k]).padStart(2, "0")}
-              </div>
+              <FlipCard value={t[k]} />
               <span className={styles.flipLabel}>{label}</span>
             </div>
           ))}
