@@ -264,28 +264,20 @@ function ImageInput({
   const [busy, setBusy] = useState(false);
 
   async function upload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("File harus berupa gambar.");
+      return;
+    }
     setBusy(true);
     try {
-      const presign = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          invitationId,
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        }),
-      });
-      const data = await presign.json();
-      if (!presign.ok) throw new Error(data.error ?? "Gagal upload");
-      const put = await fetch(data.uploadUrl, {
-        method: "PUT",
-        headers: { "content-type": file.type },
-        body: file,
-      });
-      if (!put.ok) throw new Error("Upload ke storage gagal");
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("invitationId", invitationId);
+      const res = await fetch("/api/uploads", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Gagal upload");
       onChange(data.publicUrl);
-      toast.success("Foto diunggah");
+      toast.success("Foto diunggah & dioptimasi");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal upload");
     } finally {

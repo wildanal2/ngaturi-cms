@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: import.meta.dirname,
   },
+  serverExternalPackages: ["sharp"],
   images: {
     remotePatterns: [{ protocol: "https", hostname: s3Host }],
   },
