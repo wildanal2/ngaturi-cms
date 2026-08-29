@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Toaster, toast } from "sonner";
 import { useBuilder } from "@/stores/builder-store";
-import { SectionRegistry, getAllSections } from "@/sections/registry";
-import { InvitationRenderer } from "@/lib/invitation/renderer";
-import {
-  saveComposition,
-  publishInvitation,
-} from "@/lib/invitation/actions";
-import { PropertyPanel } from "./property-panel";
+import { saveComposition, publishInvitation } from "@/lib/invitation/actions";
+import { TopBar } from "./top-bar";
+import { SectionList } from "./section-list";
+import { AddSectionButton } from "./add-section-menu";
+import { Canvas } from "./canvas";
+import { Inspector } from "./inspector";
 import type { GlobalSettings, SectionData } from "@/sections/types";
+
+type SaveState = "idle" | "saving" | "saved" | "error";
 
 export function BuilderShell({
   invitationId,
@@ -18,7 +20,6 @@ export function BuilderShell({
   status,
   locked,
   editExpiresAt,
-  hasWatermark,
   initialSections,
   initialGlobal,
 }: {
@@ -31,111 +32,108 @@ export function BuilderShell({
   initialSections: SectionData[];
   initialGlobal: GlobalSettings;
 }) {
-  const store = useBuilder();
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
-    "idle",
-  );
-  const [msg, setMsg] = useState<string | null>(null);
-  const [showAdd, setShowAdd] = useState(false);
+  const load = useBuilder((s) => s.load);
+  const dirty = useBuilder((s) => s.dirty);
+  const markClean = useBuilder((s) => s.markClean);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
   const [publishing, setPublishing] = useState(false);
   const loadedRef = useRef(false);
 
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
-    store.load({
-      invitationId,
-      sections: initialSections,
-      global: initialGlobal,
-      locked,
-    });
-  }, [invitationId, initialSections, initialGlobal, locked, store]);
+    load({ invitationId, sections: initialSections, global: initialGlobal, locked });
+    useBuilder.temporal.getState().clear();
+  }, [invitationId, initialSections, initialGlobal, locked, load]);
 
   const save = useCallback(async () => {
-    const { sections, global, dirty } = useBuilder.getState();
-    if (!dirty || locked) return;
+    const { sections, global, dirty: isDirty } = useBuilder.getState();
+    if (!isDirty || locked) return;
     setSaveState("saving");
     const res = await saveComposition(invitationId, {
       sections,
       global_settings: global,
     });
     if (res.ok) {
-      useBuilder.getState().markClean();
+      markClean();
       setSaveState("saved");
-      setMsg(null);
     } else {
       setSaveState("error");
-      setMsg(res.error);
+      toast.error(res.error);
     }
-  }, [invitationId, locked]);
+  }, [invitationId, locked, markClean]);
 
-  // autosave 1.5s setelah perubahan terakhir
+  // autosave
   useEffect(() => {
-    if (!store.dirty) return;
-    const t = setTimeout(save, 1500);
+    if (!dirty) return;
+    const t = setTimeout(save, 1200);
     return () => clearTimeout(t);
-  }, [store.dirty, store.sections, store.global, save]);
+  }, [dirty, save]);
+
+  // keyboard shortcuts
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      if (e.key === "s") {
+        e.preventDefault();
+        save();
+      } else if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        useBuilder.temporal.getState().undo();
+      } else if ((e.key === "z" && e.shiftKey) || e.key === "y") {
+        e.preventDefault();
+        useBuilder.temporal.getState().redo();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [save]);
+
+  // unsaved-changes guard
+  useEffect(() => {
+    function beforeUnload(e: BeforeUnloadEvent) {
+      if (useBuilder.getState().dirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, []);
 
   async function onPublish() {
     setPublishing(true);
     await save();
     const res = await publishInvitation(invitationId);
     setPublishing(false);
-    if (res.ok) window.open(`/${res.slug}`, "_blank");
+    if (res.ok) {
+      toast.success("Undangan terbit!");
+      window.open(`/${res.slug}`, "_blank");
+    }
   }
-
-  const selected = store.sections.find((s) => s.id === store.selectedId) ?? null;
 
   return (
     <>
-      {/* top bar */}
-      <header className="flex shrink-0 items-center justify-between border-b border-line bg-paper px-4 py-2.5">
-        <div className="flex items-center gap-3 text-sm">
-          <Link href="/invitations" className="text-ink-soft hover:text-ink">
-            ← Undangan
-          </Link>
-          <span className="text-line">|</span>
-          <span className="text-muted">
-            {saveState === "saving"
-              ? "Menyimpan…"
-              : saveState === "saved"
-                ? "Tersimpan"
-                : saveState === "error"
-                  ? "Gagal simpan"
-                  : store.dirty
-                    ? "Belum disimpan"
-                    : "Tersimpan"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <a
-            href={`/${slug}`}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full px-3 py-1.5 text-sm text-ink-soft hover:bg-cream-200"
-          >
-            Pratinjau publik
-          </a>
-          <button
-            onClick={onPublish}
-            disabled={publishing || locked}
-            className="rounded-full bg-forest px-4 py-1.5 text-sm font-medium text-cream hover:bg-forest-600 disabled:opacity-60"
-          >
-            {status === "published" ? "Perbarui" : "Publikasikan"}
-          </button>
-        </div>
-      </header>
+      <Toaster position="bottom-center" richColors />
+      <TopBar
+        slug={slug}
+        status={status}
+        saveState={saveState}
+        onPublish={onPublish}
+        publishing={publishing}
+      />
 
       {locked ? (
         <div className="shrink-0 bg-wine px-4 py-2 text-center text-sm text-cream">
-          Masa edit gratis (7 hari) sudah berakhir. Undangan tetap online,
-          tapi builder terkunci.{" "}
+          Masa edit gratis sudah berakhir. Undangan tetap online, builder
+          terkunci.{" "}
           <Link href={`/invitations/${invitationId}`} className="underline">
-            Upgrade
+            Upgrade untuk buka lagi
           </Link>
         </div>
       ) : editExpiresAt ? (
-        <div className="shrink-0 bg-cream-200 px-4 py-1.5 text-center text-xs text-ink-soft">
+        <div className="shrink-0 bg-cream-200 px-4 py-1 text-center text-xs text-ink-soft">
           Masa edit gratis sampai{" "}
           {new Date(editExpiresAt).toLocaleDateString("id-ID", {
             day: "numeric",
@@ -145,109 +143,24 @@ export function BuilderShell({
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        {/* left: section list */}
-        <aside className="w-64 shrink-0 overflow-y-auto border-r border-line bg-paper p-3">
-          <div className="mb-2 flex items-center justify-between">
+        <aside className="flex w-60 shrink-0 flex-col border-r border-line bg-paper">
+          <div className="border-b border-line p-3">
             <span className="text-xs font-medium tracking-wide text-muted uppercase">
               Bagian
             </span>
-            <button
-              onClick={() => setShowAdd((v) => !v)}
-              className="rounded-full bg-cream-200 px-2 py-0.5 text-sm"
-              disabled={locked}
-            >
-              + Tambah
-            </button>
           </div>
-
-          {showAdd ? (
-            <div className="mb-3 space-y-1 rounded-lg border border-line p-2">
-              {getAllSections().map((def) => (
-                <button
-                  key={def.type}
-                  onClick={() => {
-                    const firstVariant = Object.keys(def.variants)[0];
-                    store.addSection(def.type, firstVariant);
-                    setShowAdd(false);
-                  }}
-                  className="block w-full rounded px-2 py-1 text-left text-sm hover:bg-cream-200"
-                >
-                  {def.name}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          <ul className="space-y-1">
-            {store.sections.map((s, i) => (
-              <li
-                key={s.id}
-                className={`rounded-lg border px-2 py-1.5 text-sm ${
-                  store.selectedId === s.id
-                    ? "border-forest bg-cream-200"
-                    : "border-transparent hover:bg-cream-200"
-                }`}
-              >
-                <button
-                  onClick={() => store.select(s.id)}
-                  className="block w-full text-left"
-                >
-                  <span className={s.visible ? "" : "opacity-40"}>
-                    {SectionRegistry[s.type]?.name ?? s.type}
-                  </span>
-                </button>
-                {store.selectedId === s.id && !locked ? (
-                  <div className="mt-1 flex gap-1 text-xs text-ink-soft">
-                    <button onClick={() => store.move(s.id, -1)} disabled={i === 0}>
-                      ↑
-                    </button>
-                    <button
-                      onClick={() => store.move(s.id, 1)}
-                      disabled={i === store.sections.length - 1}
-                    >
-                      ↓
-                    </button>
-                    <button onClick={() => store.toggleVisible(s.id)}>
-                      {s.visible ? "Sembunyikan" : "Tampilkan"}
-                    </button>
-                    <button
-                      onClick={() => store.removeSection(s.id)}
-                      className="text-wine"
-                    >
-                      Hapus
-                    </button>
-                  </div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <div className="flex-1 space-y-2 overflow-y-auto p-3">
+            <SectionList />
+            <AddSectionButton />
+          </div>
         </aside>
 
-        {/* center: preview */}
-        <main className="flex-1 overflow-y-auto bg-cream-200/60 p-6">
-          <div className="mx-auto max-w-lg rounded-2xl bg-paper shadow-sm">
-            <InvitationRenderer
-              sections={store.sections}
-              global={store.global}
-              invitationId={invitationId}
-              isPreview
-            />
-            {hasWatermark ? (
-              <p className="py-3 text-center text-xs text-muted">
-                Dibuat dengan Ngaturi
-              </p>
-            ) : null}
-          </div>
+        <main className="min-w-0 flex-1 overflow-y-auto bg-cream-200/50">
+          <Canvas invitationId={invitationId} />
         </main>
 
-        {/* right: property panel */}
         <aside className="w-80 shrink-0 overflow-y-auto border-l border-line bg-paper p-4">
-          {msg ? (
-            <p className="mb-3 rounded-lg bg-wine/10 p-2 text-sm text-wine">
-              {msg}
-            </p>
-          ) : null}
-          <PropertyPanel section={selected} disabled={locked} />
+          <Inspector invitationId={invitationId} />
         </aside>
       </div>
     </>

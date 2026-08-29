@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { ZodTypeAny } from "zod";
+import type { ZodType } from "zod";
 
 export interface GlobalSettings {
   font_family: string;
@@ -12,10 +12,6 @@ export interface GlobalSettings {
 }
 
 export interface StyleOverrides {
-  color_primary?: string;
-  color_text?: string;
-  text_align?: "left" | "center" | "right";
-  background_image?: string;
   [key: string]: unknown;
 }
 
@@ -29,7 +25,6 @@ export interface SectionData {
   style_overrides?: StyleOverrides;
 }
 
-/** Props yang diterima tiap komponen section saat dirender. */
 export interface SectionRenderProps {
   props: Record<string, unknown>;
   global: GlobalSettings;
@@ -40,8 +35,9 @@ export interface SectionRenderProps {
 
 export interface VariantDefinition {
   name: string;
+  description?: string;
   component: ComponentType<SectionRenderProps>;
-  propsSchema: ZodTypeAny;
+  propsSchema: ZodType;
   defaultProps: Record<string, unknown>;
   isPremium?: boolean;
 }
@@ -50,14 +46,33 @@ export interface SectionDefinition {
   type: string;
   name: string;
   description: string;
+  icon: string; // lucide icon name
   category: "hero" | "content" | "interactive" | "footer";
   isPremium?: boolean;
-  /** field props yang bisa diedit di builder */
-  fields: SectionField[];
+  fields: Field[];
   variants: Record<string, VariantDefinition>;
 }
 
-export type SectionField =
-  | { key: string; label: string; type: "text" | "textarea" | "date" | "url" | "image" }
-  | { key: string; label: string; type: "boolean" }
-  | { key: string; label: string; type: "select"; options: { value: string; label: string }[] };
+/** Field editor descriptors for the builder inspector. */
+export type Field =
+  | { kind: "text" | "textarea" | "url" | "date"; key: string; label: string; help?: string }
+  | { kind: "boolean"; key: string; label: string; help?: string }
+  | { kind: "image"; key: string; label: string; help?: string }
+  | { kind: "color"; key: string; label: string; help?: string }
+  | {
+      kind: "select";
+      key: string;
+      label: string;
+      help?: string;
+      options: { value: string; label: string }[];
+    }
+  | { kind: "group"; label: string; fields: Field[] }
+  | {
+      kind: "array";
+      key: string;
+      label: string;
+      addLabel: string;
+      itemLabel: string;
+      itemFields: Field[];
+      defaultItem: Record<string, unknown>;
+    };

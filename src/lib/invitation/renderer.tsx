@@ -7,6 +7,17 @@ const FONT_STACK: Record<string, string> = {
   Inter: "var(--font-inter), system-ui, sans-serif",
 };
 
+export function invitationRootStyle(global: GlobalSettings): CSSProperties {
+  return {
+    "--inv-primary": global.color_primary,
+    "--inv-secondary": global.color_secondary,
+    "--inv-bg": global.color_background,
+    "--inv-ink": "#2c2723",
+    "--inv-font": FONT_STACK[global.font_family] ?? FONT_STACK.Fraunces,
+    backgroundColor: global.color_background,
+  } as CSSProperties;
+}
+
 export function InvitationRenderer({
   sections,
   global,
@@ -24,17 +35,11 @@ export function InvitationRenderer({
     .filter((s) => s.visible !== false)
     .sort((a, b) => a.order - b.order);
 
-  const rootStyle = {
-    "--inv-primary": global.color_primary,
-    "--inv-secondary": global.color_secondary,
-    "--inv-bg": global.color_background,
-    "--inv-ink": "#2c2723",
-    "--inv-font": FONT_STACK[global.font_family] ?? FONT_STACK.Fraunces,
-    backgroundColor: global.color_background,
-  } as CSSProperties;
-
   return (
-    <div className="mx-auto max-w-lg overflow-hidden" style={rootStyle}>
+    <div
+      className="mx-auto max-w-lg overflow-hidden"
+      style={invitationRootStyle(global)}
+    >
       {ordered.map((section) => {
         const variant = getVariant(section.type, section.variant);
         if (!variant) return null;

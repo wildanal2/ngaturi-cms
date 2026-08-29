@@ -1,4 +1,4 @@
-import type { SectionDefinition } from "./types";
+import type { Field, SectionDefinition } from "./types";
 import {
   HeroCentered,
   HeroSplit,
@@ -27,21 +27,36 @@ import {
 const nowPlus = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toISOString();
 
+const personFields = (prefix: string): Field => ({
+  kind: "group",
+  label: prefix === "bride" ? "Mempelai Wanita" : "Mempelai Pria",
+  fields: [
+    { kind: "text", key: `${prefix}.full_name`, label: "Nama lengkap" },
+    { kind: "text", key: `${prefix}.child_order`, label: "Anak ke- / bin/binti" },
+    { kind: "text", key: `${prefix}.parents`, label: "Nama orang tua" },
+    { kind: "text", key: `${prefix}.instagram`, label: "Instagram (tanpa @)" },
+    { kind: "image", key: `${prefix}.photo`, label: "Foto" },
+  ],
+});
+
 export const SectionRegistry: Record<string, SectionDefinition> = {
   hero: {
     type: "hero",
     name: "Sampul / Pembuka",
     description: "Bagian pertama yang dilihat tamu",
+    icon: "Sparkles",
     category: "hero",
     fields: [
-      { key: "couple_names", label: "Nama (contoh: Dinda & Raka)", type: "text" },
-      { key: "tagline", label: "Tagline", type: "text" },
-      { key: "event_date", label: "Tanggal acara", type: "date" },
-      { key: "background_image", label: "Foto latar (URL)", type: "image" },
+      { kind: "text", key: "couple_names", label: "Nama", help: "contoh: Dinda & Raka" },
+      { kind: "text", key: "tagline", label: "Tagline", help: "contoh: The Wedding Of" },
+      { kind: "date", key: "event_date", label: "Tanggal acara" },
+      { kind: "image", key: "background_image", label: "Foto latar" },
+      { kind: "boolean", key: "has_countdown", label: "Tampilkan hitung mundur di sampul" },
     ],
     variants: {
       centered: {
         name: "Foto Fullscreen",
+        description: "Foto memenuhi layar dengan teks di tengah",
         component: HeroCentered,
         propsSchema: HeroProps,
         defaultProps: {
@@ -54,6 +69,7 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
       },
       split: {
         name: "Split + Teks",
+        description: "Foto di satu sisi, teks di sisi lain",
         component: HeroSplit,
         propsSchema: HeroProps,
         defaultProps: {
@@ -69,23 +85,17 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     type: "couple-intro",
     name: "Mempelai",
     description: "Perkenalan kedua mempelai",
+    icon: "Users",
     category: "content",
-    fields: [
-      { key: "bride.full_name", label: "Nama lengkap mempelai wanita", type: "text" },
-      { key: "bride.parents", label: "Orang tua mempelai wanita", type: "text" },
-      { key: "bride.photo", label: "Foto mempelai wanita (URL)", type: "image" },
-      { key: "groom.full_name", label: "Nama lengkap mempelai pria", type: "text" },
-      { key: "groom.parents", label: "Orang tua mempelai pria", type: "text" },
-      { key: "groom.photo", label: "Foto mempelai pria (URL)", type: "image" },
-    ],
+    fields: [personFields("bride"), personFields("groom")],
     variants: {
       "side-by-side": {
         name: "Bersebelahan",
         component: CoupleSideBySide,
         propsSchema: CoupleIntroProps,
         defaultProps: {
-          bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi", child_order: "Putri kedua" },
-          groom: { name: "Raka", full_name: "Raka Wibowo", child_order: "Putra pertama" },
+          bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi", child_order: "Putri kedua dari" },
+          groom: { name: "Raka", full_name: "Raka Wibowo", child_order: "Putra pertama dari" },
         },
       },
       stacked: {
@@ -104,8 +114,35 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     type: "event-details",
     name: "Rangkaian Acara",
     description: "Akad, resepsi, dan lokasi",
+    icon: "CalendarClock",
     category: "content",
-    fields: [],
+    fields: [
+      {
+        kind: "array",
+        key: "events",
+        label: "Acara",
+        addLabel: "Tambah acara",
+        itemLabel: "Acara",
+        defaultItem: {
+          name: "Resepsi",
+          date: nowPlus(45),
+          start_time: "11:00",
+          end_time: "14:00",
+          venue_name: "",
+          address: "",
+          maps_url: "",
+        },
+        itemFields: [
+          { kind: "text", key: "name", label: "Nama acara" },
+          { kind: "date", key: "date", label: "Tanggal" },
+          { kind: "text", key: "start_time", label: "Jam mulai", help: "contoh: 08:00" },
+          { kind: "text", key: "end_time", label: "Jam selesai" },
+          { kind: "text", key: "venue_name", label: "Nama tempat" },
+          { kind: "textarea", key: "address", label: "Alamat" },
+          { kind: "url", key: "maps_url", label: "Link Google Maps" },
+        ],
+      },
+    ],
     variants: {
       timeline: {
         name: "Timeline",
@@ -139,8 +176,12 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     type: "countdown",
     name: "Hitung Mundur",
     description: "Menuju hari-H",
+    icon: "Timer",
     category: "interactive",
-    fields: [{ key: "target_date", label: "Tanggal target", type: "date" }],
+    fields: [
+      { kind: "date", key: "target_date", label: "Tanggal target" },
+      { kind: "text", key: "message_expired", label: "Pesan setelah lewat" },
+    ],
     variants: {
       minimal: {
         name: "Minimalis",
@@ -155,16 +196,29 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     type: "gallery",
     name: "Galeri",
     description: "Kumpulan foto",
+    icon: "Images",
     category: "content",
     fields: [
       {
+        kind: "select",
         key: "columns",
         label: "Jumlah kolom",
-        type: "select",
         options: [
-          { value: "2", label: "2" },
-          { value: "3", label: "3" },
-          { value: "4", label: "4" },
+          { value: "2", label: "2 kolom" },
+          { value: "3", label: "3 kolom" },
+          { value: "4", label: "4 kolom" },
+        ],
+      },
+      {
+        kind: "array",
+        key: "images",
+        label: "Foto",
+        addLabel: "Tambah foto",
+        itemLabel: "Foto",
+        defaultItem: { url: "", caption: "" },
+        itemFields: [
+          { kind: "image", key: "url", label: "Gambar" },
+          { kind: "text", key: "caption", label: "Keterangan" },
         ],
       },
     ],
@@ -182,10 +236,11 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     type: "quote",
     name: "Kutipan",
     description: "Ayat atau kutipan",
+    icon: "Quote",
     category: "content",
     fields: [
-      { key: "text", label: "Teks kutipan", type: "textarea" },
-      { key: "source", label: "Sumber", type: "text" },
+      { kind: "textarea", key: "text", label: "Teks kutipan" },
+      { kind: "text", key: "source", label: "Sumber" },
     ],
     variants: {
       centered: {
@@ -204,9 +259,22 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     type: "rsvp",
     name: "RSVP",
     description: "Konfirmasi kehadiran",
+    icon: "CircleCheck",
     category: "interactive",
     fields: [
-      { key: "require_phone", label: "Wajib nomor WhatsApp", type: "boolean" },
+      { kind: "boolean", key: "require_phone", label: "Wajib nomor WhatsApp" },
+      {
+        kind: "select",
+        key: "max_guests_per_person",
+        label: "Maks. tamu per orang",
+        options: [
+          { value: "1", label: "1" },
+          { value: "2", label: "2" },
+          { value: "3", label: "3" },
+          { value: "5", label: "5" },
+        ],
+      },
+      { kind: "date", key: "deadline", label: "Batas waktu RSVP (opsional)" },
     ],
     variants: {
       "form-card": {
@@ -222,9 +290,14 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     type: "guestbook",
     name: "Buku Tamu",
     description: "Ucapan & doa dari tamu",
+    icon: "MessageCircleHeart",
     category: "interactive",
     fields: [
-      { key: "require_approval", label: "Butuh persetujuan", type: "boolean" },
+      {
+        kind: "boolean",
+        key: "require_approval",
+        label: "Ucapan perlu disetujui dulu",
+      },
     ],
     variants: {
       cards: {
@@ -239,9 +312,25 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
   gift: {
     type: "gift",
     name: "Amplop Digital",
-    description: "Rekening hadiah",
+    description: "Rekening & e-wallet hadiah",
+    icon: "Gift",
     category: "content",
-    fields: [{ key: "intro", label: "Kalimat pembuka", type: "textarea" }],
+    fields: [
+      { kind: "textarea", key: "intro", label: "Kalimat pembuka" },
+      {
+        kind: "array",
+        key: "bank_accounts",
+        label: "Rekening",
+        addLabel: "Tambah rekening",
+        itemLabel: "Rekening",
+        defaultItem: { bank_name: "", account_number: "", account_name: "" },
+        itemFields: [
+          { kind: "text", key: "bank_name", label: "Bank / e-wallet" },
+          { kind: "text", key: "account_number", label: "Nomor rekening" },
+          { kind: "text", key: "account_name", label: "Atas nama" },
+        ],
+      },
+    ],
     variants: {
       cards: {
         name: "Kartu Bank",
@@ -251,11 +340,7 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
           intro:
             "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
           bank_accounts: [
-            {
-              bank_name: "BCA",
-              account_number: "1234567890",
-              account_name: "Dinda Ayu Pratiwi",
-            },
+            { bank_name: "BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
           ],
         },
       },
