@@ -612,3 +612,101 @@ export function GiftMinimal({ props }: SectionRenderProps) {
     </SectionShell>
   );
 }
+
+/* MAP LOCATION */
+export function MapEmbed({ props }: SectionRenderProps) {
+  const p = props as { embed_url?: string; venue_name?: string; address?: string };
+  return (
+    <SectionShell>
+      <SectionTitle>Lokasi</SectionTitle>
+      {p.venue_name ? (
+        <p className="mb-1 text-center font-[family-name:var(--inv-font)] text-lg text-[var(--inv-primary)]">
+          {p.venue_name}
+        </p>
+      ) : null}
+      {p.address ? (
+        <p className="mb-4 text-center text-sm text-[var(--inv-ink)]">
+          {p.address}
+        </p>
+      ) : null}
+      {p.embed_url ? (
+        <iframe
+          src={p.embed_url}
+          title="Peta lokasi"
+          loading="lazy"
+          className="aspect-video w-full rounded-xl border border-[color-mix(in_srgb,var(--inv-primary)_20%,transparent)]"
+        />
+      ) : (
+        <p className="rounded-xl border border-dashed border-[color-mix(in_srgb,var(--inv-primary)_25%,transparent)] p-6 text-center text-sm text-[var(--inv-ink)]">
+          Tempel URL embed Google Maps di panel editor.
+        </p>
+      )}
+    </SectionShell>
+  );
+}
+
+export function MapButton({ props }: SectionRenderProps) {
+  const p = props as { maps_url?: string; venue_name?: string; address?: string };
+  return (
+    <SectionShell muted>
+      <div className="text-center">
+        <SectionTitle>Lokasi</SectionTitle>
+        <p className="font-[family-name:var(--inv-font)] text-lg text-[var(--inv-primary)]">
+          {p.venue_name}
+        </p>
+        <p className="mt-1 text-sm text-[var(--inv-ink)]">{p.address}</p>
+        {p.maps_url ? (
+          <a
+            href={p.maps_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-block rounded-full bg-[var(--inv-primary)] px-6 py-2.5 text-sm font-medium text-white"
+          >
+            Buka di Google Maps
+          </a>
+        ) : null}
+      </div>
+    </SectionShell>
+  );
+}
+
+/* CLOSING / THANK YOU */
+export function ClosingSimple({ props }: SectionRenderProps) {
+  const p = props as { message?: string; names?: string };
+  return (
+    <section className="bg-[var(--inv-primary)] px-6 py-20 text-center text-white">
+      <p className="mx-auto max-w-md leading-relaxed">
+        {p.message ??
+          "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu."}
+      </p>
+      <p className="mt-8 text-sm tracking-widest uppercase opacity-80">
+        Kami yang berbahagia
+      </p>
+      <p className="mt-2 font-[family-name:var(--inv-font)] text-2xl">
+        {p.names ?? "Dinda & Raka"}
+      </p>
+    </section>
+  );
+}
+
+export function ClosingPhoto({ props }: SectionRenderProps) {
+  const p = props as { message?: string; names?: string; photo?: string };
+  return (
+    <section className="relative px-6 py-24 text-center text-white">
+      {p.photo ? (
+        <Image src={p.photo} alt="" fill className="object-cover" />
+      ) : (
+        <div className="absolute inset-0 bg-[var(--inv-secondary)]" />
+      )}
+      <div className="absolute inset-0 bg-black/50" />
+      <div className="relative mx-auto max-w-md">
+        <p className="leading-relaxed">
+          {p.message ?? "Terima kasih atas doa dan restunya."}
+        </p>
+        <p className="mt-6 font-[family-name:var(--inv-font)] text-3xl">
+          {p.names ?? "Dinda & Raka"}
+        </p>
+      </div>
+    </section>
+  );
+}

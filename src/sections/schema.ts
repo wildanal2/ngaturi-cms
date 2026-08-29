@@ -79,6 +79,19 @@ export const GiftProps = z.object({
   ),
 });
 
+export const MapProps = z.object({
+  venue_name: z.string().optional(),
+  address: z.string().optional(),
+  embed_url: z.string().optional(),
+  maps_url: z.string().optional(),
+});
+
+export const ClosingProps = z.object({
+  message: z.string().optional(),
+  names: z.string().optional(),
+  photo: z.string().optional(),
+});
+
 export const GlobalSettingsSchema = z.object({
   font_family: z.string().default("Fraunces"),
   color_primary: z.string().default("#34503f"),
@@ -89,7 +102,7 @@ export const GlobalSettingsSchema = z.object({
   is_rtl: z.boolean().default(false),
 });
 
-export const SECTION_PROPS_SCHEMAS: Record<string, z.ZodTypeAny> = {
+export const SECTION_PROPS_SCHEMAS: Record<string, z.ZodType> = {
   hero: HeroProps,
   "couple-intro": CoupleIntroProps,
   "event-details": EventDetailsProps,
@@ -99,6 +112,8 @@ export const SECTION_PROPS_SCHEMAS: Record<string, z.ZodTypeAny> = {
   rsvp: RsvpProps,
   guestbook: GuestbookProps,
   gift: GiftProps,
+  "map-location": MapProps,
+  closing: ClosingProps,
 };
 
 export const SectionSchema = z.object({
