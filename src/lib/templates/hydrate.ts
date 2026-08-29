@@ -9,9 +9,25 @@ import type { TemplatePreset } from "./catalog";
  * `s("gift","minimal",{})` gets example bank accounts.
  */
 const isEmpty = (v: unknown) =>
-  v == null ||
-  v === "" ||
-  (Array.isArray(v) && v.length === 0);
+  v == null || v === "" || (Array.isArray(v) && v.length === 0);
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** preset value wins, but empty values keep the (dummy) default; plain
+ *  objects merge one level deep so e.g. `{ bride: { name } }` keeps the
+ *  default `bride.photo`. */
+function mergeValue(def: unknown, override: unknown): unknown {
+  if (isEmpty(override) && !isEmpty(def)) return def;
+  if (isPlainObject(def) && isPlainObject(override)) {
+    const out: Record<string, unknown> = { ...def };
+    for (const [k, v] of Object.entries(override)) {
+      out[k] = mergeValue(def[k], v);
+    }
+    return out;
+  }
+  return override;
+}
 
 export function hydrateTemplateSections(
   t: TemplatePreset,
@@ -19,10 +35,8 @@ export function hydrateTemplateSections(
   return t.sections.map((s, i) => {
     const defaults = variantDefaultProps(s.type, s.variant);
     const props: Record<string, unknown> = { ...defaults };
-    // preset overrides win, but an empty override keeps the (dummy) default
     for (const [k, v] of Object.entries(s.props)) {
-      if (isEmpty(v) && !isEmpty(defaults[k])) continue;
-      props[k] = v;
+      props[k] = mergeValue(defaults[k], v);
     }
     return { ...s, id: `t-${i}`, props };
   });

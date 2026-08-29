@@ -16,6 +16,8 @@ export function InvitationCover({
 
   return (
     <div
+      data-invitation-cover
+      data-open={open ? "1" : "0"}
       hidden={open}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 text-center text-white"
       style={{ backgroundColor: global.color_primary }}

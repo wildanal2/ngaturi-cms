@@ -312,27 +312,37 @@ export function QuoteCentered({ props }: SectionRenderProps) {
 
 /* ---------- GIFT ---------- */
 
+type BankAccount = {
+  bank_name: string;
+  account_number: string;
+  account_name: string;
+  logo_url?: string;
+};
+
 export function GiftCards({ props }: SectionRenderProps) {
-  const p = props as {
-    intro?: string;
-    bank_accounts?: Array<{
-      bank_name: string;
-      account_number: string;
-      account_name: string;
-    }>;
-  };
+  const p = props as { intro?: string; bank_accounts?: BankAccount[] };
   return (
     <SectionShell muted>
       <SectionTitle>Amplop Digital</SectionTitle>
       {p.intro ? (
         <p className="mb-6 text-center text-[var(--inv-ink)]">{p.intro}</p>
       ) : null}
-      <div className="space-y-4">
+      <div className="inv-stagger space-y-4">
         {(p.bank_accounts ?? []).map((b, i) => (
           <div
             key={i}
             className="rounded-xl border border-[color-mix(in_srgb,var(--inv-primary)_20%,transparent)] bg-[var(--inv-bg)] p-5 text-center"
           >
+            {b.logo_url ? (
+              <Image
+                src={b.logo_url}
+                alt={b.bank_name}
+                width={48}
+                height={48}
+                className="mx-auto mb-2 h-11 w-11 rounded-lg object-contain"
+                unoptimized
+              />
+            ) : null}
             <p className="font-[family-name:var(--inv-font)] text-lg text-[var(--inv-primary)]">
               {b.bank_name}
             </p>
@@ -581,14 +591,7 @@ export function QuoteBordered({ props }: SectionRenderProps) {
 
 /* GIFT — minimal single block */
 export function GiftMinimal({ props }: SectionRenderProps) {
-  const p = props as {
-    intro?: string;
-    bank_accounts?: Array<{
-      bank_name: string;
-      account_number: string;
-      account_name: string;
-    }>;
-  };
+  const p = props as { intro?: string; bank_accounts?: BankAccount[] };
   return (
     <SectionShell>
       <SectionTitle>Amplop Digital</SectionTitle>
@@ -599,10 +602,21 @@ export function GiftMinimal({ props }: SectionRenderProps) {
       ) : null}
       <div className="divide-y divide-[color-mix(in_srgb,var(--inv-primary)_15%,transparent)] rounded-xl border border-[color-mix(in_srgb,var(--inv-primary)_15%,transparent)]">
         {(p.bank_accounts ?? []).map((b, i) => (
-          <div key={i} className="flex items-center justify-between p-4 text-sm">
-            <span className="text-[var(--inv-ink)]">
-              <b className="text-[var(--inv-primary)]">{b.bank_name}</b> ·{" "}
-              {b.account_name}
+          <div key={i} className="flex items-center gap-3 p-4 text-sm">
+            {b.logo_url ? (
+              <Image
+                src={b.logo_url}
+                alt={b.bank_name}
+                width={36}
+                height={36}
+                className="h-9 w-9 shrink-0 rounded-md object-contain"
+                unoptimized
+              />
+            ) : null}
+            <span className="flex-1 text-[var(--inv-ink)]">
+              <b className="text-[var(--inv-primary)]">{b.bank_name}</b>
+              <br />
+              <span className="opacity-80">a.n. {b.account_name}</span>
             </span>
             <span className="font-mono text-[var(--inv-ink)]">
               {b.account_number}

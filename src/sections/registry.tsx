@@ -143,11 +143,12 @@ const giftFields: Field[] = [
     label: "Rekening / e-wallet",
     addLabel: "Tambah rekening",
     itemLabel: "Rekening",
-    defaultItem: { bank_name: "", account_number: "", account_name: "" },
+    defaultItem: { bank_name: "", account_number: "", account_name: "", logo_url: "" },
     itemFields: [
       { kind: "text", key: "bank_name", label: "Bank / e-wallet" },
       { kind: "text", key: "account_number", label: "Nomor rekening" },
       { kind: "text", key: "account_name", label: "Atas nama" },
+      { kind: "image", key: "logo_url", label: "Logo (opsional)" },
     ],
   },
 ];
@@ -718,7 +719,9 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
           intro:
             "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
           bank_accounts: [
-            { bank_name: "BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
+            { bank_name: "Bank BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
+            { bank_name: "Bank Mandiri", account_number: "0987654321", account_name: "Raka Wibowo" },
+            { bank_name: "GoPay", account_number: "0812-3456-7890", account_name: "Dinda Ayu" },
           ],
         },
       },
@@ -731,7 +734,8 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
         defaultProps: {
           intro: "Kirimkan tanda kasih Anda melalui:",
           bank_accounts: [
-            { bank_name: "BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
+            { bank_name: "Bank BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
+            { bank_name: "Bank Mandiri", account_number: "0987654321", account_name: "Raka Wibowo" },
           ],
         },
       },
@@ -750,6 +754,16 @@ export function getVariant(type: string, variant: string) {
 export function getAllSections() {
   return Object.values(SectionRegistry);
 }
+
+// contoh lokasi publik (Monas, Jakarta) — ganti dengan lokasi acara
+const DUMMY_MAP_EMBED =
+  "https://maps.google.com/maps?q=-6.175392,106.827153&z=15&output=embed";
+const DUMMY_MAP_LINK =
+  "https://www.google.com/maps/search/?api=1&query=-6.175392,106.827153";
+
+// logo bank (SVG, currentColor / berwarna) — DiceBear icon set bebas pakai
+const bankLogo = (seed: string) =>
+  `https://api.dicebear.com/9.x/icons/svg?icon=bank&seed=${seed}&backgroundType=gradientLinear`;
 
 /** default props termasuk nilai styleOptions + gambar dummy publik. */
 export function variantDefaultProps(type: string, variantKey: string) {
@@ -779,6 +793,18 @@ export function variantDefaultProps(type: string, variantKey: string) {
   }
   if (type === "closing" && variantKey === "photo" && !base.photo) {
     base.photo = dummyClosing();
+  }
+  if (type === "map-location") {
+    if (!base.embed_url) base.embed_url = DUMMY_MAP_EMBED;
+    if (!base.maps_url) base.maps_url = DUMMY_MAP_LINK;
+  }
+  if (type === "gift" && Array.isArray(base.bank_accounts)) {
+    base.bank_accounts = (base.bank_accounts as Record<string, unknown>[]).map(
+      (b) => ({
+        ...b,
+        logo_url: b.logo_url || bankLogo(String(b.bank_name || "bank")),
+      }),
+    );
   }
   return base;
 }

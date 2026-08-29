@@ -4,13 +4,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AnimationKind } from "./types";
 
 /**
- * Scroll-reveal wrapper (AOS-style). Every wrapped section starts hidden
- * and animates in the first time it enters the viewport. One observer per
- * section so each animates individually.
+ * Scroll-reveal wrapper (AOS-style). Each wrapped section starts hidden and
+ * animates in the first time it enters the viewport — but not before the
+ * guest has opened the cover (otherwise everything animates behind the
+ * cover and looks static afterwards).
  *
- * - `immediate` (used for the cover/first section) starts visible, no anim.
- * - No JS / observer unsupported / 4s elapsed → force visible (failsafe).
- * - The builder canvas never mounts <Reveal>, so its sections are static.
+ * Gate: an unopened `[data-invitation-cover]` in the DOM holds reveals
+ * back; opening it (or the absence of a cover) arms them. 5s failsafe.
  */
 export function Reveal({
   children,
@@ -32,29 +32,40 @@ export function Reveal({
       return;
     }
 
-    const reveal = () => setVisible(true);
-    // already on screen at mount (e.g. after the cover opens) → reveal now
-    const r = el.getBoundingClientRect();
-    if (r.top < window.innerHeight && r.bottom > 0) {
-      reveal();
-      return;
+    let io: IntersectionObserver | null = null;
+    let failsafe = 0;
+    const cleanups: (() => void)[] = [];
+
+    const arm = () => {
+      failsafe = window.setTimeout(() => setVisible(true), 5000);
+      io = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            setVisible(true);
+            window.clearTimeout(failsafe);
+            io?.disconnect();
+          }
+        },
+        { threshold: 0.1, rootMargin: "0px 0px -12% 0px" },
+      );
+      io.observe(el);
+    };
+
+    const cover = document.querySelector("[data-invitation-cover]");
+    const locked = cover && cover.getAttribute("data-open") !== "1";
+
+    if (locked) {
+      const onOpen = () => arm();
+      window.addEventListener("ngaturi:open", onOpen, { once: true });
+      cleanups.push(() => window.removeEventListener("ngaturi:open", onOpen));
+    } else {
+      arm();
     }
 
-    const failsafe = window.setTimeout(reveal, 4000);
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          reveal();
-          window.clearTimeout(failsafe);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.12, rootMargin: "0px 0px -10% 0px" },
-    );
-    io.observe(el);
     return () => {
       window.clearTimeout(failsafe);
-      io.disconnect();
+      io?.disconnect();
+      cleanups.forEach((c) => c());
     };
   }, [visible]);
 

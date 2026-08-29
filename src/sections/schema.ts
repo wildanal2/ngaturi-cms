@@ -75,6 +75,7 @@ export const GiftProps = z.object({
       bank_name: z.string(),
       account_number: z.string(),
       account_name: z.string(),
+      logo_url: z.string().optional(),
     }),
   ),
 });
