@@ -128,7 +128,10 @@ export function BuilderShell({
         <div className="shrink-0 bg-wine px-4 py-2 text-center text-sm text-cream">
           Masa edit gratis sudah berakhir. Undangan tetap online, builder
           terkunci.{" "}
-          <Link href={`/invitations/${invitationId}`} className="underline">
+          <Link
+            href={`/invitations/${invitationId}/unlock`}
+            className="underline"
+          >
             Upgrade untuk buka lagi
           </Link>
         </div>

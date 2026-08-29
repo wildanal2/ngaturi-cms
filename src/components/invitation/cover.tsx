@@ -33,7 +33,10 @@ export function InvitationCover({
         </div>
       ) : null}
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          window.dispatchEvent(new Event("ngaturi:open"));
+        }}
         className="mt-10 rounded-full border border-white/60 px-6 py-2.5 text-sm hover:bg-white/10"
       >
         Buka Undangan

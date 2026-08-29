@@ -59,6 +59,20 @@ export default async function InvitationDetailPage({
         </p>
       </div>
 
+      {!inv.isPaid ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm">
+          <span>
+            Paket <b>Gratis</b> — ada watermark & masa edit 7 hari.
+          </span>
+          <a
+            href={`/invitations/${inv.id}/unlock`}
+            className="rounded-full bg-forest px-4 py-1.5 font-medium text-cream"
+          >
+            Upgrade
+          </a>
+        </div>
+      ) : null}
+
       {inv.status === "published" ? <ShareBox url={url} /> : null}
 
       <section className="grid gap-3 sm:grid-cols-3">
