@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { invitations, userProfiles } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
 import { getTemplate } from "@/lib/templates/catalog";
+import { hydrateTemplateSections } from "@/lib/templates/hydrate";
 import { makeSlug } from "./slug";
 import { CompositionSchema } from "@/sections/schema";
 import { editExpiresAtFor, isEditLocked } from "./entitlement";
@@ -33,7 +34,7 @@ export async function createInvitation(templateId: string): Promise<never> {
     redirect(`/builder/${existingFree[0].id}`);
   }
 
-  const sections = template.sections.map((s) => ({
+  const sections = hydrateTemplateSections(template).map((s) => ({
     ...s,
     id: crypto.randomUUID(),
   }));

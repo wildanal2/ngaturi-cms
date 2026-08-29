@@ -4,10 +4,13 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AnimationKind } from "./types";
 
 /**
- * Reveals a section (fade / slide / zoom) the first time it scrolls into
- * view. Progressive enhancement: server-rendered content is visible; on
- * mount, sections currently below the fold are hidden and animated in as
- * the guest scrolls. No JS / no observer → content just stays visible.
+ * Scroll-reveal wrapper (AOS-style). Every wrapped section starts hidden
+ * and animates in the first time it enters the viewport. One observer per
+ * section so each animates individually.
+ *
+ * - `immediate` (used for the cover/first section) starts visible, no anim.
+ * - No JS / observer unsupported / 4s elapsed → force visible (failsafe).
+ * - The builder canvas never mounts <Reveal>, so its sections are static.
  */
 export function Reveal({
   children,
@@ -19,35 +22,41 @@ export function Reveal({
   immediate?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [hidden, setHidden] = useState(false);
+  const [visible, setVisible] = useState(immediate || animation === "none");
 
   useEffect(() => {
-    if (immediate || animation === "none") return;
+    if (visible) return;
     const el = ref.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
 
-    const rect = el.getBoundingClientRect();
-    const belowFold = rect.top > window.innerHeight * 0.9;
-    if (!belowFold) return; // already visible — leave it
+    const reveal = () => setVisible(true);
+    // already on screen at mount (e.g. after the cover opens) → reveal now
+    const r = el.getBoundingClientRect();
+    if (r.top < window.innerHeight && r.bottom > 0) {
+      reveal();
+      return;
+    }
 
-    setHidden(true);
-    const failsafe = setTimeout(() => setHidden(false), 4000);
+    const failsafe = window.setTimeout(reveal, 4000);
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          setHidden(false);
-          clearTimeout(failsafe);
+          reveal();
+          window.clearTimeout(failsafe);
           io.disconnect();
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -8% 0px" },
+      { threshold: 0.12, rootMargin: "0px 0px -10% 0px" },
     );
     io.observe(el);
     return () => {
-      clearTimeout(failsafe);
+      window.clearTimeout(failsafe);
       io.disconnect();
     };
-  }, [immediate, animation]);
+  }, [visible]);
 
   if (animation === "none") return <>{children}</>;
 
@@ -55,7 +64,7 @@ export function Reveal({
     <div
       ref={ref}
       data-reveal={animation}
-      className={hidden ? undefined : "is-visible"}
+      className={visible ? "is-visible" : undefined}
     >
       {children}
     </div>

@@ -37,31 +37,38 @@ export function InvitationRenderer({
     .sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
 
+  // fixed-position chrome must live outside the animated flow: a wrapper
+  // running a CSS transform becomes the containing block for position:fixed.
+  const OVERLAY = new Set(["music", "navigation"]);
+
   return (
-    <div
-      className="mx-auto max-w-lg overflow-hidden"
-      style={invitationRootStyle(global)}
-    >
+    <div className="mx-auto max-w-lg" style={invitationRootStyle(global)}>
       {ordered.map((section, i) => {
         const variant = getVariant(section.type, section.variant);
         if (!variant) return null;
         const Component = variant.component;
+        const node = (
+          <div data-section={section.type}>
+            <Component
+              props={section.props}
+              global={global}
+              invitationId={invitationId}
+              guestName={guestName}
+              isPreview={isPreview}
+              siblingTypes={siblingTypes}
+            />
+          </div>
+        );
+        if (OVERLAY.has(section.type)) {
+          return <div key={section.id}>{node}</div>;
+        }
         return (
           <Reveal
             key={section.id}
             animation={global.animation}
             immediate={i === 0}
           >
-            <div data-section={section.type}>
-              <Component
-                props={section.props}
-                global={global}
-                invitationId={invitationId}
-                guestName={guestName}
-                isPreview={isPreview}
-                siblingTypes={siblingTypes}
-              />
-            </div>
+            {node}
           </Reveal>
         );
       })}

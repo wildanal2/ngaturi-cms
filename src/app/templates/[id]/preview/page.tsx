@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getTemplate } from "@/lib/templates/catalog";
+import { hydrateTemplateSections } from "@/lib/templates/hydrate";
 import { InvitationRenderer } from "@/lib/invitation/renderer";
 import { InvitationCover } from "@/components/invitation/cover";
 import type { SectionData } from "@/sections/types";
@@ -25,10 +26,7 @@ export default async function TemplatePreviewPage({
   const t = getTemplate(id);
   if (!t) notFound();
 
-  const sections: SectionData[] = t.sections.map((s, i) => ({
-    ...s,
-    id: `preview-${i}`,
-  }));
+  const sections: SectionData[] = hydrateTemplateSections(t);
 
   return (
     <div className="min-h-screen bg-white">

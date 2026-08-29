@@ -34,6 +34,13 @@ import { GuestbookCards } from "./guestbook";
 import { MusicSection } from "./music";
 import { NavigationBar } from "./navigation";
 import {
+  dummyHero,
+  dummyBride,
+  dummyGroom,
+  dummyGallery,
+  dummyClosing,
+} from "./dummy";
+import {
   HeroProps,
   CoupleIntroProps,
   EventDetailsProps,
@@ -744,13 +751,34 @@ export function getAllSections() {
   return Object.values(SectionRegistry);
 }
 
-/** default props termasuk nilai styleOptions. */
+/** default props termasuk nilai styleOptions + gambar dummy publik. */
 export function variantDefaultProps(type: string, variantKey: string) {
   const v = getVariant(type, variantKey);
   if (!v) return {};
   const base = structuredClone(v.defaultProps);
   for (const so of v.styleOptions ?? []) {
     base[`s_${so.key}`] = so.default;
+  }
+
+  // isi gambar contoh publik kalau belum ada
+  if (type === "hero" && !base.background_image) {
+    base.background_image = dummyHero(variantKey);
+  }
+  if (type === "couple-intro") {
+    const bride = (base.bride ?? {}) as Record<string, unknown>;
+    const groom = (base.groom ?? {}) as Record<string, unknown>;
+    if (!bride.photo) base.bride = { ...bride, photo: dummyBride };
+    if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
+  }
+  if (
+    type === "gallery" &&
+    Array.isArray(base.images) &&
+    base.images.length === 0
+  ) {
+    base.images = dummyGallery(variantKey);
+  }
+  if (type === "closing" && variantKey === "photo" && !base.photo) {
+    base.photo = dummyClosing();
   }
   return base;
 }

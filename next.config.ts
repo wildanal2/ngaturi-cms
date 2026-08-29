@@ -16,7 +16,13 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ["sharp"],
   images: {
-    remotePatterns: [{ protocol: "https", hostname: s3Host }],
+    remotePatterns: [
+      { protocol: "https", hostname: s3Host },
+      // dummy/placeholder images for template defaults (free to use)
+      { protocol: "https", hostname: "picsum.photos" },
+      { protocol: "https", hostname: "i.pravatar.cc" },
+      { protocol: "https", hostname: "api.dicebear.com" },
+    ],
   },
 };
 
