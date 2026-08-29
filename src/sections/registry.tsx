@@ -2,14 +2,28 @@ import type { Field, SectionDefinition } from "./types";
 import {
   HeroCentered,
   HeroSplit,
+  HeroMinimal,
+  HeroArch,
   CoupleSideBySide,
   CoupleStacked,
+  CouplePolaroid,
   EventTimeline,
+  EventCards,
   GalleryGrid,
+  GalleryMasonry,
+  GalleryCarousel,
   QuoteCentered,
+  QuoteBordered,
   GiftCards,
+  GiftMinimal,
 } from "./static-parts";
-import { CountdownMinimal } from "./countdown";
+import {
+  CountdownMinimal,
+  CountdownFlip,
+  CountdownRings,
+  CountdownPill,
+  CountdownElegant,
+} from "./countdown";
 import { RsvpFormCard } from "./rsvp-form";
 import { GuestbookCards } from "./guestbook";
 import {
@@ -78,6 +92,28 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
           event_date: nowPlus(45),
         },
       },
+      minimal: {
+        name: "Minimalis",
+        description: "Tipografi besar tanpa foto",
+        component: HeroMinimal,
+        propsSchema: HeroProps,
+        defaultProps: {
+          couple_names: "Dinda & Raka",
+          tagline: "The Wedding Of",
+          event_date: nowPlus(45),
+        },
+      },
+      arch: {
+        name: "Foto Melengkung",
+        description: "Foto arch + bingkai ornamen",
+        component: HeroArch,
+        propsSchema: HeroProps,
+        defaultProps: {
+          couple_names: "Dinda & Raka",
+          tagline: "The Wedding Of",
+          event_date: nowPlus(45),
+        },
+      },
     },
   },
 
@@ -101,6 +137,16 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
       stacked: {
         name: "Bertumpuk",
         component: CoupleStacked,
+        propsSchema: CoupleIntroProps,
+        defaultProps: {
+          bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi" },
+          groom: { name: "Raka", full_name: "Raka Wibowo" },
+        },
+      },
+      polaroid: {
+        name: "Polaroid",
+        description: "Kartu foto miring bergaya polaroid",
+        component: CouplePolaroid,
         propsSchema: CoupleIntroProps,
         defaultProps: {
           bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi" },
@@ -169,6 +215,28 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
           ],
         },
       },
+      cards: {
+        name: "Kartu Berdampingan",
+        description: "Dua kartu acara sejajar",
+        component: EventCards,
+        propsSchema: EventDetailsProps,
+        defaultProps: {
+          events: [
+            {
+              name: "Akad Nikah",
+              date: nowPlus(45),
+              start_time: "08:00",
+              venue_name: "Masjid Al-Falah",
+            },
+            {
+              name: "Resepsi",
+              date: nowPlus(45),
+              start_time: "11:00",
+              venue_name: "Gedung Serbaguna",
+            },
+          ],
+        },
+      },
     },
   },
 
@@ -184,8 +252,36 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     ],
     variants: {
       minimal: {
-        name: "Minimalis",
+        name: "Kotak Minimalis",
         component: CountdownMinimal,
+        propsSchema: CountdownProps,
+        defaultProps: { target_date: nowPlus(45) },
+      },
+      flip: {
+        name: "Flip Clock",
+        description: "Kartu gelap bergaya jam flip",
+        component: CountdownFlip,
+        propsSchema: CountdownProps,
+        defaultProps: { target_date: nowPlus(45) },
+      },
+      rings: {
+        name: "Cincin Progres",
+        description: "Lingkaran progres warna",
+        component: CountdownRings,
+        propsSchema: CountdownProps,
+        defaultProps: { target_date: nowPlus(45) },
+      },
+      pill: {
+        name: "Satu Baris",
+        description: "Ringkas dalam satu pill",
+        component: CountdownPill,
+        propsSchema: CountdownProps,
+        defaultProps: { target_date: nowPlus(45) },
+      },
+      elegant: {
+        name: "Serif Elegan",
+        description: "Angka serif besar dengan titik pemisah",
+        component: CountdownElegant,
         propsSchema: CountdownProps,
         defaultProps: { target_date: nowPlus(45) },
       },
@@ -224,8 +320,22 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
     ],
     variants: {
       grid: {
-        name: "Grid",
+        name: "Grid Rapi",
         component: GalleryGrid,
+        propsSchema: GalleryProps,
+        defaultProps: { images: [], columns: 3 },
+      },
+      masonry: {
+        name: "Masonry",
+        description: "Tinggi foto bervariasi",
+        component: GalleryMasonry,
+        propsSchema: GalleryProps,
+        defaultProps: { images: [], columns: 3 },
+      },
+      carousel: {
+        name: "Carousel Geser",
+        description: "Geser horizontal dengan snap",
+        component: GalleryCarousel,
         propsSchema: GalleryProps,
         defaultProps: { images: [], columns: 3 },
       },
@@ -246,6 +356,16 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
       centered: {
         name: "Tengah",
         component: QuoteCentered,
+        propsSchema: QuoteProps,
+        defaultProps: {
+          text: "Dan di antara tanda-tanda kekuasaan-Nya diciptakan-Nya untukmu pasangan hidup dari jenismu sendiri.",
+          source: "QS. Ar-Rum: 21",
+        },
+      },
+      bordered: {
+        name: "Garis Ornamen",
+        description: "Kutipan dengan garis rambut atas–bawah",
+        component: QuoteBordered,
         propsSchema: QuoteProps,
         defaultProps: {
           text: "Dan di antara tanda-tanda kekuasaan-Nya diciptakan-Nya untukmu pasangan hidup dari jenismu sendiri.",
@@ -339,6 +459,18 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
         defaultProps: {
           intro:
             "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
+          bank_accounts: [
+            { bank_name: "BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
+          ],
+        },
+      },
+      minimal: {
+        name: "Daftar Ringkas",
+        description: "Satu blok daftar rekening",
+        component: GiftMinimal,
+        propsSchema: GiftProps,
+        defaultProps: {
+          intro: "Kirimkan tanda kasih Anda melalui:",
           bank_accounts: [
             { bank_name: "BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
           ],

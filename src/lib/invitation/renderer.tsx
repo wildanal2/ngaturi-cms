@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { getVariant } from "@/sections/registry";
+import { Reveal } from "@/sections/reveal";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
 const FONT_STACK: Record<string, string> = {
@@ -40,20 +41,26 @@ export function InvitationRenderer({
       className="mx-auto max-w-lg overflow-hidden"
       style={invitationRootStyle(global)}
     >
-      {ordered.map((section) => {
+      {ordered.map((section, i) => {
         const variant = getVariant(section.type, section.variant);
         if (!variant) return null;
         const Component = variant.component;
         return (
-          <div key={section.id} data-section={section.type}>
-            <Component
-              props={section.props}
-              global={global}
-              invitationId={invitationId}
-              guestName={guestName}
-              isPreview={isPreview}
-            />
-          </div>
+          <Reveal
+            key={section.id}
+            animation={global.animation}
+            immediate={i === 0}
+          >
+            <div data-section={section.type}>
+              <Component
+                props={section.props}
+                global={global}
+                invitationId={invitationId}
+                guestName={guestName}
+                isPreview={isPreview}
+              />
+            </div>
+          </Reveal>
         );
       })}
     </div>

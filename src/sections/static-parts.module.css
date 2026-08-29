@@ -1,0 +1,78 @@
+/* Scoped styles for static section variants (CSS Modules) */
+
+.arch {
+  border-radius: 50% 50% 0.75rem 0.75rem / 60% 60% 0.75rem 0.75rem;
+  overflow: hidden;
+}
+
+.ornFrame {
+  position: relative;
+  padding: 2.5rem 1.5rem;
+}
+.ornFrame::before,
+.ornFrame::after {
+  content: "";
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border: 2px solid currentColor;
+  opacity: 0.5;
+}
+.ornFrame::before {
+  top: 12px;
+  left: 12px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.ornFrame::after {
+  bottom: 12px;
+  right: 12px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.polaroid {
+  background: #fff;
+  padding: 0.6rem 0.6rem 1.4rem;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+}
+.polaroidTiltL {
+  transform: rotate(-4deg);
+}
+.polaroidTiltR {
+  transform: rotate(3deg);
+}
+
+.masonry {
+  column-gap: 0.5rem;
+}
+.masonry > * {
+  break-inside: avoid;
+  margin-bottom: 0.5rem;
+}
+
+.hHairline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: color-mix(in srgb, var(--inv-primary) 45%, transparent);
+}
+.hHairline::before,
+.hHairline::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+}
+
+.carousel {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.5rem;
+}
+.carousel > * {
+  flex: 0 0 78%;
+  scroll-snap-align: center;
+}

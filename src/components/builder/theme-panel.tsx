@@ -95,6 +95,29 @@ export function ThemePanel() {
       </label>
 
       <label className="block text-sm">
+        <span className="mb-1 block text-ink-soft">Animasi saat scroll</span>
+        <select
+          value={global.animation ?? "fade"}
+          disabled={locked}
+          onChange={(e) =>
+            setGlobal({
+              animation: e.target.value as
+                | "none"
+                | "fade"
+                | "slide"
+                | "zoom",
+            })
+          }
+          className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
+        >
+          <option value="fade">Fade up</option>
+          <option value="slide">Slide in</option>
+          <option value="zoom">Zoom in</option>
+          <option value="none">Tanpa animasi</option>
+        </select>
+      </label>
+
+      <label className="block text-sm">
         <span className="mb-1 block text-ink-soft">URL musik latar (opsional)</span>
         <input
           type="url"

@@ -4,12 +4,7 @@ import { useBuilder } from "@/stores/builder-store";
 import { getVariant, SectionRegistry } from "@/sections/registry";
 import { invitationRootStyle } from "@/lib/invitation/renderer";
 import { AddSectionButton } from "./add-section-menu";
-
-const DEVICE_WIDTH: Record<string, number> = {
-  mobile: 390,
-  tablet: 640,
-  desktop: 900,
-};
+import { DeviceFrame } from "./device-frame";
 
 export function Canvas({ invitationId }: { invitationId: string }) {
   const sections = useBuilder((s) => s.sections);
@@ -17,25 +12,19 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   const device = useBuilder((s) => s.device);
   const selectedId = useBuilder((s) => s.selectedId);
   const select = useBuilder((s) => s.select);
-  const hasWatermark = true;
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
 
   return (
-    <div className="flex justify-center py-8">
-      <div
-        className="rounded-[1.75rem] border-4 border-ink/10 bg-white shadow-xl transition-all"
-        style={{ width: DEVICE_WIDTH[device], maxWidth: "100%" }}
-      >
-        <div
-          className="overflow-hidden rounded-[1.4rem]"
-          style={invitationRootStyle(global)}
-        >
+    <div className="px-6 py-8">
+      <DeviceFrame device={device}>
+        <div style={invitationRootStyle(global)}>
           {ordered.length === 0 ? (
-            <div className="p-10 text-center text-sm text-muted">
-              Belum ada bagian. Tambahkan dari panel kiri.
+            <div className="p-12 text-center text-sm text-muted">
+              Belum ada bagian. Tambahkan dari panel kiri atau tombol di bawah.
             </div>
           ) : null}
+
           {ordered.map((section) => {
             const variant = getVariant(section.type, section.variant);
             const def = SectionRegistry[section.type];
@@ -74,15 +63,15 @@ export function Canvas({ invitationId }: { invitationId: string }) {
               </div>
             );
           })}
-          {hasWatermark ? (
-            <p className="py-3 text-center text-[11px] text-black/40">
-              Dibuat dengan Ngaturi
-            </p>
-          ) : null}
+
+          <p className="py-3 text-center text-[11px] text-black/40">
+            Dibuat dengan Ngaturi
+          </p>
         </div>
-        <div className="p-3">
-          <AddSectionButton />
-        </div>
+      </DeviceFrame>
+
+      <div className="mx-auto mt-4 max-w-[400px]">
+        <AddSectionButton />
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import {
   formatEventDate,
   formatTimeRange,
 } from "./shared";
+import styles from "./static-parts.module.css";
 
 /* ---------- HERO ---------- */
 
@@ -186,7 +187,7 @@ export function EventTimeline({ props }: SectionRenderProps) {
   return (
     <SectionShell>
       <SectionTitle>Rangkaian Acara</SectionTitle>
-      <div className="space-y-6">
+      <div className="space-y-6 inv-stagger">
         {(p.events ?? []).map((e, i) => (
           <div
             key={i}
@@ -236,7 +237,7 @@ export function GalleryGrid({ props }: SectionRenderProps) {
     <SectionShell muted>
       <SectionTitle>Galeri</SectionTitle>
       <div
-        className="grid gap-2"
+        className="inv-stagger grid gap-2"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
       >
         {(p.images ?? []).map((img, i) => (
@@ -306,6 +307,266 @@ export function GiftCards({ props }: SectionRenderProps) {
             <p className="text-sm text-[var(--inv-ink)] opacity-80">
               a.n. {b.account_name}
             </p>
+          </div>
+        ))}
+      </div>
+    </SectionShell>
+  );
+}
+
+/* =========================================================
+ * ADDITIONAL VARIANTS
+ * ======================================================= */
+
+/* HERO — minimal typographic (no photo) */
+export function HeroMinimal({ props, guestName }: SectionRenderProps) {
+  const p = props as {
+    couple_names?: string;
+    event_date?: string;
+    tagline?: string;
+  };
+  return (
+    <section className="flex min-h-[80vh] flex-col items-center justify-center bg-[var(--inv-bg)] px-6 py-20 text-center">
+      {guestName ? (
+        <p className="mb-6 text-xs tracking-widest text-[var(--inv-primary)] uppercase">
+          Kepada Yth. {guestName}
+        </p>
+      ) : null}
+      <p className={styles.hHairline + " w-full max-w-[220px] text-xs tracking-[0.3em] uppercase"}>
+        {p.tagline ?? "The Wedding Of"}
+      </p>
+      <h1 className="mt-6 font-[family-name:var(--inv-font)] text-6xl leading-none text-[var(--inv-primary)]">
+        {p.couple_names ?? "Nama Mempelai"}
+      </h1>
+      <p className="mt-6 text-[var(--inv-ink)]">{formatEventDate(p.event_date)}</p>
+    </section>
+  );
+}
+
+/* HERO — arched photo with ornamental frame */
+export function HeroArch({ props, guestName }: SectionRenderProps) {
+  const p = props as {
+    couple_names?: string;
+    event_date?: string;
+    tagline?: string;
+    background_image?: string;
+  };
+  return (
+    <section className="bg-[var(--inv-bg)] px-6 py-16 text-center text-[var(--inv-primary)]">
+      <div className={styles.ornFrame}>
+        {p.tagline ? (
+          <p className="text-xs tracking-[0.3em] uppercase">{p.tagline}</p>
+        ) : null}
+        <div className={styles.arch + " mx-auto mt-5 h-72 w-56"}>
+          {p.background_image ? (
+            <Image
+              src={p.background_image}
+              alt=""
+              width={224}
+              height={288}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="h-full w-full bg-[color-mix(in_srgb,var(--inv-primary)_15%,transparent)]" />
+          )}
+        </div>
+        <h1 className="mt-5 font-[family-name:var(--inv-font)] text-4xl">
+          {p.couple_names ?? "Nama Mempelai"}
+        </h1>
+        <p className="mt-2 text-sm text-[var(--inv-ink)]">
+          {formatEventDate(p.event_date)}
+        </p>
+        {guestName ? (
+          <p className="mt-4 text-xs text-[var(--inv-ink)]">
+            Kepada Yth. {guestName}
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/* COUPLE — polaroid tilted cards */
+function PolaroidCard({ person, tilt }: { person: Person; tilt: string }) {
+  return (
+    <div className={styles.polaroid + " " + tilt}>
+      {person.photo ? (
+        <Image
+          src={person.photo}
+          alt={person.name ?? ""}
+          width={220}
+          height={220}
+          className="h-52 w-52 object-cover"
+        />
+      ) : (
+        <div className="h-52 w-52 bg-[color-mix(in_srgb,var(--inv-primary)_12%,transparent)]" />
+      )}
+      <p className="mt-3 text-center font-[family-name:var(--inv-font)] text-xl text-[var(--inv-primary)]">
+        {person.full_name || person.name}
+      </p>
+    </div>
+  );
+}
+
+export function CouplePolaroid({ props }: SectionRenderProps) {
+  const p = props as { bride?: Person; groom?: Person };
+  return (
+    <SectionShell muted>
+      <SectionTitle>Mempelai</SectionTitle>
+      <div className="inv-stagger flex flex-wrap justify-center gap-6">
+        <PolaroidCard person={p.bride ?? {}} tilt={styles.polaroidTiltL} />
+        <PolaroidCard person={p.groom ?? {}} tilt={styles.polaroidTiltR} />
+      </div>
+    </SectionShell>
+  );
+}
+
+/* GALLERY — masonry via CSS columns */
+export function GalleryMasonry({ props }: SectionRenderProps) {
+  const p = props as {
+    images?: Array<{ url: string; caption?: string }>;
+    columns?: number;
+  };
+  return (
+    <SectionShell>
+      <SectionTitle>Galeri</SectionTitle>
+      <div className={styles.masonry} style={{ columnCount: p.columns ?? 3 }}>
+        {(p.images ?? []).map((img, i) => (
+          <Image
+            key={i}
+            src={img.url}
+            alt={img.caption ?? ""}
+            width={400}
+            height={0}
+            style={{ height: "auto" }}
+            className="w-full rounded-lg object-cover"
+          />
+        ))}
+      </div>
+    </SectionShell>
+  );
+}
+
+/* GALLERY — horizontal snap carousel */
+export function GalleryCarousel({ props }: SectionRenderProps) {
+  const p = props as { images?: Array<{ url: string; caption?: string }> };
+  return (
+    <SectionShell muted>
+      <SectionTitle>Galeri</SectionTitle>
+      <div className={styles.carousel}>
+        {(p.images ?? []).map((img, i) => (
+          <Image
+            key={i}
+            src={img.url}
+            alt={img.caption ?? ""}
+            width={400}
+            height={500}
+            className="aspect-[4/5] rounded-xl object-cover"
+          />
+        ))}
+      </div>
+    </SectionShell>
+  );
+}
+
+/* EVENT DETAILS — side cards */
+export function EventCards({ props }: SectionRenderProps) {
+  const p = props as {
+    events?: Array<{
+      name: string;
+      date: string;
+      start_time?: string;
+      end_time?: string;
+      venue_name: string;
+      address?: string;
+      maps_url?: string;
+    }>;
+  };
+  return (
+    <SectionShell muted>
+      <SectionTitle>Acara</SectionTitle>
+      <div className="grid gap-4 sm:grid-cols-2 inv-stagger">
+        {(p.events ?? []).map((e, i) => (
+          <div
+            key={i}
+            className="rounded-2xl bg-[var(--inv-bg)] p-5 text-center shadow-sm"
+          >
+            <h3 className="font-[family-name:var(--inv-font)] text-lg text-[var(--inv-primary)]">
+              {e.name}
+            </h3>
+            <p className="mt-1 text-sm text-[var(--inv-ink)]">
+              {formatEventDate(e.date)}
+            </p>
+            <p className="text-sm text-[var(--inv-ink)]">
+              {formatTimeRange(e.start_time, e.end_time)}
+            </p>
+            <p className="mt-2 text-sm font-medium text-[var(--inv-ink)]">
+              {e.venue_name}
+            </p>
+            {e.maps_url ? (
+              <a
+                href={e.maps_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-block text-xs text-[var(--inv-primary)] underline"
+              >
+                Google Maps
+              </a>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </SectionShell>
+  );
+}
+
+/* QUOTE — bordered with hairlines */
+export function QuoteBordered({ props }: SectionRenderProps) {
+  const p = props as { text?: string; source?: string };
+  return (
+    <SectionShell muted>
+      <div className="text-center">
+        <p className={styles.hHairline + " mx-auto mb-5 max-w-[120px]"} />
+        <p className="font-[family-name:var(--inv-font)] text-lg leading-relaxed text-[var(--inv-primary)]">
+          {p.text}
+        </p>
+        {p.source ? (
+          <p className="mt-3 text-sm text-[var(--inv-ink)]">— {p.source}</p>
+        ) : null}
+        <p className={styles.hHairline + " mx-auto mt-5 max-w-[120px]"} />
+      </div>
+    </SectionShell>
+  );
+}
+
+/* GIFT — minimal single block */
+export function GiftMinimal({ props }: SectionRenderProps) {
+  const p = props as {
+    intro?: string;
+    bank_accounts?: Array<{
+      bank_name: string;
+      account_number: string;
+      account_name: string;
+    }>;
+  };
+  return (
+    <SectionShell>
+      <SectionTitle>Amplop Digital</SectionTitle>
+      {p.intro ? (
+        <p className="mb-4 text-center text-sm text-[var(--inv-ink)]">
+          {p.intro}
+        </p>
+      ) : null}
+      <div className="divide-y divide-[color-mix(in_srgb,var(--inv-primary)_15%,transparent)] rounded-xl border border-[color-mix(in_srgb,var(--inv-primary)_15%,transparent)]">
+        {(p.bank_accounts ?? []).map((b, i) => (
+          <div key={i} className="flex items-center justify-between p-4 text-sm">
+            <span className="text-[var(--inv-ink)]">
+              <b className="text-[var(--inv-primary)]">{b.bank_name}</b> ·{" "}
+              {b.account_name}
+            </span>
+            <span className="font-mono text-[var(--inv-ink)]">
+              {b.account_number}
+            </span>
           </div>
         ))}
       </div>
