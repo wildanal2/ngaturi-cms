@@ -1,6 +1,21 @@
+import Image from "next/image";
+import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
+import { getRecentInvitations } from "@/lib/invitation/showcase";
+
+export const revalidate = 600;
+
+const EVENT_LABEL: Record<string, string> = {
+  wedding: "Pernikahan",
+  khitan: "Khitan",
+  tahlil: "Tahlil",
+  aqiqah: "Aqiqah",
+  engagement: "Lamaran",
+  birthday: "Ulang tahun",
+  generic: "Acara",
+};
 
 const FEATURES = [
   {
@@ -27,7 +42,9 @@ const STEPS = [
   ["Bagikan", "Publikasikan, salin tautan, sebar via WhatsApp & QR."],
 ];
 
-export default function Home() {
+export default async function Home() {
+  const recent = await getRecentInvitations(8);
+
   return (
     <>
       <SiteHeader />
@@ -84,6 +101,51 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Undangan Terbaru */}
+        {recent.length >= 3 ? (
+          <section className="mx-auto max-w-6xl px-5 py-20">
+            <div className="flex items-end justify-between">
+              <div>
+                <h2 className="text-3xl sm:text-4xl">Undangan Terbaru</h2>
+                <p className="mt-2 text-ink-soft">
+                  Baru saja dibuat orang lain dengan Ngaturi.
+                </p>
+              </div>
+            </div>
+            <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {recent.map((r) => (
+                <Link
+                  key={r.slug}
+                  href={`/${r.slug}`}
+                  className="group overflow-hidden rounded-2xl border border-line bg-paper"
+                >
+                  <div className="relative aspect-[3/4] bg-cream-200">
+                    {r.image ? (
+                      <Image
+                        src={r.image}
+                        alt={r.title}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                        sizes="(max-width: 640px) 50vw, 25vw"
+                      />
+                    ) : (
+                      <div className="grid h-full place-items-center font-display text-2xl text-forest/40">
+                        {r.title.slice(0, 1)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="truncate text-sm font-medium">{r.title}</p>
+                    <p className="text-xs text-muted">
+                      {EVENT_LABEL[r.eventType] ?? "Acara"}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* CTA */}
         <section className="mx-auto max-w-4xl px-5 py-24 text-center">
