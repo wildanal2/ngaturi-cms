@@ -1,78 +1,113 @@
 /**
- * Original decorative SVG ornaments (hand-authored, not copied). Colour
- * follows `currentColor` so sections can tint them via `--inv-primary`.
+ * Original decorative SVG ornaments — hand-authored for Ngaturi, not
+ * copied from any third party. They inherit `currentColor` so sections
+ * tint them via `--inv-primary` / `--inv-secondary`.
  */
 
-export function LeafSprig({ className }: { className?: string }) {
+/** Lush corner spray: stems, leaves, a few small blooms. */
+export function CornerFloral({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 120 40"
+      viewBox="0 0 140 140"
+      className={className}
+      aria-hidden
       fill="none"
       stroke="currentColor"
       strokeWidth="1.4"
       strokeLinecap="round"
-      className={className}
-      aria-hidden
     >
-      <path d="M10 20h100" />
-      {[22, 38, 54, 70, 86].map((x, i) => (
-        <g key={x}>
-          <path d={`M${x} 20c6-8 14-9 18-3-6 6-14 6-18 3z`} opacity={0.9 - i * 0.05} />
-          <path d={`M${x} 20c6 8 14 9 18 3-6-6-14-6-18-3z`} opacity={0.9 - i * 0.05} />
+      {/* main stems */}
+      <path d="M6 6c30 4 55 18 72 44M6 6c4 30 18 55 44 72M6 6c22 10 40 26 52 48" />
+      {/* leaves along the stems */}
+      {[
+        [34, 22, -20],
+        [52, 34, -8],
+        [66, 50, 6],
+        [22, 34, -70],
+        [34, 52, -84],
+        [50, 66, -96],
+        [40, 40, -45],
+      ].map(([x, y, r], i) => (
+        <path
+          key={i}
+          d={`M${x} ${y}c7-9 16-9 20 0-4 9-13 12-20 0z`}
+          transform={`rotate(${r} ${x} ${y})`}
+          fill="currentColor"
+          fillOpacity="0.14"
+        />
+      ))}
+      {/* small blooms */}
+      {[
+        [78, 46],
+        [46, 78],
+        [64, 64],
+      ].map(([cx, cy], i) => (
+        <g key={i}>
+          {[0, 72, 144, 216, 288].map((a) => (
+            <ellipse
+              key={a}
+              cx={cx}
+              cy={cy - 6}
+              rx="3.2"
+              ry="6"
+              transform={`rotate(${a} ${cx} ${cy})`}
+              fill="currentColor"
+              fillOpacity="0.9"
+              stroke="none"
+            />
+          ))}
+          <circle cx={cx} cy={cy} r="2.4" fill="#fff" stroke="none" />
         </g>
       ))}
-      <circle cx="110" cy="20" r="2.2" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="8" r="2.4" fill="currentColor" stroke="none" />
     </svg>
   );
 }
 
-export function CornerFloral({ className }: { className?: string }) {
+/** Horizontal leafy sprig — good beside a name or title. */
+export function LeafSprig({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 90 90"
+      viewBox="0 0 160 34"
+      className={className}
+      aria-hidden
       fill="none"
       stroke="currentColor"
       strokeWidth="1.3"
       strokeLinecap="round"
-      className={className}
-      aria-hidden
     >
-      <path d="M4 4c18 2 34 12 44 30" />
-      <path d="M4 4c2 18 12 34 30 44" />
-      {[
-        [26, 14],
-        [40, 24],
-        [52, 38],
-        [14, 26],
-        [24, 40],
-        [38, 52],
-      ].map(([cx, cy], i) => (
-        <path
-          key={i}
-          d={`M${cx} ${cy}c4-5 9-5 12 0-3 5-9 5-12 0z`}
-          transform={`rotate(${i * 18} ${cx} ${cy})`}
-        />
-      ))}
-      <circle cx="10" cy="10" r="2" fill="currentColor" stroke="none" />
+      <path d="M8 17h144" />
+      {[24, 44, 64, 84, 104, 124].map((x, i) => {
+        const o = 0.9 - i * 0.06;
+        return (
+          <g key={x}>
+            <path d={`M${x} 17c7-9 16-10 21-4-6 7-15 8-21 4z`} fill="currentColor" fillOpacity={o * 0.16} />
+            <path d={`M${x} 17c7 9 16 10 21 4-6-7-15-8-21-4z`} fill="currentColor" fillOpacity={o * 0.16} />
+          </g>
+        );
+      })}
+      <circle cx="150" cy="17" r="2.4" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="17" r="2.4" fill="currentColor" stroke="none" />
     </svg>
   );
 }
 
+/** Centre divider with a leaf/diamond motif. */
 export function Divider({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 200 20"
+      viewBox="0 0 220 22"
+      className={className}
+      aria-hidden
       fill="none"
       stroke="currentColor"
       strokeWidth="1.3"
       strokeLinecap="round"
-      className={className}
-      aria-hidden
     >
-      <path d="M20 10h60M120 10h60" />
-      <path d="M100 3c5 3 5 11 0 14-5-3-5-11 0-14z" />
-      <circle cx="86" cy="10" r="1.6" fill="currentColor" stroke="none" />
-      <circle cx="114" cy="10" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M16 11h74M130 11h74" />
+      <path d="M110 3c6 3 6 13 0 16-6-3-6-13 0-16z" fill="currentColor" fillOpacity="0.18" />
+      <path d="M96 11c4-3 4-3 8 0-4 3-4 3-8 0z" fill="currentColor" stroke="none" />
+      <path d="M116 11c4-3 4-3 8 0-4 3-4 3-8 0z" fill="currentColor" stroke="none" />
     </svg>
   );
 }

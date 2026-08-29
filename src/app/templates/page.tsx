@@ -20,21 +20,39 @@ export default function TemplatesPage() {
           {TEMPLATES.map((t) => (
             <div
               key={t.id}
-              className="overflow-hidden rounded-2xl border border-line bg-paper"
+              className="flex flex-col overflow-hidden rounded-2xl border border-line bg-paper"
             >
-              <Image
-                src={t.thumbnail}
-                alt={t.name}
-                width={400}
-                height={300}
-                className="aspect-[4/3] w-full object-cover"
-              />
-              <div className="p-5">
+              <a href={`/templates/${t.id}/preview`} className="group block">
+                <Image
+                  src={t.thumbnail}
+                  alt={t.name}
+                  width={400}
+                  height={300}
+                  className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-[1.03]"
+                />
+              </a>
+              <div className="flex flex-1 flex-col p-5">
                 <h2 className="text-xl">{t.name}</h2>
-                <p className="mt-1 text-sm text-ink-soft">{t.description}</p>
-                <ButtonLink href="/login" size="sm" className="mt-3">
-                  Pakai template
-                </ButtonLink>
+                <p className="mt-1 flex-1 text-sm text-ink-soft">
+                  {t.description}
+                </p>
+                <div className="mt-4 flex gap-2">
+                  <ButtonLink
+                    href={`/templates/${t.id}/preview`}
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Lihat
+                  </ButtonLink>
+                  <ButtonLink
+                    href={`/templates/${t.id}/use`}
+                    size="sm"
+                    className="flex-1"
+                  >
+                    Pakai template
+                  </ButtonLink>
+                </div>
               </div>
             </div>
           ))}
