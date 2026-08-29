@@ -1,15 +1,18 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import {
   guestbookMessages,
   invitations,
+  invitationViews,
   rsvpResponses,
 } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { moderateMessage } from "@/lib/invitation/moderation";
 import { ShareBox } from "@/components/dashboard/share-box";
+import { ViewsChart } from "@/components/dashboard/views-chart";
 
 export default async function InvitationDetailPage({
   params,
@@ -31,7 +34,11 @@ export default async function InvitationDetailPage({
     .limit(1);
   if (!inv) notFound();
 
-  const [rsvps, messages] = await Promise.all([
+  // server component: runs once per request, not per React render
+  // eslint-disable-next-line react-hooks/purity
+  const nowMs = Date.now();
+  const since = new Date(nowMs - 14 * 86_400_000);
+  const [rsvps, messages, viewRows] = await Promise.all([
     db
       .select()
       .from(rsvpResponses)
@@ -42,12 +49,30 @@ export default async function InvitationDetailPage({
       .from(guestbookMessages)
       .where(eq(guestbookMessages.invitationId, invitationId))
       .orderBy(desc(guestbookMessages.createdAt)),
+    db
+      .select({
+        day: sql<string>`to_char(${invitationViews.viewedAt}, 'YYYY-MM-DD')`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(invitationViews)
+      .where(
+        and(
+          eq(invitationViews.invitationId, invitationId),
+          gte(invitationViews.viewedAt, since),
+        ),
+      )
+      .groupBy(sql`1`),
   ]);
 
   const attending = rsvps
     .filter((r) => r.status === "attending")
     .reduce((n, r) => n + r.guestCount, 0);
   const url = `${env.NEXT_PUBLIC_APP_URL}/${inv.slug}`;
+
+  const days = last14Days(
+    new Map(viewRows.map((r) => [r.day, r.count])),
+    nowMs,
+  );
 
   return (
     <div className="space-y-8">
@@ -57,6 +82,28 @@ export default async function InvitationDetailPage({
           {inv.status === "published" ? "Terbit" : "Belum terbit"} ·{" "}
           {inv.viewCount} kunjungan
         </p>
+        <nav className="mt-3 flex flex-wrap gap-2 text-sm">
+          <Link
+            href={`/builder/${inv.id}`}
+            className="rounded-full bg-forest px-3.5 py-1.5 font-medium text-cream"
+          >
+            Edit undangan
+          </Link>
+          <Link
+            href={`/invitations/${inv.id}/guests`}
+            className="rounded-full border border-line px-3.5 py-1.5 hover:bg-cream-200"
+          >
+            Undangan per-tamu
+          </Link>
+          {!inv.isPaid ? (
+            <Link
+              href={`/invitations/${inv.id}/unlock`}
+              className="rounded-full border border-line px-3.5 py-1.5 hover:bg-cream-200"
+            >
+              Upgrade
+            </Link>
+          ) : null}
+        </nav>
       </div>
 
       {!inv.isPaid ? (
@@ -79,6 +126,11 @@ export default async function InvitationDetailPage({
         <Stat label="Total RSVP" value={rsvps.length} />
         <Stat label="Konfirmasi hadir" value={attending} />
         <Stat label="Ucapan" value={messages.length} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg">Kunjungan 14 hari terakhir</h2>
+        <ViewsChart data={days} />
       </section>
 
       <section>
@@ -150,6 +202,17 @@ export default async function InvitationDetailPage({
       </section>
     </div>
   );
+}
+
+function last14Days(viewMap: Map<string, number>, nowMs: number) {
+  return Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(nowMs - (13 - i) * 86_400_000);
+    const key = d.toISOString().slice(0, 10);
+    return {
+      label: `${d.getDate()}/${d.getMonth() + 1}`,
+      count: viewMap.get(key) ?? 0,
+    };
+  });
 }
 
 function Stat({ label, value }: { label: string; value: number }) {

@@ -9,6 +9,7 @@ import { InvitationRenderer } from "@/lib/invitation/renderer";
 import {
   getPublicInvitation,
   getGuestByToken,
+  markGuestOpened,
 } from "@/lib/invitation/query";
 import { InvitationCover } from "@/components/invitation/cover";
 import { MusicPlayer } from "@/components/invitation/music-player";
@@ -51,7 +52,8 @@ export default async function InvitationPage({
 
   if (!inv || inv.status !== "published") notFound();
 
-  const guestName = to ? await getGuestByToken(to) : null;
+  const guest = to ? await getGuestByToken(inv.id, to) : null;
+  const guestName = guest?.name ?? null;
 
   // track view setelah response
   const h = await headers();
@@ -70,6 +72,7 @@ export default async function InvitationPage({
         .update(invitations)
         .set({ viewCount: sql`${invitations.viewCount} + 1` })
         .where(eq(invitations.id, inv.id));
+      if (guest) await markGuestOpened(guest.id);
     } catch {
       /* noop */
     }

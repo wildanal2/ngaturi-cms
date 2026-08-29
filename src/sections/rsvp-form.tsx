@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SectionRenderProps } from "./types";
 import { SectionShell, SectionTitle } from "./shared";
+import { TurnstileField } from "./turnstile-field";
 
 export function RsvpFormCard({
   props,
@@ -87,6 +88,7 @@ export function RsvpFormCard({
           <Field label="Ucapan (opsional)">
             <textarea name="message" rows={3} className="inv-input" />
           </Field>
+          <TurnstileField />
           {error ? <p className="text-sm text-[var(--inv-secondary)]">{error}</p> : null}
           <button
             type="submit"

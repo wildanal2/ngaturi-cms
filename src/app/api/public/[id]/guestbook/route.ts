@@ -5,6 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations, guestbookMessages } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export async function GET(
   _req: Request,
@@ -32,6 +33,7 @@ export async function GET(
 
 const Body = z.object({
   _hp: z.string().optional(),
+  "cf-turnstile-response": z.string().optional(),
   name: z.string().min(1).max(120),
   message: z.string().min(1).max(1000),
 });
@@ -55,6 +57,13 @@ export async function POST(
     return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
   }
   if (parsed.data._hp) return NextResponse.json({ ok: true, pending: true });
+
+  if (!(await verifyTurnstile(parsed.data["cf-turnstile-response"], ip))) {
+    return NextResponse.json(
+      { error: "Verifikasi keamanan gagal." },
+      { status: 400 },
+    );
+  }
 
   const [inv] = await db
     .select({

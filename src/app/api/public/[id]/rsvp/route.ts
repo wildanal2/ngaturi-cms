@@ -5,9 +5,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations, rsvpResponses } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 const Body = z.object({
   _hp: z.string().optional(),
+  "cf-turnstile-response": z.string().optional(),
   name: z.string().min(1).max(120),
   phone: z.string().max(40).optional().or(z.literal("")),
   status: z.enum(["attending", "not_attending", "maybe"]),
@@ -34,6 +36,15 @@ export async function POST(
   }
   // Honeypot — diam-diam sukses.
   if (parsed.data._hp) return NextResponse.json({ ok: true });
+
+  if (
+    !(await verifyTurnstile(parsed.data["cf-turnstile-response"], ip))
+  ) {
+    return NextResponse.json(
+      { error: "Verifikasi keamanan gagal. Muat ulang halaman." },
+      { status: 400 },
+    );
+  }
 
   const [inv] = await db
     .select({ id: invitations.id, status: invitations.status })

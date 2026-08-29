@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations, guestInvites } from "@/lib/db/schema";
 import type { GlobalSettings, SectionData } from "@/sections/types";
@@ -41,11 +41,26 @@ export async function getPublicInvitation(
   };
 }
 
-export async function getGuestByToken(token: string): Promise<string | null> {
+export async function getGuestByToken(
+  invitationId: string,
+  token: string,
+): Promise<{ id: string; name: string } | null> {
   const [g] = await db
-    .select({ name: guestInvites.guestName })
+    .select({ id: guestInvites.id, name: guestInvites.guestName })
     .from(guestInvites)
-    .where(eq(guestInvites.slugToken, token))
+    .where(
+      and(
+        eq(guestInvites.invitationId, invitationId),
+        eq(guestInvites.slugToken, token),
+      ),
+    )
     .limit(1);
-  return g?.name ?? null;
+  return g ?? null;
+}
+
+export async function markGuestOpened(guestId: string): Promise<void> {
+  await db
+    .update(guestInvites)
+    .set({ openedAt: new Date() })
+    .where(and(eq(guestInvites.id, guestId), isNull(guestInvites.openedAt)));
 }
