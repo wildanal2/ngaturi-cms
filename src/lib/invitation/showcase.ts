@@ -6,7 +6,9 @@ export interface ShowcaseItem {
   slug: string;
   title: string;
   eventType: string;
-  image: string | null;
+  /** hero photo if any, otherwise the generated OG card */
+  image: string;
+  hasPhoto: boolean;
 }
 
 function heroImage(sections: unknown): string | null {
@@ -38,10 +40,14 @@ export async function getRecentInvitations(limit = 12): Promise<ShowcaseItem[]> 
     .orderBy(desc(invitations.publishedAt))
     .limit(limit);
 
-  return rows.map((r) => ({
-    slug: r.slug,
-    title: r.title ?? "Undangan",
-    eventType: r.eventType,
-    image: heroImage(r.sections),
-  }));
+  return rows.map((r) => {
+    const photo = heroImage(r.sections);
+    return {
+      slug: r.slug,
+      title: r.title ?? "Undangan",
+      eventType: r.eventType,
+      image: photo ?? `/${r.slug}/opengraph-image`,
+      hasPhoto: Boolean(photo),
+    };
+  });
 }
