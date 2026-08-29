@@ -1,9 +1,24 @@
 // Run with: npx tsx --env-file=.env.local scripts/seed.ts
+import { inArray } from "drizzle-orm";
 import { db } from "../src/lib/db";
-import { templates } from "../src/lib/db/schema";
+import { templates, users } from "../src/lib/db/schema";
 import { TEMPLATES } from "../src/lib/templates/catalog";
 
 async function main() {
+  // promote admins from ADMIN_EMAILS (comma-separated)
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (adminEmails.length) {
+    const promoted = await db
+      .update(users)
+      .set({ role: "admin" })
+      .where(inArray(users.email, adminEmails))
+      .returning({ email: users.email });
+    console.log("promoted admins:", promoted.map((p) => p.email).join(", ") || "(none matched)");
+  }
+
   for (const t of TEMPLATES) {
     await db
       .insert(templates)

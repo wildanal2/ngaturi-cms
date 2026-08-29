@@ -7,6 +7,7 @@ const NAV = [
   { href: "/dashboard", label: "Ringkasan" },
   { href: "/invitations", label: "Undangan" },
   { href: "/invitations/new", label: "Buat baru" },
+  { href: "/media", label: "Media" },
   { href: "/settings", label: "Pengaturan" },
 ];
 
@@ -31,6 +32,14 @@ export default async function DashboardLayout({
               {item.label}
             </Link>
           ))}
+          {(session.user as { role?: string }).role === "admin" ? (
+            <Link
+              href="/admin"
+              className="rounded-lg px-3 py-2 text-sm text-wine hover:bg-cream-200"
+            >
+              Admin
+            </Link>
+          ) : null}
         </nav>
       </aside>
 
