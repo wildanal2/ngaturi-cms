@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
- * Wraps a section and reveals it (fade-up / zoom / slide) the first time it
- * scrolls into view. Each section gets its own observer so animations run
- * individually as the guest scrolls.
+ * Reveals a section (fade / slide / zoom) the first time it scrolls into
+ * view. Progressive enhancement: server-rendered content is visible; on
+ * mount, sections currently below the fold are hidden and animated in as
+ * the guest scrolls. No JS / no observer → content just stays visible.
  */
 export function Reveal({
   children,
@@ -17,32 +18,43 @@ export function Reveal({
   immediate?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(immediate || animation === "none");
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    if (visible) return;
+    if (immediate || animation === "none") return;
     const el = ref.current;
-    if (!el) return;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const rect = el.getBoundingClientRect();
+    const belowFold = rect.top > window.innerHeight * 0.9;
+    if (!belowFold) return; // already visible — leave it
+
+    setHidden(true);
+    const failsafe = setTimeout(() => setHidden(false), 4000);
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          setVisible(true);
+          setHidden(false);
+          clearTimeout(failsafe);
           io.disconnect();
         }
       },
       { threshold: 0.15, rootMargin: "0px 0px -8% 0px" },
     );
     io.observe(el);
-    return () => io.disconnect();
-  }, [visible]);
+    return () => {
+      clearTimeout(failsafe);
+      io.disconnect();
+    };
+  }, [immediate, animation]);
 
-  const type = animation === "fade" ? "" : animation;
+  if (animation === "none") return <>{children}</>;
 
   return (
     <div
       ref={ref}
-      data-reveal={type || undefined}
-      className={visible ? "is-visible" : undefined}
+      data-reveal={animation}
+      className={hidden ? undefined : "is-visible"}
     >
       {children}
     </div>

@@ -86,7 +86,10 @@ h3 {
   }
 }
 
-[data-reveal] {
+/* only hide while a reveal wrapper is present AND not yet in view.
+   Without a [data-reveal] ancestor (e.g. the builder canvas) everything
+   stays fully visible. */
+[data-reveal]:not(.is-visible) {
   opacity: 0;
 }
 [data-reveal].is-visible {
@@ -98,12 +101,9 @@ h3 {
 [data-reveal="slide"].is-visible {
   animation-name: inv-slide-in;
 }
-[data-reveal="none"] {
-  opacity: 1;
-}
 
 /* per-item stagger inside a section */
-.inv-stagger > * {
+[data-reveal]:not(.is-visible) .inv-stagger > * {
   opacity: 0;
 }
 [data-reveal].is-visible .inv-stagger > * {
