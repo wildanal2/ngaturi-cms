@@ -8,6 +8,13 @@
       "when": 1788023416303,
       "tag": "0000_unusual_jazinda",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788023714074,
+      "tag": "0001_slippery_puppet_master",
+      "breakpoints": true
     }
   ]
 }
