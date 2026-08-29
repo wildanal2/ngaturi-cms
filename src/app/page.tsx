@@ -103,7 +103,7 @@ export default async function Home() {
         </section>
 
         {/* Undangan Terbaru */}
-        {recent.length >= 3 ? (
+        {recent.length >= 1 ? (
           <section className="mx-auto max-w-6xl px-5 py-20">
             <div className="flex items-end justify-between">
               <div>

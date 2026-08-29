@@ -60,6 +60,7 @@ export function Canvas({ invitationId }: { invitationId: string }) {
                   global={global}
                   invitationId={invitationId}
                   isPreview
+                  inCanvas
                   siblingTypes={siblingTypes}
                 />
               </div>

@@ -20,6 +20,48 @@ const s = (
 
 export const TEMPLATES: TemplatePreset[] = [
   {
+    id: "kana-noir",
+    name: "Kana Noir",
+    description: "Hijau gelap mewah, aksen emas, ornamen eucalyptus.",
+    category: "wedding",
+    tier: "premium",
+    thumbnail: "/templates/kana-noir.svg",
+    global_settings: {
+      font_family: "Fraunces",
+      color_primary: "#243b30",
+      color_secondary: "#c6a15b",
+      color_background: "#0f1512",
+      animation: "fade-up",
+    },
+    sections: [
+      s("hero", "botanical", 0, {
+        couple_names: "Kana & Arya",
+        tagline: "The Wedding Of",
+        event_date: new Date(Date.now() + 55 * 86400000).toISOString(),
+        s_palette: "noir",
+      }),
+      s("quote", "bordered", 1, {
+        text: "Semoga Allah menyatukan yang berserak dan memberkahi keduanya.",
+        source: "Doa pernikahan",
+      }),
+      s("couple-intro", "stacked", 2, {
+        bride: { name: "Kana", full_name: "Kana Maheswari", child_order: "Putri pertama" },
+        groom: { name: "Arya", full_name: "Arya Danendra", child_order: "Putra kedua" },
+        s_photo_shape: "arch",
+      }),
+      s("countdown", "elegant", 3, { s_sep: "dot" }),
+      s("event-details", "cards", 4, {}),
+      s("map-location", "button", 5, {}),
+      s("gallery", "carousel", 6, { images: [] }),
+      s("rsvp", "form-card", 7, {}),
+      s("guestbook", "cards", 8, {}),
+      s("gift", "minimal", 9, {}),
+      s("closing", "photo", 10, { names: "Kana & Arya" }),
+      s("music", "floating", 11, {}),
+      s("navigation", "bar", 12, {}),
+    ],
+  },
+  {
     id: "kana-botanical",
     name: "Kana Botanical",
     description: "Sage lembut dengan ornamen bunga & navigasi bawah.",

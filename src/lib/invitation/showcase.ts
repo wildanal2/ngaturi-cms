@@ -20,7 +20,7 @@ function heroImage(sections: unknown): string | null {
 }
 
 /** Undangan yang baru dipublikasikan (untuk showcase di landing). */
-export async function getRecentInvitations(limit = 8): Promise<ShowcaseItem[]> {
+export async function getRecentInvitations(limit = 12): Promise<ShowcaseItem[]> {
   const rows = await db
     .select({
       slug: invitations.slug,

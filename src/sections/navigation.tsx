@@ -21,12 +21,15 @@ function Icon({ name }: { name: string }) {
   return C ? <C size={16} /> : null;
 }
 
-export function NavigationBar({ siblingTypes = [], isPreview }: SectionRenderProps) {
+export function NavigationBar({
+  siblingTypes = [],
+  inCanvas,
+}: SectionRenderProps) {
   const items = TARGETS.filter((t) => siblingTypes.includes(t.type)).slice(0, 6);
   if (items.length < 2) return null;
 
   function jump(type: string) {
-    if (isPreview) return;
+    if (inCanvas) return;
     document
       .querySelector(`[data-section="${type}"]`)
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -35,15 +38,12 @@ export function NavigationBar({ siblingTypes = [], isPreview }: SectionRenderPro
   return (
     <nav
       className={
-        isPreview
+        inCanvas
           ? "mx-auto max-w-lg px-2 py-2"
           : "fixed inset-x-0 bottom-0 z-40 mx-auto max-w-lg"
       }
     >
       <div className="m-2 flex justify-around rounded-2xl bg-black/75 px-1 py-1.5 text-white shadow-lg backdrop-blur">
-        {isPreview ? (
-          <span className="sr-only">Pratinjau bar navigasi</span>
-        ) : null}
         {items.map((it) => (
           <button
             key={it.type}

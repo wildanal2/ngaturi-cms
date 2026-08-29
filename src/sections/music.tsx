@@ -9,7 +9,7 @@ import type { SectionRenderProps } from "./types";
  * section list doesn't matter (the control is position: fixed). Autoplays
  * when the guest taps "Buka Undangan" on the cover.
  */
-export function MusicSection({ props, isPreview }: SectionRenderProps) {
+export function MusicSection({ props, isPreview, inCanvas }: SectionRenderProps) {
   const p = props as {
     audio_url?: string;
     title?: string;
@@ -33,11 +33,11 @@ export function MusicSection({ props, isPreview }: SectionRenderProps) {
     return () => window.removeEventListener("ngaturi:open", tryPlay);
   }, [isPreview]);
 
-  if (isPreview) {
+  if (inCanvas) {
     return (
       <div className="px-6 py-4 text-center text-xs text-[var(--inv-ink)] opacity-60">
         {p.audio_url
-          ? `🎵 Musik latar aktif${p.title ? ` — ${p.title}` : ""} (tombol muncul di undangan asli)`
+          ? `🎵 Musik latar aktif${p.title ? ` — ${p.title}` : ""} (tombol muncul di undangan)`
           : "🎵 Musik latar — isi URL audio di panel editor."}
       </div>
     );

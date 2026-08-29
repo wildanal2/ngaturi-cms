@@ -41,6 +41,9 @@ export interface SectionRenderProps {
   invitationId?: string;
   guestName?: string | null;
   isPreview?: boolean;
+  /** true only inside the builder's device-frame canvas (fixed/sticky
+   *  chrome must render inline there so it doesn't escape the frame) */
+  inCanvas?: boolean;
   /** ordered list of every section type in this invitation */
   siblingTypes?: string[];
 }

@@ -247,12 +247,23 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
       },
       botanical: {
         name: "Botani (bunga)",
-        description: "Foto bulat + ornamen bunga di sudut",
+        description: "Foto bulat, garland atas + eucalyptus di sudut",
         component: HeroBotanical,
         propsSchema: HeroProps,
         fields: [
           ...heroBase,
           { kind: "image", key: "background_image", label: "Foto" },
+        ],
+        styleOptions: [
+          {
+            key: "palette",
+            label: "Nuansa",
+            default: "cream",
+            options: [
+              { value: "cream", label: "Terang" },
+              { value: "noir", label: "Gelap" },
+            ],
+          },
         ],
         defaultProps: {
           couple_names: "Kana & Arya",
