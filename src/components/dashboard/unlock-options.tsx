@@ -61,7 +61,7 @@ export function UnlockOptions({
           onClose: () => setBusy(null),
         });
       } else if (data.redirectUrl) {
-        window.location.href = data.redirectUrl;
+        window.location.assign(data.redirectUrl);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal");
