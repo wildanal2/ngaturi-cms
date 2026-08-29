@@ -1,48 +1,53 @@
 import Link from "next/link";
+import { desc, eq } from "drizzle-orm";
 import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { ButtonLink } from "@/components/ui/button";
+import { InvitationCard } from "@/components/dashboard/invitation-card";
 
 export default async function DashboardPage() {
   const session = await requireUser();
   const mine = await db
     .select()
     .from(invitations)
-    .where(eq(invitations.userId, session.user.id));
+    .where(eq(invitations.userId, session.user.id))
+    .orderBy(desc(invitations.updatedAt));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Halo, {session.user.name} 👋</h1>
-        <Link
-          href="/invitations/new"
-          className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          Buat undangan
-        </Link>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl">Halo, {session.user.name?.split(" ")[0]}</h1>
+          <p className="mt-1 text-sm text-ink-soft">
+            {mine.length} undangan
+          </p>
+        </div>
+        <ButtonLink href="/invitations/new">Buat undangan</ButtonLink>
       </div>
 
       {mine.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-zinc-300 p-10 text-center text-sm text-zinc-500">
-          Belum ada undangan. Mulai dari template gratis — kamu punya 1 undangan
-          gratis (masa edit 7 hari).
+        <div className="rounded-2xl border border-dashed border-line p-12 text-center">
+          <p className="text-ink-soft">
+            Belum ada undangan. Undangan pertamamu gratis (masa edit 7 hari).
+          </p>
+          <ButtonLink href="/invitations/new" className="mt-4">
+            Mulai dari template
+          </ButtonLink>
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2">
           {mine.map((inv) => (
-            <li
-              key={inv.id}
-              className="rounded-lg border border-zinc-200 p-4 text-sm"
-            >
-              <p className="font-medium">{inv.eventTitle ?? inv.slug}</p>
-              <p className="text-zinc-500">
-                {inv.status} · {inv.plan}
-              </p>
-            </li>
+            <InvitationCard key={inv.id} invitation={inv} />
           ))}
         </ul>
       )}
+
+      <p className="text-xs text-muted">
+        <Link href="/settings" className="underline">
+          Pengaturan akun
+        </Link>
+      </p>
     </div>
   );
 }

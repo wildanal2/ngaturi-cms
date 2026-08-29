@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/cron/lock-expired-edits", "schedule": "0 1 * * *" },
+    { "path": "/api/cron/archive-expired", "schedule": "30 1 * * *" }
+  ]
+}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Logo } from "@/components/common/logo";
 import { ButtonLink } from "@/components/ui/button";
 
@@ -7,12 +8,12 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Logo />
         <nav className="hidden items-center gap-7 text-sm text-ink-soft sm:flex">
-          <a href="/templates" className="hover:text-ink">
+          <Link href="/templates" className="hover:text-ink">
             Template
-          </a>
-          <a href="/pricing" className="hover:text-ink">
+          </Link>
+          <Link href="/pricing" className="hover:text-ink">
             Harga
-          </a>
+          </Link>
         </nav>
         <div className="flex items-center gap-2">
           <ButtonLink href="/login" variant="ghost" size="sm">

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Logo } from "@/components/common/logo";
 
 export function SiteFooter() {
@@ -7,12 +8,12 @@ export function SiteFooter() {
         <Logo />
         <p>© {new Date().getFullYear()} Ngaturi. Undangan digital Indonesia.</p>
         <div className="flex gap-5">
-          <a href="/legal/privacy" className="hover:text-ink">
+          <Link href="/legal/privacy" className="hover:text-ink">
             Privasi
-          </a>
-          <a href="/legal/terms" className="hover:text-ink">
+          </Link>
+          <Link href="/legal/terms" className="hover:text-ink">
             Ketentuan
-          </a>
+          </Link>
         </div>
       </div>
     </footer>
