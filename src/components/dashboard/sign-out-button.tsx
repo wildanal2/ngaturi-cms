@@ -11,7 +11,7 @@ export function SignOutButton() {
         await signOut();
         router.push("/login");
       }}
-      className="rounded-md px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100"
+      className="rounded-lg px-3 py-1.5 text-sm text-ink-soft transition-colors hover:bg-cream-200"
     >
       Keluar
     </button>

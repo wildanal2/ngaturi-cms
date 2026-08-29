@@ -1,31 +1,103 @@
-import Link from "next/link";
+import { ButtonLink } from "@/components/ui/button";
+import { SiteHeader } from "@/components/marketing/site-header";
+import { SiteFooter } from "@/components/marketing/site-footer";
+
+const FEATURES = [
+  {
+    title: "Builder per-bagian",
+    body: "Susun undangan dari blok siap pakai — sampul, mempelai, acara, galeri, RSVP, ucapan. Ganti gaya sekali klik.",
+  },
+  {
+    title: "RSVP & buku tamu",
+    body: "Kumpulkan konfirmasi kehadiran dan ucapan doa dalam satu tempat, lengkap dengan moderasi anti-spam.",
+  },
+  {
+    title: "Undangan per-tamu",
+    body: "Bagikan tautan personal — nama tamu tampil di sampul, jumlah tamu terkontrol.",
+  },
+  {
+    title: "Cepat & ringan",
+    body: "Halaman undangan dioptimalkan untuk dibuka di WhatsApp: hitungan mundur, musik, galeri, semua mulus.",
+  },
+];
+
+const STEPS = [
+  ["Pilih template", "Mulai dari desain gratis yang sudah rapi."],
+  ["Isi & atur", "Ubah teks, foto, dan urutan bagian di builder."],
+  ["Bagikan", "Publikasikan, salin tautan, sebar via WhatsApp & QR."],
+];
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-24 text-center">
-      <div className="space-y-4">
-        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-          Undangan digital yang cantik, cepat, terjangkau
-        </h1>
-        <p className="mx-auto max-w-xl text-lg text-zinc-600">
-          Buat undangan pernikahan, khitan, aqiqah, dan tahlil dalam hitungan
-          menit — tanpa skill desain. Undangan pertama gratis.
-        </p>
-      </div>
-      <div className="flex gap-3">
-        <Link
-          href="/login"
-          className="rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white hover:bg-zinc-700"
-        >
-          Mulai gratis
-        </Link>
-        <Link
-          href="/templates"
-          className="rounded-full border border-zinc-300 px-6 py-3 text-sm font-medium hover:bg-zinc-50"
-        >
-          Lihat template
-        </Link>
-      </div>
-    </main>
+    <>
+      <SiteHeader />
+
+      <main className="flex-1">
+        {/* Hero */}
+        <section className="mx-auto max-w-6xl px-5 pt-16 pb-20 sm:pt-24">
+          <p className="mb-4 text-sm font-medium tracking-wide text-forest-400 uppercase">
+            Undangan digital · sejak hari ini
+          </p>
+          <h1 className="max-w-3xl text-4xl leading-[1.1] text-ink sm:text-6xl">
+            Undangan digital yang tenang, elegan, dan mudah dibuat.
+          </h1>
+          <p className="mt-6 max-w-xl text-lg text-ink-soft">
+            Pernikahan, khitan, aqiqah, tahlil — rangkai undangan yang indah
+            dalam hitungan menit. Undangan pertama gratis.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <ButtonLink href="/login" size="lg">
+              Buat undangan gratis
+            </ButtonLink>
+            <ButtonLink href="/templates" variant="outline" size="lg">
+              Lihat template
+            </ButtonLink>
+          </div>
+
+          <div className="mt-16 grid gap-4 rounded-2xl border border-line bg-paper p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] sm:grid-cols-3">
+            {STEPS.map(([t, d], i) => (
+              <div key={t} className="rounded-xl bg-cream-200/60 p-5">
+                <span className="font-display text-2xl text-forest">
+                  {i + 1}
+                </span>
+                <h3 className="mt-2 text-lg">{t}</h3>
+                <p className="mt-1 text-sm text-ink-soft">{d}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Features */}
+        <section className="border-y border-line/70 bg-cream-200/40">
+          <div className="mx-auto max-w-6xl px-5 py-20">
+            <h2 className="text-3xl sm:text-4xl">Semua yang kamu butuhkan</h2>
+            <div className="mt-10 grid gap-6 sm:grid-cols-2">
+              {FEATURES.map((f) => (
+                <div
+                  key={f.title}
+                  className="rounded-2xl border border-line bg-paper p-6"
+                >
+                  <h3 className="text-xl">{f.title}</h3>
+                  <p className="mt-2 text-ink-soft">{f.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="mx-auto max-w-4xl px-5 py-24 text-center">
+          <h2 className="text-3xl sm:text-4xl">Siap membuat undanganmu?</h2>
+          <p className="mx-auto mt-4 max-w-md text-ink-soft">
+            Masuk dengan Google, pilih template, dan bagikan hari ini juga.
+          </p>
+          <ButtonLink href="/login" size="lg" className="mt-8">
+            Mulai sekarang
+          </ButtonLink>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </>
   );
 }
