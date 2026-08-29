@@ -1,10 +1,19 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, Trash2, Upload, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Upload,
+  ChevronUp,
+  ChevronDown,
+  Loader2,
+  Crop,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { Field } from "@/sections/types";
 import { getDeep } from "@/stores/builder-store";
+import { CropDialog, type CropResult } from "./crop-dialog";
 
 const inputCls =
   "w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm outline-none focus:border-forest";
@@ -262,27 +271,51 @@ function ImageInput({
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  // pending file waiting for the crop dialog, or an existing URL to re-crop
+  const [pending, setPending] = useState<
+    { kind: "file"; file: File; url: string } | { kind: "url"; url: string } | null
+  >(null);
 
-  async function upload(file: File) {
-    if (!file.type.startsWith("image/")) {
-      toast.error("File harus berupa gambar.");
-      return;
-    }
+  async function send(body: FormData) {
     setBusy(true);
     try {
-      const fd = new FormData();
-      fd.set("file", file);
-      fd.set("invitationId", invitationId);
-      const res = await fetch("/api/uploads", { method: "POST", body: fd });
+      const res = await fetch("/api/uploads", { method: "POST", body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Gagal upload");
       onChange(data.publicUrl);
-      toast.success("Foto diunggah & dioptimasi");
+      toast.success("Foto disimpan & dioptimasi");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal upload");
     } finally {
       setBusy(false);
+      setPending(null);
     }
+  }
+
+  function pickFile(f: File) {
+    if (!f.type.startsWith("image/")) {
+      toast.error("File harus berupa gambar.");
+      return;
+    }
+    setPending({ kind: "file", file: f, url: URL.createObjectURL(f) });
+  }
+
+  function onCrop(crop: CropResult) {
+    if (!pending) return;
+    const fd = new FormData();
+    fd.set("invitationId", invitationId);
+    fd.set("crop", JSON.stringify(crop));
+    if (pending.kind === "file") fd.set("file", pending.file);
+    else fd.set("sourceUrl", pending.url);
+    send(fd);
+  }
+
+  function skipCrop() {
+    if (!pending || pending.kind !== "file") return;
+    const fd = new FormData();
+    fd.set("invitationId", invitationId);
+    fd.set("file", pending.file);
+    send(fd);
   }
 
   return (
@@ -310,14 +343,24 @@ function ImageInput({
           {value ? "Ganti foto" : "Unggah foto"}
         </button>
         {value ? (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange("")}
-            className="rounded-lg border border-line px-2 text-muted hover:bg-cream-200"
-          >
-            <Trash2 size={15} />
-          </button>
+          <>
+            <button
+              type="button"
+              disabled={disabled || busy}
+              onClick={() => setPending({ kind: "url", url: value })}
+              className="flex items-center gap-1 rounded-lg border border-line px-2.5 text-sm text-ink-soft hover:bg-cream-200"
+            >
+              <Crop size={14} /> Atur
+            </button>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onChange("")}
+              className="rounded-lg border border-line px-2 text-muted hover:bg-cream-200"
+            >
+              <Trash2 size={15} />
+            </button>
+          </>
         ) : null}
       </div>
       <input
@@ -327,10 +370,26 @@ function ImageInput({
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) upload(f);
+          if (f) pickFile(f);
           e.target.value = "";
         }}
       />
+
+      {pending ? (
+        <CropDialog
+          src={pending.url}
+          onCancel={() => {
+            if (pending.kind === "file") URL.revokeObjectURL(pending.url);
+            setPending(null);
+          }}
+          onConfirm={onCrop}
+          extraAction={
+            pending.kind === "file"
+              ? { label: "Pakai tanpa crop", onClick: skipCrop }
+              : undefined
+          }
+        />
+      ) : null}
     </div>
   );
 }

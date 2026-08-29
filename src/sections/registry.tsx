@@ -4,6 +4,7 @@ import {
   HeroSplit,
   HeroMinimal,
   HeroArch,
+  HeroBotanical,
   CoupleSideBySide,
   CoupleStacked,
   CouplePolaroid,
@@ -30,6 +31,8 @@ import {
 } from "./countdown";
 import { RsvpFormCard } from "./rsvp-form";
 import { GuestbookCards } from "./guestbook";
+import { MusicSection } from "./music";
+import { NavigationBar } from "./navigation";
 import {
   HeroProps,
   CoupleIntroProps,
@@ -42,6 +45,8 @@ import {
   GiftProps,
   MapProps,
   ClosingProps,
+  MusicProps2,
+  NavigationProps,
 } from "./schema";
 
 const nowPlus = (days: number) =>
@@ -236,6 +241,21 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
         ],
         defaultProps: {
           couple_names: "Dinda & Raka",
+          tagline: "The Wedding Of",
+          event_date: nowPlus(45),
+        },
+      },
+      botanical: {
+        name: "Botani (bunga)",
+        description: "Foto bulat + ornamen bunga di sudut",
+        component: HeroBotanical,
+        propsSchema: HeroProps,
+        fields: [
+          ...heroBase,
+          { kind: "image", key: "background_image", label: "Foto" },
+        ],
+        defaultProps: {
+          couple_names: "Kana & Arya",
           tagline: "The Wedding Of",
           event_date: nowPlus(45),
         },
@@ -585,6 +605,50 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
           { kind: "url", key: "maps_url", label: "Link Google Maps" },
         ],
         defaultProps: { venue_name: "Gedung Serbaguna", address: "Jl. Melati No. 12, Bandung" },
+      },
+    },
+  },
+
+  music: {
+    type: "music",
+    name: "Musik Latar",
+    description: "Tombol musik mengambang, autoplay saat undangan dibuka",
+    icon: "Music",
+    category: "footer",
+    variants: {
+      floating: {
+        name: "Tombol Mengambang",
+        component: MusicSection,
+        propsSchema: MusicProps2,
+        fields: [
+          {
+            kind: "url",
+            key: "audio_url",
+            label: "URL file audio (.mp3)",
+            help: "mis. dari Dropbox/Drive (direct link) atau storage lain",
+          },
+          { kind: "text", key: "title", label: "Judul lagu (opsional)" },
+          { kind: "text", key: "artist", label: "Artis (opsional)" },
+        ],
+        defaultProps: { autoplay: true },
+      },
+    },
+  },
+
+  navigation: {
+    type: "navigation",
+    name: "Navigasi",
+    description: "Bar navigasi mengambang ke tiap bagian",
+    icon: "Menu",
+    category: "footer",
+    variants: {
+      bar: {
+        name: "Bar Bawah",
+        description: "Ikon otomatis mengikuti bagian yang ada",
+        component: NavigationBar,
+        propsSchema: NavigationProps,
+        fields: [],
+        defaultProps: {},
       },
     },
   },

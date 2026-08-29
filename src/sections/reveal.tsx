@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { AnimationKind } from "./types";
 
 /**
  * Reveals a section (fade / slide / zoom) the first time it scrolls into
@@ -10,11 +11,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  */
 export function Reveal({
   children,
-  animation = "fade",
+  animation = "fade-up",
   immediate = false,
 }: {
   children: ReactNode;
-  animation?: "none" | "fade" | "slide" | "zoom";
+  animation?: AnimationKind;
   immediate?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);

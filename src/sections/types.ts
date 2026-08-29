@@ -1,12 +1,22 @@
 import type { ComponentType } from "react";
 import type { ZodType } from "zod";
 
+export type AnimationKind =
+  | "none"
+  | "fade"
+  | "fade-up"
+  | "fade-down"
+  | "fade-left"
+  | "fade-right"
+  | "zoom"
+  | "flip";
+
 export interface GlobalSettings {
   font_family: string;
   color_primary: string;
   color_secondary: string;
   color_background: string;
-  animation?: "none" | "fade" | "slide" | "zoom";
+  animation?: AnimationKind;
   music_url?: string;
   is_rtl?: boolean;
 }
@@ -31,6 +41,8 @@ export interface SectionRenderProps {
   invitationId?: string;
   guestName?: string | null;
   isPreview?: boolean;
+  /** ordered list of every section type in this invitation */
+  siblingTypes?: string[];
 }
 
 /** A "Gaya" sub-choice within a component (e.g. accent treatment). */

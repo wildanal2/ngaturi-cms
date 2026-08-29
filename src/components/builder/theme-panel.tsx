@@ -97,37 +97,32 @@ export function ThemePanel() {
       <label className="block text-sm">
         <span className="mb-1 block text-ink-soft">Animasi saat scroll</span>
         <select
-          value={global.animation ?? "fade"}
+          value={global.animation ?? "fade-up"}
           disabled={locked}
           onChange={(e) =>
             setGlobal({
-              animation: e.target.value as
-                | "none"
-                | "fade"
-                | "slide"
-                | "zoom",
+              animation: e.target.value as NonNullable<
+                typeof global.animation
+              >,
             })
           }
           className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
         >
-          <option value="fade">Fade up</option>
-          <option value="slide">Slide in</option>
+          <option value="fade-up">Muncul dari bawah</option>
+          <option value="fade-down">Muncul dari atas</option>
+          <option value="fade-left">Geser dari kanan</option>
+          <option value="fade-right">Geser dari kiri</option>
           <option value="zoom">Zoom in</option>
+          <option value="flip">Flip</option>
+          <option value="fade">Fade halus</option>
           <option value="none">Tanpa animasi</option>
         </select>
       </label>
 
-      <label className="block text-sm">
-        <span className="mb-1 block text-ink-soft">URL musik latar (opsional)</span>
-        <input
-          type="url"
-          value={global.music_url ?? ""}
-          disabled={locked}
-          onChange={(e) => setGlobal({ music_url: e.target.value })}
-          placeholder="https://…/lagu.mp3"
-          className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
-        />
-      </label>
+      <p className="text-xs text-muted">
+        Musik latar & navigasi kini jadi bagian tersendiri — tambahkan lewat
+        tombol &ldquo;Tambah bagian&rdquo;.
+      </p>
     </div>
   );
 }

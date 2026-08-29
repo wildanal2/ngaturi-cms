@@ -92,12 +92,33 @@ export const ClosingProps = z.object({
   photo: z.string().optional(),
 });
 
+export const MusicProps2 = z.object({
+  audio_url: z.string().optional(),
+  title: z.string().optional(),
+  artist: z.string().optional(),
+  autoplay: z.boolean().optional(),
+});
+
+export const NavigationProps = z.object({});
+
 export const GlobalSettingsSchema = z.object({
   font_family: z.string().default("Fraunces"),
   color_primary: z.string().default("#34503f"),
   color_secondary: z.string().default("#7a2e3c"),
   color_background: z.string().default("#fbf8f3"),
-  animation: z.enum(["none", "fade", "slide", "zoom"]).default("fade"),
+  animation: z
+    .enum([
+      "none",
+      "fade",
+      "fade-up",
+      "fade-down",
+      "fade-left",
+      "fade-right",
+      "zoom",
+      "flip",
+    ])
+    .catch("fade-up")
+    .default("fade-up"),
   music_url: z.string().optional(),
   is_rtl: z.boolean().default(false),
 });
@@ -114,6 +135,8 @@ export const SECTION_PROPS_SCHEMAS: Record<string, z.ZodType> = {
   gift: GiftProps,
   "map-location": MapProps,
   closing: ClosingProps,
+  music: MusicProps2,
+  navigation: NavigationProps,
 };
 
 export const SectionSchema = z.object({

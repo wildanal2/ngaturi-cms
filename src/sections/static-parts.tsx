@@ -7,6 +7,7 @@ import {
   formatTimeRange,
 } from "./shared";
 import styles from "./static-parts.module.css";
+import { CornerFloral, LeafSprig } from "./ornaments";
 
 /* ---------- HERO ---------- */
 
@@ -707,6 +708,50 @@ export function ClosingPhoto({ props }: SectionRenderProps) {
           {p.names ?? "Dinda & Raka"}
         </p>
       </div>
+    </section>
+  );
+}
+
+/* HERO — botanical framed photo (original SVG ornaments) */
+export function HeroBotanical({ props, guestName }: SectionRenderProps) {
+  const p = props as {
+    couple_names?: string;
+    event_date?: string;
+    tagline?: string;
+    background_image?: string;
+  };
+  return (
+    <section className="relative overflow-hidden bg-[var(--inv-bg)] px-6 py-20 text-center text-[var(--inv-primary)]">
+      <CornerFloral className="pointer-events-none absolute -top-2 -left-2 h-28 w-28 text-[var(--inv-secondary)] opacity-70" />
+      <CornerFloral className="pointer-events-none absolute -right-2 -bottom-2 h-28 w-28 -scale-x-100 -scale-y-100 text-[var(--inv-secondary)] opacity-70" />
+      {guestName ? (
+        <p className="mb-3 text-xs tracking-widest uppercase opacity-80">
+          Kepada Yth. {guestName}
+        </p>
+      ) : null}
+      <p className="text-sm tracking-[0.3em] uppercase">
+        {p.tagline ?? "The Wedding Of"}
+      </p>
+      <div className="mx-auto mt-6 w-56 overflow-hidden rounded-full border-4 border-[color-mix(in_srgb,var(--inv-secondary)_50%,transparent)]">
+        {p.background_image ? (
+          <Image
+            src={p.background_image}
+            alt=""
+            width={224}
+            height={280}
+            className="h-64 w-full object-cover"
+          />
+        ) : (
+          <div className="h-64 w-full bg-[color-mix(in_srgb,var(--inv-primary)_14%,transparent)]" />
+        )}
+      </div>
+      <h1 className="mt-6 font-[family-name:var(--inv-font)] text-4xl">
+        {p.couple_names ?? "Nama Mempelai"}
+      </h1>
+      <LeafSprig className="mx-auto mt-3 h-5 w-40 text-[var(--inv-secondary)]" />
+      <p className="mt-3 text-sm text-[var(--inv-ink)]">
+        {formatEventDate(p.event_date)}
+      </p>
     </section>
   );
 }

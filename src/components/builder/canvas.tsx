@@ -14,6 +14,7 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   const select = useBuilder((s) => s.select);
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
+  const siblingTypes = ordered.map((s) => s.type);
 
   return (
     <div className="px-6 py-8">
@@ -59,6 +60,7 @@ export function Canvas({ invitationId }: { invitationId: string }) {
                   global={global}
                   invitationId={invitationId}
                   isPreview
+                  siblingTypes={siblingTypes}
                 />
               </div>
             );

@@ -25,18 +25,48 @@ export async function POST(req: Request) {
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
+  const sourceUrl = String(form?.get("sourceUrl") ?? "");
   const invitationId = String(form?.get("invitationId") ?? "");
-  if (!(file instanceof File) || !invitationId) {
+  const cropRaw = form?.get("crop");
+  if (!invitationId || (!(file instanceof File) && !sourceUrl)) {
     return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
   }
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "File harus gambar." }, { status: 415 });
+  // SSRF guard: re-crop only from our own storage
+  if (
+    sourceUrl &&
+    !sourceUrl.startsWith(env.S3_PUBLIC_URL.replace(/\/$/, ""))
+  ) {
+    return NextResponse.json({ error: "Sumber tidak valid." }, { status: 400 });
   }
-  if (file.size > env.MAX_UPLOAD_MB * 1024 * 1024) {
-    return NextResponse.json(
-      { error: `Ukuran maksimal ${env.MAX_UPLOAD_MB} MB.` },
-      { status: 413 },
-    );
+  if (file instanceof File) {
+    if (!file.type.startsWith("image/")) {
+      return NextResponse.json({ error: "File harus gambar." }, { status: 415 });
+    }
+    if (file.size > env.MAX_UPLOAD_MB * 1024 * 1024) {
+      return NextResponse.json(
+        { error: `Ukuran maksimal ${env.MAX_UPLOAD_MB} MB.` },
+        { status: 413 },
+      );
+    }
+  }
+
+  let crop: { x: number; y: number; width: number; height: number } | null =
+    null;
+  if (typeof cropRaw === "string" && cropRaw) {
+    try {
+      const c = JSON.parse(cropRaw);
+      if (
+        [c.x, c.y, c.width, c.height].every(
+          (n) => typeof n === "number" && Number.isFinite(n),
+        ) &&
+        c.width > 0 &&
+        c.height > 0
+      ) {
+        crop = c;
+      }
+    } catch {
+      /* ignore malformed crop */
+    }
   }
 
   const [inv] = await db
@@ -57,15 +87,32 @@ export async function POST(req: Request) {
   let width: number | undefined;
   let height: number | undefined;
   try {
-    const input = Buffer.from(await file.arrayBuffer());
-    const pipeline = sharp(input, { failOn: "none" })
-      .rotate()
-      .resize(MAX_EDGE, MAX_EDGE, {
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .webp({ quality: WEBP_QUALITY });
-    const result = await pipeline.toBuffer({ resolveWithObject: true });
+    let input: Buffer;
+    if (file instanceof File) {
+      input = Buffer.from(await file.arrayBuffer());
+    } else {
+      const r = await fetch(sourceUrl);
+      if (!r.ok) throw new Error("source fetch failed");
+      input = Buffer.from(await r.arrayBuffer());
+    }
+
+    let pipeline = sharp(input, { failOn: "none" }).rotate();
+
+    if (crop) {
+      const meta = await sharp(input).rotate().metadata();
+      const iw = meta.width ?? 0;
+      const ih = meta.height ?? 0;
+      const left = Math.max(0, Math.min(crop.x, iw - 1));
+      const top = Math.max(0, Math.min(crop.y, ih - 1));
+      const w = Math.max(1, Math.min(crop.width, iw - left));
+      const h = Math.max(1, Math.min(crop.height, ih - top));
+      pipeline = pipeline.extract({ left, top, width: w, height: h });
+    }
+
+    const result = await pipeline
+      .resize(MAX_EDGE, MAX_EDGE, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer({ resolveWithObject: true });
     out = result.data;
     width = result.info.width;
     height = result.info.height;
@@ -94,7 +141,8 @@ export async function POST(req: Request) {
     .values({
       userId: session.user.id,
       invitationId,
-      originalFilename: file.name.slice(0, 255),
+      originalFilename:
+        file instanceof File ? file.name.slice(0, 255) : "recrop.webp",
       fileKey: key,
       fileUrl: url,
       fileSize: out.length,

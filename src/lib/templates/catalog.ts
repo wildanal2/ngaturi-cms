@@ -20,6 +20,46 @@ const s = (
 
 export const TEMPLATES: TemplatePreset[] = [
   {
+    id: "kana-botanical",
+    name: "Kana Botanical",
+    description: "Sage lembut dengan ornamen bunga & navigasi bawah.",
+    category: "wedding",
+    tier: "free",
+    thumbnail: "/templates/kana-botanical.svg",
+    global_settings: {
+      font_family: "Fraunces",
+      color_primary: "#5c6f52",
+      color_secondary: "#a4715a",
+      color_background: "#f6f4ee",
+      animation: "fade-up",
+    },
+    sections: [
+      s("hero", "botanical", 0, {
+        couple_names: "Kana & Arya",
+        tagline: "The Wedding Of",
+        event_date: new Date(Date.now() + 50 * 86400000).toISOString(),
+      }),
+      s("quote", "bordered", 1, {
+        text: "Semoga Allah menyatukan yang berserak dan memberkahi keduanya.",
+        source: "Doa pernikahan",
+      }),
+      s("couple-intro", "stacked", 2, {
+        bride: { name: "Kana", full_name: "Kana Maheswari", child_order: "Putri pertama" },
+        groom: { name: "Arya", full_name: "Arya Danendra", child_order: "Putra kedua" },
+      }),
+      s("countdown", "elegant", 3, {}),
+      s("event-details", "cards", 4, {}),
+      s("map-location", "button", 5, {}),
+      s("gallery", "carousel", 6, { images: [] }),
+      s("rsvp", "form-card", 7, {}),
+      s("guestbook", "cards", 8, {}),
+      s("gift", "minimal", 9, {}),
+      s("closing", "simple", 10, { names: "Kana & Arya" }),
+      s("music", "floating", 11, {}),
+      s("navigation", "bar", 12, {}),
+    ],
+  },
+  {
     id: "elegant-forest",
     name: "Elegant Forest",
     description: "Hijau daun yang tenang, cocok untuk pernikahan outdoor.",
@@ -31,7 +71,7 @@ export const TEMPLATES: TemplatePreset[] = [
       color_primary: "#34503f",
       color_secondary: "#7a2e3c",
       color_background: "#fbf8f3",
-      animation: "fade",
+      animation: "fade-up",
     },
     sections: [
       s("hero", "centered", 0, {
@@ -67,7 +107,7 @@ export const TEMPLATES: TemplatePreset[] = [
       color_primary: "#7a2e3c",
       color_secondary: "#b08a4f",
       color_background: "#faf6f0",
-      animation: "fade",
+      animation: "fade-up",
     },
     sections: [
       s("hero", "split", 0, { couple_names: "Fatimah & Umar", tagline: "بسم الله" }),
@@ -97,7 +137,7 @@ export const TEMPLATES: TemplatePreset[] = [
       color_primary: "#2b6cb0",
       color_secondary: "#dd6b20",
       color_background: "#f7fafc",
-      animation: "slide",
+      animation: "fade-left",
     },
     sections: [
       s("hero", "centered", 0, {

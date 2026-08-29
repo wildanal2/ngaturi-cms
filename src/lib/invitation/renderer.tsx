@@ -35,6 +35,7 @@ export function InvitationRenderer({
   const ordered = [...sections]
     .filter((s) => s.visible !== false)
     .sort((a, b) => a.order - b.order);
+  const siblingTypes = ordered.map((s) => s.type);
 
   return (
     <div
@@ -58,6 +59,7 @@ export function InvitationRenderer({
                 invitationId={invitationId}
                 guestName={guestName}
                 isPreview={isPreview}
+                siblingTypes={siblingTypes}
               />
             </div>
           </Reveal>

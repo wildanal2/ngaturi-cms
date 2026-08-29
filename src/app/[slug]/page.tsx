@@ -12,7 +12,6 @@ import {
   markGuestOpened,
 } from "@/lib/invitation/query";
 import { InvitationCover } from "@/components/invitation/cover";
-import { MusicPlayer } from "@/components/invitation/music-player";
 
 export async function generateMetadata({
   params,
@@ -98,9 +97,6 @@ export default async function InvitationPage({
         <p className="bg-white py-4 text-center text-xs text-gray-400">
           Dibuat dengan Ngaturi · buat undanganmu di ngaturi.com
         </p>
-      ) : null}
-      {inv.global.music_url ? (
-        <MusicPlayer src={inv.global.music_url} />
       ) : null}
     </>
   );

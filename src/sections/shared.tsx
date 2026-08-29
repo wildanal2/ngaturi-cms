@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
+import { Divider } from "./ornaments";
 
 export function SectionShell({
   children,
@@ -25,9 +26,12 @@ export function SectionShell({
 
 export function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mb-8 text-center font-[family-name:var(--inv-font)] text-2xl text-[var(--inv-primary)]">
-      {children}
-    </h2>
+    <div className="mb-8 flex flex-col items-center gap-2">
+      <h2 className="text-center font-[family-name:var(--inv-font)] text-2xl text-[var(--inv-primary)]">
+        {children}
+      </h2>
+      <Divider className="h-4 w-40 text-[var(--inv-secondary)] opacity-70" />
+    </div>
   );
 }
 

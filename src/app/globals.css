@@ -54,79 +54,75 @@ h3 {
   letter-spacing: -0.01em;
 }
 
-/* ---- invitation section reveal animations ---- */
-@keyframes inv-fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+/* ---- invitation section reveal animations (AOS-style) ---- */
+@keyframes inv-a-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-@keyframes inv-zoom-in {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+@keyframes inv-a-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
 }
-@keyframes inv-slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(-28px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+@keyframes inv-a-down {
+  from { opacity: 0; transform: translateY(-28px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes inv-a-left {
+  from { opacity: 0; transform: translateX(36px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes inv-a-right {
+  from { opacity: 0; transform: translateX(-36px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes inv-a-zoom {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes inv-a-flip {
+  from { opacity: 0; transform: perspective(700px) rotateX(28deg); }
+  to { opacity: 1; transform: none; }
 }
 
 /* only hide while a reveal wrapper is present AND not yet in view.
    Without a [data-reveal] ancestor (e.g. the builder canvas) everything
    stays fully visible. */
-[data-reveal]:not(.is-visible) {
-  opacity: 0;
-}
-[data-reveal].is-visible {
-  animation: inv-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-[data-reveal="zoom"].is-visible {
-  animation-name: inv-zoom-in;
-}
-[data-reveal="slide"].is-visible {
-  animation-name: inv-slide-in;
-}
-
-/* per-item stagger inside a section */
+[data-reveal]:not(.is-visible),
 [data-reveal]:not(.is-visible) .inv-stagger > * {
   opacity: 0;
 }
+
+[data-reveal].is-visible,
 [data-reveal].is-visible .inv-stagger > * {
-  animation: inv-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-duration: 0.7s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
 }
-.inv-stagger > *:nth-child(1) {
-  animation-delay: 0.05s;
+[data-reveal].is-visible .inv-stagger > * {
+  animation-duration: 0.55s;
 }
-.inv-stagger > *:nth-child(2) {
-  animation-delay: 0.12s;
-}
-.inv-stagger > *:nth-child(3) {
-  animation-delay: 0.19s;
-}
-.inv-stagger > *:nth-child(4) {
-  animation-delay: 0.26s;
-}
-.inv-stagger > *:nth-child(5) {
-  animation-delay: 0.33s;
-}
-.inv-stagger > *:nth-child(n + 6) {
-  animation-delay: 0.4s;
-}
+
+[data-reveal="fade"].is-visible,
+[data-reveal="fade"].is-visible .inv-stagger > * { animation-name: inv-a-fade; }
+[data-reveal="fade-up"].is-visible,
+[data-reveal="fade-up"].is-visible .inv-stagger > * { animation-name: inv-a-up; }
+[data-reveal="fade-down"].is-visible,
+[data-reveal="fade-down"].is-visible .inv-stagger > * { animation-name: inv-a-down; }
+[data-reveal="fade-left"].is-visible,
+[data-reveal="fade-left"].is-visible .inv-stagger > * { animation-name: inv-a-left; }
+[data-reveal="fade-right"].is-visible,
+[data-reveal="fade-right"].is-visible .inv-stagger > * { animation-name: inv-a-right; }
+[data-reveal="zoom"].is-visible,
+[data-reveal="zoom"].is-visible .inv-stagger > * { animation-name: inv-a-zoom; }
+[data-reveal="flip"].is-visible,
+[data-reveal="flip"].is-visible .inv-stagger > * { animation-name: inv-a-flip; }
+
+.inv-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.inv-stagger > *:nth-child(2) { animation-delay: 0.12s; }
+.inv-stagger > *:nth-child(3) { animation-delay: 0.19s; }
+.inv-stagger > *:nth-child(4) { animation-delay: 0.26s; }
+.inv-stagger > *:nth-child(5) { animation-delay: 0.33s; }
+.inv-stagger > *:nth-child(n + 6) { animation-delay: 0.4s; }
 
 @media (prefers-reduced-motion: reduce) {
   [data-reveal],
