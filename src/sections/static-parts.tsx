@@ -16,10 +16,21 @@ export function HeroCentered({ props, guestName }: SectionRenderProps) {
     event_date?: string;
     tagline?: string;
     background_image?: string;
-    overlay_opacity?: number;
+    s_overlay?: string;
+    s_text_pos?: string;
   };
+  const overlay =
+    p.s_overlay === "light" ? 0.25 : p.s_overlay === "dark" ? 0.65 : 0.45;
+  const justify =
+    p.s_text_pos === "top"
+      ? "justify-start pt-24"
+      : p.s_text_pos === "bottom"
+        ? "justify-end pb-24"
+        : "justify-center";
   return (
-    <section className="relative flex min-h-[85vh] flex-col items-center justify-center px-6 text-center text-white">
+    <section
+      className={`relative flex min-h-[85vh] flex-col items-center ${justify} px-6 text-center text-white`}
+    >
       {p.background_image ? (
         <Image
           src={p.background_image}
@@ -31,10 +42,7 @@ export function HeroCentered({ props, guestName }: SectionRenderProps) {
       ) : (
         <div className="absolute inset-0 bg-[var(--inv-primary)]" />
       )}
-      <div
-        className="absolute inset-0 bg-black"
-        style={{ opacity: p.overlay_opacity ?? 0.45 }}
-      />
+      <div className="absolute inset-0 bg-black" style={{ opacity: overlay }} />
       <div className="relative">
         {guestName ? (
           <p className="mb-6 text-sm tracking-widest uppercase opacity-90">
@@ -63,10 +71,14 @@ export function HeroSplit({ props, guestName }: SectionRenderProps) {
     event_date?: string;
     tagline?: string;
     background_image?: string;
+    s_photo_side?: string;
   };
+  const photoRight = p.s_photo_side === "right";
   return (
     <section className="grid min-h-[80vh] sm:grid-cols-2">
-      <div className="relative min-h-[40vh]">
+      <div
+        className={`relative min-h-[40vh] ${photoRight ? "sm:order-2" : ""}`}
+      >
         {p.background_image ? (
           <Image
             src={p.background_image}
@@ -110,7 +122,20 @@ type Person = {
   child_order?: string;
 };
 
-function PersonCard({ person }: { person: Person }) {
+const SHAPE_CLASS: Record<string, string> = {
+  circle: "rounded-full",
+  rounded: "rounded-2xl",
+  arch: "rounded-[50%_50%_1rem_1rem/60%_60%_1rem_1rem]",
+};
+
+function PersonCard({
+  person,
+  shape = "circle",
+}: {
+  person: Person;
+  shape?: string;
+}) {
+  const sc = SHAPE_CLASS[shape] ?? SHAPE_CLASS.circle;
   return (
     <div className="text-center">
       {person.photo ? (
@@ -119,10 +144,12 @@ function PersonCard({ person }: { person: Person }) {
           alt={person.name ?? ""}
           width={180}
           height={180}
-          className="mx-auto h-44 w-44 rounded-full object-cover"
+          className={`mx-auto h-44 w-44 object-cover ${sc}`}
         />
       ) : (
-        <div className="mx-auto h-44 w-44 rounded-full bg-[color-mix(in_srgb,var(--inv-primary)_12%,transparent)]" />
+        <div
+          className={`mx-auto h-44 w-44 bg-[color-mix(in_srgb,var(--inv-primary)_12%,transparent)] ${sc}`}
+        />
       )}
       <h3 className="mt-4 font-[family-name:var(--inv-font)] text-2xl text-[var(--inv-primary)]">
         {person.full_name || person.name}
@@ -142,29 +169,29 @@ function PersonCard({ person }: { person: Person }) {
 }
 
 export function CoupleSideBySide({ props }: SectionRenderProps) {
-  const p = props as { bride?: Person; groom?: Person };
+  const p = props as { bride?: Person; groom?: Person; s_photo_shape?: string };
   return (
     <SectionShell muted>
       <SectionTitle>Mempelai</SectionTitle>
-      <div className="grid gap-10 sm:grid-cols-2">
-        <PersonCard person={p.bride ?? {}} />
-        <PersonCard person={p.groom ?? {}} />
+      <div className="inv-stagger grid gap-10 sm:grid-cols-2">
+        <PersonCard person={p.bride ?? {}} shape={p.s_photo_shape} />
+        <PersonCard person={p.groom ?? {}} shape={p.s_photo_shape} />
       </div>
     </SectionShell>
   );
 }
 
 export function CoupleStacked({ props }: SectionRenderProps) {
-  const p = props as { bride?: Person; groom?: Person };
+  const p = props as { bride?: Person; groom?: Person; s_photo_shape?: string };
   return (
     <SectionShell>
       <SectionTitle>Mempelai</SectionTitle>
-      <div className="space-y-12">
-        <PersonCard person={p.bride ?? {}} />
+      <div className="inv-stagger space-y-12">
+        <PersonCard person={p.bride ?? {}} shape={p.s_photo_shape} />
         <p className="text-center font-[family-name:var(--inv-font)] text-3xl text-[var(--inv-secondary)]">
           &amp;
         </p>
-        <PersonCard person={p.groom ?? {}} />
+        <PersonCard person={p.groom ?? {}} shape={p.s_photo_shape} />
       </div>
     </SectionShell>
   );
@@ -231,14 +258,21 @@ export function GalleryGrid({ props }: SectionRenderProps) {
   const p = props as {
     images?: Array<{ url: string; caption?: string }>;
     columns?: number;
+    s_gap?: string;
+    s_radius?: string;
   };
   const cols = p.columns ?? 3;
+  const gap = p.s_gap === "loose" ? "0.75rem" : "0.25rem";
+  const radius = p.s_radius === "sharp" ? "" : "rounded-lg";
   return (
     <SectionShell muted>
       <SectionTitle>Galeri</SectionTitle>
       <div
-        className="inv-stagger grid gap-2"
-        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+        className="inv-stagger grid"
+        style={{
+          gap,
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+        }}
       >
         {(p.images ?? []).map((img, i) => (
           <Image
@@ -247,7 +281,7 @@ export function GalleryGrid({ props }: SectionRenderProps) {
             alt={img.caption ?? ""}
             width={400}
             height={400}
-            className="aspect-square w-full rounded-lg object-cover"
+            className={`aspect-square w-full object-cover ${radius}`}
           />
         ))}
       </div>
@@ -324,7 +358,9 @@ export function HeroMinimal({ props, guestName }: SectionRenderProps) {
     couple_names?: string;
     event_date?: string;
     tagline?: string;
+    s_scale?: string;
   };
+  const size = p.s_scale === "lg" ? "text-5xl" : "text-6xl";
   return (
     <section className="flex min-h-[80vh] flex-col items-center justify-center bg-[var(--inv-bg)] px-6 py-20 text-center">
       {guestName ? (
@@ -335,7 +371,9 @@ export function HeroMinimal({ props, guestName }: SectionRenderProps) {
       <p className={styles.hHairline + " w-full max-w-[220px] text-xs tracking-[0.3em] uppercase"}>
         {p.tagline ?? "The Wedding Of"}
       </p>
-      <h1 className="mt-6 font-[family-name:var(--inv-font)] text-6xl leading-none text-[var(--inv-primary)]">
+      <h1
+        className={`mt-6 font-[family-name:var(--inv-font)] ${size} leading-none text-[var(--inv-primary)]`}
+      >
         {p.couple_names ?? "Nama Mempelai"}
       </h1>
       <p className="mt-6 text-[var(--inv-ink)]">{formatEventDate(p.event_date)}</p>
@@ -350,10 +388,11 @@ export function HeroArch({ props, guestName }: SectionRenderProps) {
     event_date?: string;
     tagline?: string;
     background_image?: string;
+    s_frame?: string;
   };
   return (
     <section className="bg-[var(--inv-bg)] px-6 py-16 text-center text-[var(--inv-primary)]">
-      <div className={styles.ornFrame}>
+      <div className={p.s_frame === "plain" ? "px-2 py-6" : styles.ornFrame}>
         {p.tagline ? (
           <p className="text-xs tracking-[0.3em] uppercase">{p.tagline}</p>
         ) : null}

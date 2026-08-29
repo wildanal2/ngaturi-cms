@@ -30,8 +30,10 @@ const schema = z.object({
   CRON_SECRET: z.string().min(1),
 
   // Optional (fitur menyusul)
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),
   MIDTRANS_SERVER_KEY: z.string().optional(),
+  NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: z.string().optional(),
   MIDTRANS_IS_PRODUCTION: z
     .string()
     .optional()

@@ -33,12 +33,24 @@ export interface SectionRenderProps {
   isPreview?: boolean;
 }
 
+/** A "Gaya" sub-choice within a component (e.g. accent treatment). */
+export interface StyleOption {
+  key: string; // stored in props as `s_<key>`
+  label: string;
+  options: { value: string; label: string }[];
+  default: string;
+}
+
 export interface VariantDefinition {
   name: string;
   description?: string;
   component: ComponentType<SectionRenderProps>;
   propsSchema: ZodType;
   defaultProps: Record<string, unknown>;
+  /** Editable content fields — differ per component. */
+  fields: Field[];
+  /** Optional visual sub-styles for this component. */
+  styleOptions?: StyleOption[];
   isPremium?: boolean;
 }
 
@@ -49,7 +61,6 @@ export interface SectionDefinition {
   icon: string; // lucide icon name
   category: "hero" | "content" | "interactive" | "footer";
   isPremium?: boolean;
-  fields: Field[];
   variants: Record<string, VariantDefinition>;
 }
 

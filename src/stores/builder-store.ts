@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { temporal } from "zundo";
 import { useStore } from "zustand";
 import type { GlobalSettings, SectionData } from "@/sections/types";
-import { SectionRegistry } from "@/sections/registry";
+import { SectionRegistry, variantDefaultProps } from "@/sections/registry";
 
 export type PreviewDevice = "mobile" | "tablet" | "desktop";
 
@@ -107,7 +107,7 @@ export const useBuilder = create<BuilderState>()(
             variant,
             order: 0,
             visible: true,
-            props: structuredClone(def.defaultProps),
+            props: variantDefaultProps(type, variant),
           };
           const list = [...s.sections];
           list.splice(atIndex ?? list.length, 0, section);
@@ -165,7 +165,21 @@ export const useBuilder = create<BuilderState>()(
 
       setVariant: (id, variant) =>
         set((s) => ({
-          sections: s.sections.map((x) => (x.id === id ? { ...x, variant } : x)),
+          sections: s.sections.map((x) => {
+            if (x.id !== id) return x;
+            // pertahankan isi yang cocok, tambahkan default styleOption baru
+            const merged = {
+              ...variantDefaultProps(x.type, variant),
+              ...x.props,
+            };
+            const nextDefaults = variantDefaultProps(x.type, variant);
+            for (const k of Object.keys(nextDefaults)) {
+              if (k.startsWith("s_") && !(k in x.props)) {
+                merged[k] = nextDefaults[k];
+              }
+            }
+            return { ...x, variant, props: merged };
+          }),
           dirty: true,
         })),
 

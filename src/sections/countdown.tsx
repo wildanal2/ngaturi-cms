@@ -171,8 +171,13 @@ export function CountdownPill({ props }: SectionRenderProps) {
 
 /* 5. elegant — large serif numbers, dot separators */
 export function CountdownElegant({ props }: SectionRenderProps) {
-  const p = props as { target_date?: string; message_expired?: string };
+  const p = props as {
+    target_date?: string;
+    message_expired?: string;
+    s_sep?: string;
+  };
   const t = useCountdown(p.target_date);
+  const showSep = p.s_sep !== "none";
   return (
     <SectionShell muted>
       {!t ? (
@@ -189,7 +194,7 @@ export function CountdownElegant({ props }: SectionRenderProps) {
                   {label}
                 </div>
               </div>
-              {i < UNITS.length - 1 ? (
+              {showSep && i < UNITS.length - 1 ? (
                 <span className="pb-4 text-2xl opacity-40">·</span>
               ) : null}
             </div>
