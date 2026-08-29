@@ -120,12 +120,12 @@ export default async function Home() {
                   href={`/${r.slug}`}
                   className="group overflow-hidden rounded-2xl border border-line bg-paper"
                 >
-                  <div className="relative aspect-[4/5] bg-cream-200">
+                  <div className="relative aspect-[1200/630] bg-cream-200">
                     <Image
                       src={r.image}
                       alt={r.title}
                       fill
-                      unoptimized={!r.hasPhoto}
+                      unoptimized
                       className="object-cover transition-transform group-hover:scale-105"
                       sizes="(max-width: 640px) 50vw, 25vw"
                     />

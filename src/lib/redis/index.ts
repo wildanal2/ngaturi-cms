@@ -8,6 +8,11 @@ declare global {
 
 export const redis =
   globalThis.__redisClient ??
-  new Redis(env.REDIS_URL, { maxRetriesPerRequest: 3, lazyConnect: false });
+  new Redis(env.REDIS_URL, {
+    maxRetriesPerRequest: 3,
+    // connect on first command, not at module load — keeps `next build`
+    // from opening a socket during page-data collection
+    lazyConnect: true,
+  });
 
 if (env.NODE_ENV !== "production") globalThis.__redisClient = redis;
