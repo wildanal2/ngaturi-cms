@@ -749,13 +749,13 @@ export function HeroBotanical({ props, guestName }: SectionRenderProps) {
       }}
     >
       <TopGarland
-        className={`pointer-events-none absolute inset-x-0 top-0 h-24 w-full ${orn} opacity-80`}
+        className={`inv-ornament inv-ornament--drift pointer-events-none absolute inset-x-0 top-0 h-24 w-full ${orn} opacity-80`}
       />
       <CornerFloral
-        className={`pointer-events-none absolute -bottom-6 -left-8 h-52 w-52 ${orn} opacity-90`}
+        className={`inv-ornament inv-ornament--slow pointer-events-none absolute -bottom-6 -left-8 h-52 w-52 ${orn} opacity-90`}
       />
       <CornerFloral
-        className={`pointer-events-none absolute -right-8 -bottom-6 h-52 w-52 -scale-x-100 ${orn} opacity-90`}
+        className={`inv-ornament inv-ornament--flip pointer-events-none absolute -right-8 -bottom-6 h-52 w-52 ${orn} opacity-90`}
       />
 
       <div className="relative">
@@ -789,7 +789,9 @@ export function HeroBotanical({ props, guestName }: SectionRenderProps) {
         <h1 className="mt-7 font-[family-name:var(--inv-font)] text-5xl">
           {p.couple_names ?? "Nama Mempelai"}
         </h1>
-        <LeafSprig className={`mx-auto mt-3 h-6 w-48 ${orn}`} />
+        <LeafSprig
+          className={`inv-ornament inv-ornament--drift mx-auto mt-3 h-6 w-48 ${orn}`}
+        />
         <p className="mt-3 text-sm opacity-90">{formatEventDate(p.event_date)}</p>
       </div>
     </section>

@@ -134,6 +134,57 @@ h3 {
   }
 }
 
+/* ---- living ornaments: gentle continuous motion ---- */
+@keyframes inv-sway {
+  0%,
+  100% {
+    transform: rotate(-1.6deg) translateY(0);
+  }
+  50% {
+    transform: rotate(1.6deg) translateY(-4px);
+  }
+}
+@keyframes inv-sway-flip {
+  0%,
+  100% {
+    transform: scaleX(-1) rotate(-1.6deg) translateY(0);
+  }
+  50% {
+    transform: scaleX(-1) rotate(1.6deg) translateY(-4px);
+  }
+}
+@keyframes inv-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+.inv-ornament {
+  animation: inv-sway 7s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+.inv-ornament--flip {
+  animation-name: inv-sway-flip;
+}
+.inv-ornament--drift {
+  animation-name: inv-drift;
+  animation-duration: 9s;
+}
+.inv-ornament--slow {
+  animation-duration: 11s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inv-ornament {
+    animation: none;
+  }
+}
+
 /* input styling inside rendered invitations */
 .inv-input {
   width: 100%;

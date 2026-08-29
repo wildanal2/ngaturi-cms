@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": { "deploymentEnabled": { "main": false } },
   "crons": [
     { "path": "/api/cron/lock-expired-edits", "schedule": "0 1 * * *" },
     { "path": "/api/cron/archive-expired", "schedule": "30 1 * * *" }

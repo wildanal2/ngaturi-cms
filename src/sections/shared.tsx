@@ -30,7 +30,7 @@ export function SectionTitle({ children }: { children: ReactNode }) {
       <h2 className="text-center font-[family-name:var(--inv-font)] text-2xl text-[var(--inv-primary)]">
         {children}
       </h2>
-      <Divider className="h-4 w-40 text-[var(--inv-secondary)] opacity-70" />
+      <Divider className="inv-ornament inv-ornament--drift h-4 w-40 text-[var(--inv-secondary)] opacity-70" />
     </div>
   );
 }
