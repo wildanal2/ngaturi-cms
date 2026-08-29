@@ -19,7 +19,11 @@ export const metadata: Metadata = {
     "Platform generator undangan digital: pernikahan, khitan, aqiqah, tahlil. Cantik, cepat, terjangkau.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="id"
