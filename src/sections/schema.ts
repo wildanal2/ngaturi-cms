@@ -120,8 +120,14 @@ export const GlobalSettingsSchema = z.object({
     ])
     .catch("fade-up")
     .default("fade-up"),
+  animation_repeat: z.boolean().optional(),
   music_url: z.string().optional(),
   is_rtl: z.boolean().default(false),
+  cover_enabled: z.boolean().optional(),
+  cover_image: z.string().optional(),
+  cover_tagline: z.string().optional(),
+  cover_note: z.string().optional(),
+  cover_button: z.string().optional(),
 });
 
 export const SECTION_PROPS_SCHEMAS: Record<string, z.ZodType> = {

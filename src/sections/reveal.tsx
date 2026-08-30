@@ -4,13 +4,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AnimationKind } from "./types";
 
 /**
- * Scroll-reveal wrapper (AOS-style). Each wrapped section starts hidden and
- * animates in the first time it enters the viewport — but not before the
- * guest has opened the cover (otherwise everything animates behind the
- * cover and looks static afterwards).
+ * Scroll-reveal wrapper (AOS-style). A section animates in every time it
+ * enters the viewport — scrolling down *or* back up — and resets when it
+ * leaves, so the motion is always "alive".
  *
  * Gate: an unopened `[data-invitation-cover]` in the DOM holds reveals
- * back; opening it (or the absence of a cover) arms them. 5s failsafe.
+ * back until the guest taps "Buka Undangan". 5s failsafe.
  */
 export function Reveal({
   children,
@@ -25,7 +24,7 @@ export function Reveal({
   const [visible, setVisible] = useState(immediate || animation === "none");
 
   useEffect(() => {
-    if (visible) return;
+    if (immediate || animation === "none") return;
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") {
       setVisible(true);
@@ -40,13 +39,11 @@ export function Reveal({
       failsafe = window.setTimeout(() => setVisible(true), 5000);
       io = new IntersectionObserver(
         (entries) => {
-          if (entries.some((e) => e.isIntersecting)) {
-            setVisible(true);
-            window.clearTimeout(failsafe);
-            io?.disconnect();
-          }
+          const e = entries[entries.length - 1];
+          setVisible(e.isIntersecting);
+          if (e.isIntersecting) window.clearTimeout(failsafe);
         },
-        { threshold: 0.1, rootMargin: "0px 0px -12% 0px" },
+        { threshold: 0.12, rootMargin: "0px 0px -12% 0px" },
       );
       io.observe(el);
     };
@@ -67,7 +64,7 @@ export function Reveal({
       io?.disconnect();
       cleanups.forEach((c) => c());
     };
-  }, [visible]);
+  }, [immediate, animation]);
 
   if (animation === "none") return <>{children}</>;
 

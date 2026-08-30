@@ -258,7 +258,7 @@ function ArrayField({
   );
 }
 
-function ImageInput({
+export function ImageInput({
   value,
   onChange,
   disabled,

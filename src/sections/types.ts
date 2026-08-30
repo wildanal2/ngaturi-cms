@@ -17,8 +17,15 @@ export interface GlobalSettings {
   color_secondary: string;
   color_background: string;
   animation?: AnimationKind;
+  animation_repeat?: boolean;
   music_url?: string;
   is_rtl?: boolean;
+  // cover ("Buka Undangan")
+  cover_enabled?: boolean;
+  cover_image?: string;
+  cover_tagline?: string;
+  cover_note?: string;
+  cover_button?: string;
 }
 
 export interface StyleOverrides {
