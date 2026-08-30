@@ -6,11 +6,12 @@ import { invitationRootStyle } from "@/lib/invitation/renderer";
 import { useBuilder } from "@/stores/builder-store";
 
 const BASE_WIDTH = 390; // mobile canvas width the components are designed for
-const VIEWPORT_H = 300; // how much vertical content to show in the thumb
+const MAX_H = 260; // tallest a thumbnail may get
 
 /**
- * Live miniature render of a section variant, scaled so the FULL component
- * width fits the card. Shown in the "Tampilan" picker.
+ * Live miniature render of a section variant, scaled so the WHOLE
+ * component fits the card (fit-to-width for short sections, fit-to-height
+ * for full-height ones like the cover). Shown in the "Tampilan" picker.
  */
 export function VariantThumb({
   type,
@@ -20,17 +21,20 @@ export function VariantThumb({
   variantKey: string;
 }) {
   const global = useBuilder((s) => s.global);
-  const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.3);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [{ cardW, natH }, setDims] = useState({ cardW: 0, natH: 0 });
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => {
-      const w = e.contentRect.width;
-      if (w > 0) setScale(w / BASE_WIDTH);
-    });
-    ro.observe(el);
+    const card = cardRef.current;
+    const inner = innerRef.current;
+    if (!card || !inner) return;
+    const update = () =>
+      setDims({ cardW: card.clientWidth, natH: inner.scrollHeight });
+    const ro = new ResizeObserver(update);
+    ro.observe(card);
+    ro.observe(inner);
+    update();
     return () => ro.disconnect();
   }, []);
 
@@ -38,14 +42,23 @@ export function VariantThumb({
   if (!v) return null;
   const Component = v.component;
 
+  const scale =
+    cardW && natH
+      ? Math.min(cardW / BASE_WIDTH, MAX_H / natH)
+      : cardW
+        ? cardW / BASE_WIDTH
+        : 0.3;
+  const height = natH ? Math.min(natH * scale, MAX_H) : 110;
+
   return (
     <div
-      ref={ref}
-      className="relative w-full overflow-hidden border-b border-line bg-white"
-      style={{ height: VIEWPORT_H * scale }}
+      ref={cardRef}
+      className="relative flex w-full justify-center overflow-hidden border-b border-line bg-white"
+      style={{ height }}
     >
       <div
-        className="pointer-events-none absolute top-0 left-0 origin-top-left"
+        ref={innerRef}
+        className="pointer-events-none origin-top shrink-0 self-start"
         style={{
           ...invitationRootStyle(global),
           width: BASE_WIDTH,
