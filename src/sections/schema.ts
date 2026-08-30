@@ -103,8 +103,10 @@ export const ClosingProps = z.object({
 
 export const MusicProps2 = z.object({
   audio_url: z.string().optional(),
-  title: z.string().optional(),
-  artist: z.string().optional(),
+  track_id: z.string().optional(),
+  track_title: z.string().optional(),
+  track_artist: z.string().optional(),
+  cover_url: z.string().optional(),
   autoplay: z.boolean().optional(),
 });
 

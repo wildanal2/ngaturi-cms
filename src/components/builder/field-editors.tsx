@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import type { Field } from "@/sections/types";
 import { getDeep } from "@/stores/builder-store";
 import { CropDialog, type CropResult } from "./crop-dialog";
+import { MusicPickerField } from "./music-picker";
 
 const inputCls =
   "w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm outline-none focus:border-forest";
@@ -63,6 +64,10 @@ export function FieldRenderer({
 
   if (field.kind === "array") {
     return <ArrayField field={field} ctx={ctx} prefix={prefix} />;
+  }
+
+  if (field.kind === "music-picker") {
+    return <MusicPickerField ctx={ctx} label={field.label} />;
   }
 
   const path = prefix ? `${prefix}.${field.key}` : field.key;

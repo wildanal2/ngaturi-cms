@@ -92,6 +92,7 @@ export type Field =
   | { kind: "boolean"; key: string; label: string; help?: string }
   | { kind: "image"; key: string; label: string; help?: string }
   | { kind: "color"; key: string; label: string; help?: string }
+  | { kind: "music-picker"; label: string; help?: string }
   | {
       kind: "select";
       key: string;

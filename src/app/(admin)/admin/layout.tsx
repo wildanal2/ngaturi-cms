@@ -6,6 +6,7 @@ import { SignOutButton } from "@/components/dashboard/sign-out-button";
 const NAV = [
   { href: "/admin", label: "Ringkasan" },
   { href: "/admin/templates", label: "Template" },
+  { href: "/admin/music", label: "Musik" },
   { href: "/admin/users", label: "Pengguna" },
 ];
 

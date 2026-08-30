@@ -431,6 +431,28 @@ export const payments = pgTable(
 );
 
 /* =====================================================
+ * MUSIC CATALOG (dikelola admin — dipilih di section musik)
+ * ===================================================== */
+
+export const musicTracks = pgTable(
+  "music_tracks",
+  {
+    id: varchar("id", { length: 60 }).primaryKey(), // slug: "acoustic-morning"
+    title: varchar("title", { length: 200 }).notNull(),
+    artist: varchar("artist", { length: 200 }),
+    audioUrl: text("audio_url").notNull(),
+    coverUrl: text("cover_url"),
+    license: varchar("license", { length: 120 }), // "CC0", "CC-BY 4.0", ...
+    attribution: text("attribution"),
+    genre: varchar("genre", { length: 80 }),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("idx_music_active").on(t.isActive)],
+);
+
+/* =====================================================
  * ANALYTICS (minimal — detail di Phase 2)
  * ===================================================== */
 

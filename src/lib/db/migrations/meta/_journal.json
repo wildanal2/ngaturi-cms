@@ -15,6 +15,13 @@
       "when": 1788023714074,
       "tag": "0001_slippery_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788102163118,
+      "tag": "0002_chunky_azazel",
+      "breakpoints": true
     }
   ]
 }

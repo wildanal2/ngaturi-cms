@@ -31,7 +31,7 @@ import {
 } from "./countdown";
 import { RsvpFormCard } from "./rsvp-form";
 import { GuestbookCards } from "./guestbook";
-import { MusicSection } from "./music";
+import { MusicDisc, MusicVinyl, MusicBar, MusicPill } from "./music";
 import { NavigationBar } from "./navigation";
 import {
   CoverClassic,
@@ -189,6 +189,20 @@ const sPhotoShape: StyleOption = {
     { value: "circle", label: "Bulat" },
     { value: "rounded", label: "Kotak lembut" },
     { value: "arch", label: "Melengkung" },
+  ],
+};
+
+const musicPickerField: Field = {
+  kind: "music-picker",
+  label: "Lagu",
+};
+const sMusicPosition: StyleOption = {
+  key: "position",
+  label: "Posisi tombol",
+  default: "right",
+  options: [
+    { value: "right", label: "Kanan bawah" },
+    { value: "left", label: "Kiri bawah" },
   ],
 };
 
@@ -724,24 +738,43 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
   music: {
     type: "music",
     name: "Musik Latar",
-    description: "Tombol musik mengambang, autoplay saat undangan dibuka",
+    description: "Musik yang diputar saat undangan dibuka",
     icon: "Music",
     category: "footer",
     variants: {
-      floating: {
-        name: "Tombol Mengambang",
-        component: MusicSection,
+      disc: {
+        name: "Piringan Berputar",
+        description: "Tombol bulat, cover lagu berputar saat diputar",
+        component: MusicDisc,
         propsSchema: MusicProps2,
-        fields: [
-          {
-            kind: "url",
-            key: "audio_url",
-            label: "URL file audio (.mp3)",
-            help: "mis. dari Dropbox/Drive (direct link) atau storage lain",
-          },
-          { kind: "text", key: "title", label: "Judul lagu (opsional)" },
-          { kind: "text", key: "artist", label: "Artis (opsional)" },
-        ],
+        fields: [musicPickerField],
+        styleOptions: [sMusicPosition],
+        defaultProps: { autoplay: true },
+      },
+      vinyl: {
+        name: "Piringan Hitam",
+        description: "Pemutar piringan hitam (turntable) di dalam undangan",
+        component: MusicVinyl,
+        propsSchema: MusicProps2,
+        fields: [musicPickerField],
+        defaultProps: { autoplay: true },
+      },
+      bar: {
+        name: "Bar Mini",
+        description: "Pemutar mini mengambang: cover, judul, tombol",
+        component: MusicBar,
+        propsSchema: MusicProps2,
+        fields: [musicPickerField],
+        styleOptions: [sMusicPosition],
+        defaultProps: { autoplay: true },
+      },
+      pill: {
+        name: "Tombol Kecil",
+        description: "Tombol musik ringkas di sudut",
+        component: MusicPill,
+        propsSchema: MusicProps2,
+        fields: [musicPickerField],
+        styleOptions: [sMusicPosition],
         defaultProps: { autoplay: true },
       },
     },

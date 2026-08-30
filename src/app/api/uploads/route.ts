@@ -27,9 +27,48 @@ export async function POST(req: Request) {
   const file = form?.get("file");
   const sourceUrl = String(form?.get("sourceUrl") ?? "");
   const invitationId = String(form?.get("invitationId") ?? "");
+  const kind = String(form?.get("kind") ?? "image");
   const cropRaw = form?.get("crop");
   if (!invitationId || (!(file instanceof File) && !sourceUrl)) {
     return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
+  }
+
+  // ---- AUDIO: simpan apa adanya (tanpa sharp) ----
+  if (kind === "audio" && file instanceof File) {
+    if (!file.type.startsWith("audio/")) {
+      return NextResponse.json({ error: "File harus audio." }, { status: 415 });
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: "Ukuran audio maksimal 15 MB." },
+        { status: 413 },
+      );
+    }
+    const [own] = await db
+      .select({ id: invitations.id })
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.id, invitationId),
+          eq(invitations.userId, session.user.id),
+        ),
+      )
+      .limit(1);
+    if (!own) {
+      return NextResponse.json({ error: "Undangan tidak ditemukan." }, { status: 404 });
+    }
+    const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "mp3";
+    const audioKey = `invitations/${invitationId}/audio/${crypto.randomUUID()}.${ext}`;
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: audioKey,
+        Body: Buffer.from(await file.arrayBuffer()),
+        ContentType: file.type || "audio/mpeg",
+        CacheControl: "public, max-age=31536000, immutable",
+      }),
+    );
+    return NextResponse.json({ publicUrl: publicUrl(audioKey), key: audioKey });
   }
   // SSRF guard: re-crop only from our own storage
   if (
