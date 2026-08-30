@@ -7,16 +7,24 @@ import type { DevicePreset } from "./devices";
 export function DeviceFrame({
   preset,
   children,
+  overlay,
 }: {
   preset: DevicePreset;
   children: ReactNode;
+  /** Non-scrolling layer pinned over the viewport (floating chrome: music FAB). */
+  overlay?: ReactNode;
 }) {
   const screen = (
     <div
-      className="overflow-y-auto bg-white"
+      className="relative bg-white"
       style={{ width: preset.width, height: `min(${preset.height}px, 74vh)` }}
     >
-      {children}
+      <div className="h-full w-full overflow-y-auto">{children}</div>
+      {overlay ? (
+        <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
+          {overlay}
+        </div>
+      ) : null}
     </div>
   );
 

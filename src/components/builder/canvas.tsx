@@ -19,10 +19,16 @@ export function Canvas({ invitationId }: { invitationId: string }) {
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
-  // music renders as a floating FAB — pin it over the device viewport so it
-  // stays visible while scrolling the preview, mirroring the live page.
-  const flowSections = ordered.filter((s) => s.type !== "music");
+  // music renders as a real floating FAB — pinned over the device viewport so
+  // it stays visible while scrolling, mirroring the live page. In the section
+  // flow we keep a slim placeholder block so it's still visible & selectable.
   const musicSections = ordered.filter((s) => s.type === "music");
+
+  const selectHandler = (id: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    clickInCanvas.current = true;
+    select(id);
+  };
 
   // scroll the preview to the selected section (e.g. clicked in the left list)
   useEffect(() => {
@@ -38,9 +44,45 @@ export function Canvas({ invitationId }: { invitationId: string }) {
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [selectedId]);
 
+  const musicOverlay =
+    musicSections.length > 0 ? (
+      <>
+        {musicSections.map((section) => {
+          const variant = getVariant(section.type, section.variant);
+          if (!variant || section.visible === false) return null;
+          const Component = variant.component;
+          const side = (section.props?.s_position as string) === "left";
+          const wide = section.variant === "bar";
+          return (
+            <div
+              key={section.id}
+              data-section-id={section.id}
+              onClickCapture={selectHandler(section.id)}
+              className={`pointer-events-auto absolute bottom-3 ${
+                wide ? "inset-x-0" : side ? "left-0" : "right-0"
+              } ${
+                selectedId === section.id
+                  ? "rounded-2xl outline outline-2 outline-forest"
+                  : ""
+              }`}
+            >
+              <Component
+                props={section.props}
+                global={global}
+                invitationId={invitationId}
+                isPreview
+                inCanvas
+                siblingTypes={siblingTypes}
+              />
+            </div>
+          );
+        })}
+      </>
+    ) : null;
+
   return (
     <div className="min-h-full px-6 py-8">
-      <DeviceFrame preset={preset}>
+      <DeviceFrame preset={preset} overlay={musicOverlay}>
         <div ref={scrollRef} style={invitationRootStyle(global)}>
           {ordered.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted">
@@ -48,21 +90,42 @@ export function Canvas({ invitationId }: { invitationId: string }) {
             </div>
           ) : null}
 
-          {flowSections.map((section) => {
+          {ordered.map((section) => {
             const variant = getVariant(section.type, section.variant);
             const def = SectionRegistry[section.type];
             const selected = selectedId === section.id;
             if (!variant) return null;
             const Component = variant.component;
+
+            if (section.type === "music") {
+              return (
+                <div
+                  key={section.id}
+                  data-section-id={section.id}
+                  onClickCapture={selectHandler(section.id)}
+                  className={`relative cursor-pointer border-y border-dashed px-4 py-3 text-center transition-colors ${
+                    selected
+                      ? "border-forest bg-forest/5"
+                      : "border-black/15 bg-black/[0.02] hover:border-forest/40"
+                  } ${section.visible === false ? "opacity-40" : ""}`}
+                >
+                  <p className="text-[11px] font-medium text-black/55">
+                    🎵 {def?.name ?? "Musik Latar"} · {variant.name}
+                  </p>
+                  <p className="text-[10px] text-black/40">
+                    {(section.props?.track_title as string) ||
+                      "Belum ada lagu dipilih"}{" "}
+                    — tampil sebagai tombol mengambang di undangan
+                  </p>
+                </div>
+              );
+            }
+
             return (
               <div
                 key={section.id}
                 data-section-id={section.id}
-                onClickCapture={(e) => {
-                  e.stopPropagation();
-                  clickInCanvas.current = true;
-                  select(section.id);
-                }}
+                onClickCapture={selectHandler(section.id)}
                 className={`group relative cursor-pointer ${
                   section.visible ? "" : "opacity-40"
                 }`}
@@ -94,40 +157,6 @@ export function Canvas({ invitationId }: { invitationId: string }) {
           <p className="py-3 text-center text-[11px] text-black/40">
             Dibuat dengan Ngaturi
           </p>
-
-          {musicSections.length > 0 ? (
-            <div className="pointer-events-none sticky bottom-0 z-40 h-0">
-              {musicSections.map((section) => {
-                const variant = getVariant(section.type, section.variant);
-                if (!variant) return null;
-                const Component = variant.component;
-                const selected = selectedId === section.id;
-                return (
-                  <div
-                    key={section.id}
-                    data-section-id={section.id}
-                    onClickCapture={(e) => {
-                      e.stopPropagation();
-                      clickInCanvas.current = true;
-                      select(section.id);
-                    }}
-                    className={`pointer-events-auto absolute inset-x-0 bottom-3 cursor-pointer ${
-                      selected ? "outline-2 outline-forest" : ""
-                    }`}
-                  >
-                    <Component
-                      props={section.props}
-                      global={global}
-                      invitationId={invitationId}
-                      isPreview
-                      inCanvas
-                      siblingTypes={siblingTypes}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
         </div>
       </DeviceFrame>
 
