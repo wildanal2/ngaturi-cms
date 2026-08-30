@@ -113,21 +113,21 @@ export default async function Home() {
                 </p>
               </div>
             </div>
-            <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {recent.map((r) => (
                 <Link
                   key={r.slug}
                   href={`/${r.slug}`}
                   className="group overflow-hidden rounded-2xl border border-line bg-paper"
                 >
-                  <div className="relative aspect-[1200/630] bg-cream-200">
+                  <div className="relative aspect-[1200/630] w-full bg-cream-200">
                     <Image
                       src={r.image}
                       alt={r.title}
                       fill
                       unoptimized
-                      className="object-cover transition-transform group-hover:scale-105"
-                      sizes="(max-width: 640px) 50vw, 25vw"
+                      className="object-contain transition-transform group-hover:scale-[1.03]"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
                   </div>
                   <div className="p-3">

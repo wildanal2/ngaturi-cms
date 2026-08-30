@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations, guestInvites } from "@/lib/db/schema";
@@ -15,9 +16,9 @@ export interface PublicInvitation {
   global: GlobalSettings;
 }
 
-// NOTE: direct query for MVP. Move to `'use cache'` + cacheTag/updateTag
-// once cacheComponents is enabled project-wide.
-export async function getPublicInvitation(
+// react cache() dedups the query across generateMetadata + the page +
+// opengraph-image within a single request.
+export const getPublicInvitation = cache(async function getPublicInvitation(
   slug: string,
 ): Promise<PublicInvitation | null> {
   const [row] = await db
@@ -38,6 +39,47 @@ export async function getPublicInvitation(
     hasWatermark: row.hasWatermark,
     sections: row.sections as SectionData[],
     global: row.globalSettings as GlobalSettings,
+  };
+});
+
+const EVENT_LABEL: Record<string, string> = {
+  wedding: "Pernikahan",
+  khitan: "Khitan",
+  tahlil: "Tahlil",
+  aqiqah: "Aqiqah",
+  engagement: "Lamaran",
+  birthday: "Ulang Tahun",
+  generic: "Acara",
+};
+
+/** display name, photo (cover → hero), first venue — for SEO/OG/JSON-LD. */
+export function invitationSummary(inv: PublicInvitation) {
+  const cover = inv.sections.find((s) => s.type === "cover");
+  const hero = inv.sections.find((s) => s.type === "hero");
+  const events = inv.sections.find((s) => s.type === "event-details");
+
+  const names =
+    (cover?.props?.names as string) ||
+    (hero?.props?.couple_names as string) ||
+    inv.eventTitle ||
+    "Undangan";
+
+  const pick = (v: unknown) =>
+    typeof v === "string" && /^https?:\/\//.test(v) ? v : null;
+  const photo =
+    pick(cover?.props?.background_image) ||
+    pick(hero?.props?.background_image) ||
+    null;
+
+  const firstEvent = (events?.props?.events as Array<Record<string, unknown>>)
+    ?.[0];
+
+  return {
+    names,
+    photo,
+    eventLabel: EVENT_LABEL[inv.eventType] ?? "Acara",
+    venueName: (firstEvent?.venue_name as string) || null,
+    venueAddress: (firstEvent?.address as string) || null,
   };
 }
 
