@@ -158,7 +158,7 @@ export function BuilderShell({
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-y-auto bg-cream-200/50">
+        <main className="min-w-0 flex-1 overflow-auto bg-cream-200/50">
           <Canvas invitationId={invitationId} />
         </main>
 

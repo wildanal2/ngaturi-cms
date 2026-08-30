@@ -1,23 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Undo2,
-  Redo2,
-  Smartphone,
-  Tablet,
-  Monitor,
-  ExternalLink,
-  Check,
-  Loader2,
-} from "lucide-react";
-import { useBuilder, useTemporal, type PreviewDevice } from "@/stores/builder-store";
+import { Undo2, Redo2, ExternalLink, Check, Loader2 } from "lucide-react";
+import { useBuilder, useTemporal } from "@/stores/builder-store";
+import { DEVICES } from "./devices";
 
-const DEVICES: { key: PreviewDevice; icon: typeof Smartphone }[] = [
-  { key: "mobile", icon: Smartphone },
-  { key: "tablet", icon: Tablet },
-  { key: "desktop", icon: Monitor },
-];
+const CATEGORY_LABEL: Record<string, string> = {
+  phone: "Ponsel",
+  tablet: "Tablet",
+  desktop: "Desktop",
+};
 
 export function TopBar({
   slug,
@@ -32,7 +24,7 @@ export function TopBar({
   onPublish: () => void;
   publishing: boolean;
 }) {
-  const device = useBuilder((s) => s.device);
+  const deviceId = useBuilder((s) => s.deviceId);
   const setDevice = useBuilder((s) => s.setDevice);
   const dirty = useBuilder((s) => s.dirty);
   const locked = useBuilder((s) => s.locked);
@@ -67,20 +59,22 @@ export function TopBar({
         </div>
       </div>
 
-      <div className="flex items-center gap-1 rounded-full bg-cream-200 p-0.5">
-        {DEVICES.map(({ key, icon: Ic }) => (
-          <button
-            key={key}
-            onClick={() => setDevice(key)}
-            className={`rounded-full p-1.5 ${
-              device === key ? "bg-paper shadow-sm" : "text-muted"
-            }`}
-            aria-label={key}
-          >
-            <Ic size={15} />
-          </button>
+      <select
+        value={deviceId}
+        onChange={(e) => setDevice(e.target.value)}
+        className="max-w-[190px] rounded-full border border-line bg-cream-200 px-3 py-1.5 text-xs"
+        aria-label="Perangkat pratinjau"
+      >
+        {["phone", "tablet", "desktop"].map((cat) => (
+          <optgroup key={cat} label={CATEGORY_LABEL[cat]}>
+            {DEVICES.filter((d) => d.category === cat).map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.label} · {d.width}×{d.height}
+              </option>
+            ))}
+          </optgroup>
         ))}
-      </div>
+      </select>
 
       <div className="flex items-center gap-2">
         <span className="hidden items-center gap-1 text-xs text-muted sm:flex">

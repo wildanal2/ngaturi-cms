@@ -3,15 +3,14 @@ import { temporal } from "zundo";
 import { useStore } from "zustand";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 import { SectionRegistry, variantDefaultProps } from "@/sections/registry";
-
-export type PreviewDevice = "mobile" | "tablet" | "desktop";
+import { DEFAULT_DEVICE } from "@/components/builder/devices";
 
 interface BuilderState {
   invitationId: string | null;
   sections: SectionData[];
   global: GlobalSettings;
   selectedId: string | null;
-  device: PreviewDevice;
+  deviceId: string;
   dirty: boolean;
   locked: boolean;
 
@@ -22,7 +21,7 @@ interface BuilderState {
     locked: boolean;
   }) => void;
   select: (id: string | null) => void;
-  setDevice: (d: PreviewDevice) => void;
+  setDevice: (id: string) => void;
   addSection: (type: string, variant: string, atIndex?: number) => void;
   duplicateSection: (id: string) => void;
   removeSection: (id: string) => void;
@@ -80,7 +79,7 @@ export const useBuilder = create<BuilderState>()(
         color_background: "#fbf8f3",
       },
       selectedId: null,
-      device: "mobile",
+      deviceId: DEFAULT_DEVICE,
       dirty: false,
       locked: false,
 
@@ -95,7 +94,7 @@ export const useBuilder = create<BuilderState>()(
         }),
 
       select: (id) => set({ selectedId: id }),
-      setDevice: (device) => set({ device }),
+      setDevice: (deviceId) => set({ deviceId }),
 
       addSection: (type, variant, atIndex) =>
         set((s) => {

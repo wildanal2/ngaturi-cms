@@ -1,25 +1,43 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useBuilder } from "@/stores/builder-store";
 import { getVariant, SectionRegistry } from "@/sections/registry";
 import { invitationRootStyle } from "@/lib/invitation/renderer";
 import { AddSectionButton } from "./add-section-menu";
 import { DeviceFrame } from "./device-frame";
+import { getDevice } from "./devices";
 
 export function Canvas({ invitationId }: { invitationId: string }) {
   const sections = useBuilder((s) => s.sections);
   const global = useBuilder((s) => s.global);
-  const device = useBuilder((s) => s.device);
+  const preset = getDevice(useBuilder((s) => s.deviceId));
   const selectedId = useBuilder((s) => s.selectedId);
   const select = useBuilder((s) => s.select);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const clickInCanvas = useRef(false);
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
 
+  // scroll the preview to the selected section (e.g. clicked in the left list)
+  useEffect(() => {
+    if (!selectedId) return;
+    if (clickInCanvas.current) {
+      clickInCanvas.current = false;
+      return;
+    }
+    const root = scrollRef.current;
+    const el = root?.querySelector<HTMLElement>(
+      `[data-section-id="${selectedId}"]`,
+    );
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [selectedId]);
+
   return (
-    <div className="px-6 py-8">
-      <DeviceFrame device={device}>
-        <div style={invitationRootStyle(global)}>
+    <div className="min-h-full px-6 py-8">
+      <DeviceFrame preset={preset}>
+        <div ref={scrollRef} style={invitationRootStyle(global)}>
           {ordered.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted">
               Belum ada bagian. Tambahkan dari panel kiri atau tombol di bawah.
@@ -35,8 +53,10 @@ export function Canvas({ invitationId }: { invitationId: string }) {
             return (
               <div
                 key={section.id}
+                data-section-id={section.id}
                 onClickCapture={(e) => {
                   e.stopPropagation();
+                  clickInCanvas.current = true;
                   select(section.id);
                 }}
                 className={`group relative cursor-pointer ${
