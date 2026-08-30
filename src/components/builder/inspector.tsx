@@ -46,7 +46,7 @@ export function Inspector({ invitationId }: { invitationId: string }) {
           <span className="mb-2 block text-xs font-medium tracking-wide text-muted uppercase">
             Tampilan
           </span>
-          <div className="grid gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
             {variants.map(([key, v]) => (
               <button
                 key={key}
