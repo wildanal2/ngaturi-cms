@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/common/logo";
-import { ButtonLink } from "@/components/ui/button";
+import { HeaderAuth } from "./header-auth";
 
 export function SiteHeader() {
   return (
@@ -18,14 +18,7 @@ export function SiteHeader() {
             Pengguna mencoba
           </Link>
         </nav>
-        <div className="flex items-center gap-2">
-          <ButtonLink href="/login" variant="ghost" size="sm">
-            Masuk
-          </ButtonLink>
-          <ButtonLink href="/login" size="sm">
-            Buat undangan
-          </ButtonLink>
-        </div>
+        <HeaderAuth />
       </div>
     </header>
   );
