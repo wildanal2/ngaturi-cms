@@ -117,11 +117,12 @@ export default async function Home() {
               <div className="m-float absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-forest/10 to-wine/10 blur-2xl" />
               <div className="relative overflow-hidden rounded-[2rem] border-8 border-ink bg-white shadow-2xl">
                 <Image
-                  src="/templates/kana-noir.svg"
+                  src="/templates/kana-noir/card"
                   alt="Contoh undangan Ngaturi"
-                  width={420}
-                  height={520}
-                  className="aspect-[4/5] w-full object-cover"
+                  width={600}
+                  height={800}
+                  className="aspect-[3/4] w-full object-cover"
+                  unoptimized
                   priority
                 />
               </div>
@@ -236,6 +237,7 @@ export default async function Home() {
                   width={400}
                   height={300}
                   className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-105"
+                  unoptimized
                 />
                 <div className="p-5">
                   <h3 className="text-lg">{t.name}</h3>

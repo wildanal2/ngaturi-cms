@@ -56,6 +56,7 @@ export default async function NewInvitationPage() {
               width={400}
               height={300}
               className="aspect-[4/3] w-full object-cover"
+              unoptimized
             />
             <div className="p-4">
               <h3 className="text-lg">{t.name}</h3>

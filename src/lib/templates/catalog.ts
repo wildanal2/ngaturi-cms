@@ -21,11 +21,11 @@ const s = (
 export const TEMPLATES: TemplatePreset[] = [
   {
     id: "kana-noir",
-    name: "Kana Noir",
-    description: "Hijau gelap mewah, aksen emas, ornamen eucalyptus.",
+    name: "Elegan Hijau Emas",
+    description: "Hijau tua mewah dengan aksen emas — kesan berkelas untuk resepsi malam.",
     category: "wedding",
     tier: "premium",
-    thumbnail: "/templates/kana-noir.svg",
+    thumbnail: "/templates/kana-noir/card",
     global_settings: {
       font_family: "Fraunces",
       color_primary: "#243b30",
@@ -64,11 +64,11 @@ export const TEMPLATES: TemplatePreset[] = [
   },
   {
     id: "kana-botanical",
-    name: "Kana Botanical",
-    description: "Sage lembut dengan ornamen bunga & navigasi bawah.",
+    name: "Sage Bunga Lembut",
+    description: "Hijau sage kalem dengan hiasan bunga — manis dan natural.",
     category: "wedding",
     tier: "free",
-    thumbnail: "/templates/kana-botanical.svg",
+    thumbnail: "/templates/kana-botanical/card",
     global_settings: {
       font_family: "Fraunces",
       color_primary: "#5c6f52",
@@ -105,11 +105,11 @@ export const TEMPLATES: TemplatePreset[] = [
   },
   {
     id: "elegant-forest",
-    name: "Elegant Forest",
-    description: "Hijau daun yang tenang, cocok untuk pernikahan outdoor.",
+    name: "Hijau Klasik",
+    description: "Hijau daun yang tenang — cocok untuk akad & resepsi outdoor.",
     category: "wedding",
     tier: "free",
-    thumbnail: "/templates/elegant-forest.svg",
+    thumbnail: "/templates/elegant-forest/card",
     global_settings: {
       font_family: "Fraunces",
       color_primary: "#34503f",
@@ -142,11 +142,11 @@ export const TEMPLATES: TemplatePreset[] = [
   },
   {
     id: "islamic-classic",
-    name: "Islamic Classic",
-    description: "Nuansa maroon klasik dengan ornamen sederhana.",
+    name: "Islami Maroon",
+    description: "Nuansa maroon klasik dengan sentuhan islami yang khidmat.",
     category: "wedding",
     tier: "free",
-    thumbnail: "/templates/islamic-classic.svg",
+    thumbnail: "/templates/islamic-classic/card",
     global_settings: {
       font_family: "Fraunces",
       color_primary: "#7a2e3c",
@@ -173,11 +173,11 @@ export const TEMPLATES: TemplatePreset[] = [
   },
   {
     id: "khitan-joy",
-    name: "Khitan Joy",
-    description: "Cerah dan ceria untuk syukuran khitan.",
+    name: "Khitan Ceria",
+    description: "Warna cerah dan riang untuk syukuran khitan anak.",
     category: "khitan",
     tier: "free",
-    thumbnail: "/templates/khitan-joy.svg",
+    thumbnail: "/templates/khitan-joy/card",
     global_settings: {
       font_family: "Inter",
       color_primary: "#2b6cb0",

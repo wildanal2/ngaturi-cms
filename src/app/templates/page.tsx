@@ -29,6 +29,7 @@ export default function TemplatesPage() {
                   width={400}
                   height={300}
                   className="aspect-[4/3] w-full object-cover transition-transform group-hover:scale-[1.03]"
+                  unoptimized
                 />
               </a>
               <div className="flex flex-1 flex-col p-5">
