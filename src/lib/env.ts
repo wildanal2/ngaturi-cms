@@ -34,10 +34,9 @@ const schema = z.object({
   TURNSTILE_SECRET_KEY: z.string().optional(),
   DOKU_CLIENT_ID: z.string().optional(),
   DOKU_SECRET_KEY: z.string().optional(),
-  DOKU_IS_PRODUCTION: z
-    .string()
-    .optional()
-    .transform((v) => v === "true"),
+  DOKU_BASE_URL: z.string().default("https://api-sandbox.doku.com"),
+  DOKU_NOTIFICATION_URL: z.string().optional(),
+  DOKU_CALLBACK_URL: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
   SENTRY_DSN: z.string().optional(),

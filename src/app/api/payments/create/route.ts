@@ -74,12 +74,15 @@ export async function POST(req: Request) {
       amount,
       itemName,
       customer: { name: session.user.name, email: session.user.email },
-      callbackUrl: `${env.NEXT_PUBLIC_APP_URL}/invitations/${inv.id}`,
+      callbackUrl:
+        env.DOKU_CALLBACK_URL ||
+        `${env.NEXT_PUBLIC_APP_URL}/payment/callback`,
     });
-    if (checkout.tokenId) {
+    const providerPaymentId = checkout.sessionId || checkout.tokenId || null;
+    if (providerPaymentId) {
       await db
         .update(payments)
-        .set({ providerPaymentId: checkout.tokenId })
+        .set({ providerPaymentId })
         .where(eq(payments.providerOrderId, orderId));
     }
     return NextResponse.json({ redirectUrl: checkout.url });

@@ -29,7 +29,7 @@ export default async function DashboardPage() {
       {mine.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line p-12 text-center">
           <p className="text-ink-soft">
-            Belum ada undangan. Undangan pertamamu gratis (masa edit 7 hari).
+            Belum ada undangan. Undangan pertamamu gratis (masa edit 3 hari).
           </p>
           <ButtonLink href="/invitations/new" className="mt-4">
             Mulai dari template

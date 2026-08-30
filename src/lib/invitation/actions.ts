@@ -2,7 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations, userProfiles } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
@@ -10,28 +10,33 @@ import { getTemplate } from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
 import { makeSlug } from "./slug";
 import { CompositionSchema } from "@/sections/schema";
-import { editExpiresAtFor, isEditLocked } from "./entitlement";
+import { editExpiresAtFor, isEditLocked, maxInvitationsFor } from "./entitlement";
 
-/** Buat undangan baru dari template. Enforce: 1 free_trial / user. */
+/**
+ * Buat undangan baru dari template. Kuota: 1 undangan untuk akun gratis,
+ * +1 setiap kali user membeli paket (Basic / Premium).
+ */
 export async function createInvitation(templateId: string): Promise<never> {
   const session = await requireUser();
   const template = getTemplate(templateId);
   if (!template) throw new Error("Template tidak ditemukan");
 
-  const existingFree = await db
-    .select({ id: invitations.id })
-    .from(invitations)
-    .where(
-      and(
-        eq(invitations.userId, session.user.id),
-        eq(invitations.plan, "free_trial"),
-      ),
-    )
-    .limit(1);
+  const [[{ count }], [profile]] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invitations)
+      .where(eq(invitations.userId, session.user.id)),
+    db
+      .select({ bonus: userProfiles.invitationQuotaBonus })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, session.user.id))
+      .limit(1),
+  ]);
 
-  if (existingFree.length > 0) {
-    // Sudah punya trial → arahkan untuk bayar / pakai yang ada.
-    redirect(`/builder/${existingFree[0].id}`);
+  const limit = maxInvitationsFor(profile?.bonus);
+  if (count >= limit) {
+    // Kuota habis → arahkan ke halaman harga untuk menambah kapasitas.
+    redirect("/invitations?quota=full");
   }
 
   const sections = hydrateTemplateSections(template).map((s) => ({

@@ -9,23 +9,35 @@ const PLANS = [
   {
     name: "Gratis",
     price: "Rp 0",
-    note: "1 undangan · edit 7 hari",
+    note: "1 undangan · edit 3 hari",
     features: ["Semua template dasar", "RSVP & buku tamu", "5 foto", "Watermark"],
     cta: "Mulai gratis",
   },
   {
     name: "Basic",
     price: "Rp 49k",
-    note: "sekali bayar / undangan",
-    features: ["Tanpa watermark", "30 foto", "Edit selama aktif", "Analytics dasar"],
+    note: "sekali bayar / undangan · +1 kuota undangan",
+    features: [
+      "Tanpa watermark",
+      "+1 kuota bikin undangan",
+      "30 foto",
+      "Edit selama undangan aktif",
+      "Analitik dasar",
+    ],
     cta: "Pilih Basic",
     highlight: true,
   },
   {
     name: "Premium",
     price: "Rp 99k",
-    note: "sekali bayar / undangan",
-    features: ["Foto unlimited", "Undangan per-tamu", "Musik & video", "Analitik lengkap"],
+    note: "sekali bayar / undangan · +1 kuota undangan",
+    features: [
+      "Semua fitur Basic",
+      "+1 kuota bikin undangan",
+      "Foto unlimited",
+      "Undangan per-tamu",
+      "Musik & analitik lengkap",
+    ],
     cta: "Pilih Premium",
   },
 ];
@@ -69,8 +81,8 @@ export default function PricingPage() {
           ))}
         </div>
         <p className="mt-8 text-sm text-muted">
-          Pembayaran online (Midtrans) sedang disiapkan. Sementara, upgrade
-          dilakukan manual oleh tim kami.
+          Pembayaran online diproses aman oleh DOKU. Untuk sekarang paket Basic
+          dan Premium memberi manfaat yang sama.
         </p>
       </main>
       <SiteFooter />

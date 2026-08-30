@@ -13,7 +13,7 @@ export default function TermsPage() {
         <p>
           Dengan menggunakan Ngaturi, Anda setuju untuk tidak mengunggah konten
           yang melanggar hukum atau hak orang lain. Setiap akun mendapat satu
-          undangan gratis dengan masa edit 7 hari.
+          undangan gratis dengan masa edit 3 hari.
         </p>
         <p>
           Undangan berbayar bersifat sekali bayar per undangan dan aktif sampai

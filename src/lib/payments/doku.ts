@@ -1,69 +1,93 @@
 import { createHash, createHmac } from "node:crypto";
 import { env } from "@/lib/env";
 
-const isProd = env.DOKU_IS_PRODUCTION === true;
-const BASE = isProd ? "https://api.doku.com" : "https://api-sandbox.doku.com";
+const BASE = (env.DOKU_BASE_URL || "https://api-sandbox.doku.com").replace(
+  /\/$/,
+  "",
+);
 const CHECKOUT_TARGET = "/checkout/v1/payment";
-const NOTIFY_TARGET = "/checkout/v1/notify";
 
 export function isPaymentConfigured(): boolean {
   return Boolean(env.DOKU_CLIENT_ID && env.DOKU_SECRET_KEY);
 }
 
-function digest(body: string): string {
-  return createHash("sha256").update(body).digest("base64");
+/** ISO8601 UTC, no ms: 2020-08-11T08:45:42Z */
+function makeTimestamp(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
-/** DOKU signature: HMACSHA256 over the canonical component string, base64. */
-function sign(params: {
-  clientId: string;
+function b64Sha256(s: string): string {
+  return createHash("sha256").update(s).digest("base64");
+}
+
+/**
+ * DOKU Jokul signature.
+ * component = "Client-Id:..\nRequest-Id:..\nRequest-Timestamp:..\nRequest-Target:<path>[\nDigest:<b64(sha256(body))>]"
+ * header    = "HMACSHA256=" + base64(hmac-sha256(component, secretKey))
+ */
+function buildSignature(params: {
   requestId: string;
   timestamp: string;
   target: string;
-  bodyDigest: string;
+  jsonBody?: string;
 }): string {
-  const raw =
-    `Client-Id:${params.clientId}\n` +
-    `Request-Id:${params.requestId}\n` +
-    `Request-Timestamp:${params.timestamp}\n` +
-    `Request-Target:${params.target}\n` +
-    `Digest:${params.bodyDigest}`;
+  const parts = [
+    `Client-Id:${env.DOKU_CLIENT_ID ?? ""}`,
+    `Request-Id:${params.requestId}`,
+    `Request-Timestamp:${params.timestamp}`,
+    `Request-Target:${params.target}`,
+  ];
+  if (params.jsonBody && params.jsonBody !== "") {
+    parts.push(`Digest:${b64Sha256(params.jsonBody)}`);
+  }
   const mac = createHmac("sha256", env.DOKU_SECRET_KEY ?? "")
-    .update(raw)
+    .update(parts.join("\n"))
     .digest("base64");
   return `HMACSHA256=${mac}`;
 }
 
+/** DOKU only allows: a-z A-Z 0-9 . - / + , = _ : ' @ % and space. */
+export function sanitizeText(text: string, fallback = "Pembayaran"): string {
+  const swapped = (text ?? "")
+    .replace(/[—–]/g, "-")
+    .replace(/#/g, "No.")
+    .replace(/&/g, "dan");
+  const clean = swapped.replace(/[^a-zA-Z0-9 .\-/+,=_:'@%]/g, "").trim();
+  return clean || fallback;
+}
+
 interface CheckoutParams {
   orderId: string;
-  amount: number; // IDR, integer
+  amount: number;
   itemName: string;
   customer: { name?: string | null; email?: string | null };
   callbackUrl: string;
 }
 
-/** Creates a DOKU hosted-checkout session, returns the payment page URL. */
 export async function createCheckout(
   p: CheckoutParams,
-): Promise<{ url: string; tokenId: string }> {
-  const clientId = env.DOKU_CLIENT_ID ?? "";
+): Promise<{ url: string; tokenId: string; sessionId: string | null }> {
   const requestId = crypto.randomUUID();
-  const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-  const due = 60; // minutes
+  const timestamp = makeTimestamp();
 
-  const body = JSON.stringify({
+  const jsonBody = JSON.stringify({
     order: {
       amount: Math.round(p.amount),
       invoice_number: p.orderId,
       currency: "IDR",
       callback_url: p.callbackUrl,
+      auto_redirect: true,
       line_items: [
-        { name: p.itemName, price: Math.round(p.amount), quantity: 1 },
+        {
+          name: sanitizeText(p.itemName),
+          quantity: 1,
+          price: Math.round(p.amount),
+        },
       ],
     },
-    payment: { payment_due_date: due },
+    payment: { payment_due_date: 60 },
     customer: {
-      name: p.customer.name ?? "Pengguna Ngaturi",
+      name: sanitizeText(p.customer.name ?? "Pengguna Ngaturi", "Pengguna"),
       email: p.customer.email ?? undefined,
     },
   });
@@ -72,18 +96,17 @@ export async function createCheckout(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Client-Id": clientId,
+      "Client-Id": env.DOKU_CLIENT_ID ?? "",
       "Request-Id": requestId,
       "Request-Timestamp": timestamp,
-      Signature: sign({
-        clientId,
+      Signature: buildSignature({
         requestId,
         timestamp,
         target: CHECKOUT_TARGET,
-        bodyDigest: digest(body),
+        jsonBody,
       }),
     },
-    body,
+    body: jsonBody,
   });
 
   const data = await res.json().catch(() => ({}));
@@ -92,33 +115,88 @@ export async function createCheckout(
       `DOKU ${res.status}: ${data?.error?.message ?? JSON.stringify(data)}`,
     );
   }
-  const url: string | undefined = data?.response?.payment?.url;
-  const tokenId: string | undefined = data?.response?.payment?.token_id;
+  const payload = data?.response ?? data;
+  const url: string | undefined = payload?.payment?.url;
   if (!url) throw new Error("DOKU: URL pembayaran tidak diterima");
-  return { url, tokenId: tokenId ?? "" };
+  return {
+    url,
+    tokenId: payload?.payment?.token_id ?? "",
+    sessionId: payload?.order?.session_id ?? null,
+  };
+}
+
+export type DokuStatus = "SUCCESS" | "PENDING" | "FAILED" | "EXPIRED" | string;
+
+/** Query order status (used by the return/callback page). */
+export async function checkOrderStatus(
+  gatewayOrderId: string,
+): Promise<DokuStatus> {
+  const target = `/orders/v1/status/${gatewayOrderId}`;
+  const requestId = crypto.randomUUID();
+  const timestamp = makeTimestamp();
+
+  const res = await fetch(
+    `${BASE}${target}?client_id=${encodeURIComponent(env.DOKU_CLIENT_ID ?? "")}`,
+    {
+      headers: {
+        "Client-Id": env.DOKU_CLIENT_ID ?? "",
+        "Request-Id": requestId,
+        "Request-Timestamp": timestamp,
+        Signature: buildSignature({ requestId, timestamp, target }),
+      },
+    },
+  );
+  const data = await res.json().catch(() => ({}));
+  return (data?.transaction?.status ?? "PENDING") as DokuStatus;
 }
 
 /**
- * Verify a DOKU HTTP notification. DOKU signs the raw request body the same
- * way; recompute and compare against the `Signature` header.
+ * Verify a DOKU notification. `requestPath` MUST be the exact path DOKU
+ * called (i.e. what's registered as the Notification URL) — pass the
+ * incoming request's pathname.
  */
 export function verifyNotification(
   headers: Headers,
   rawBody: string,
+  requestPath: string,
 ): boolean {
   const clientId = headers.get("client-id");
   const requestId = headers.get("request-id");
   const timestamp = headers.get("request-timestamp");
-  const signature = headers.get("signature");
-  if (!clientId || !requestId || !timestamp || !signature) return false;
-  if (clientId !== env.DOKU_CLIENT_ID) return false;
+  const received = headers.get("signature");
+  if (!clientId || !requestId || !timestamp || !received) return false;
+  if (env.DOKU_CLIENT_ID && clientId !== env.DOKU_CLIENT_ID) return false;
 
-  const expected = sign({
-    clientId,
-    requestId,
-    timestamp,
-    target: NOTIFY_TARGET,
-    bodyDigest: digest(rawBody),
-  });
-  return expected === signature;
+  const expected =
+    `HMACSHA256=` +
+    createHmac("sha256", env.DOKU_SECRET_KEY ?? "")
+      .update(
+        [
+          `Client-Id:${clientId}`,
+          `Request-Id:${requestId}`,
+          `Request-Timestamp:${timestamp}`,
+          `Request-Target:${requestPath}`,
+          `Digest:${b64Sha256(rawBody)}`,
+        ].join("\n"),
+      )
+      .digest("base64");
+  return expected === received;
+}
+
+/** DOKU transaction.status → our payments.status */
+export function mapStatus(
+  s: DokuStatus,
+): "paid" | "expired" | "failed" | "pending" {
+  switch (s) {
+    case "SUCCESS":
+      return "paid";
+    case "EXPIRED":
+      return "expired";
+    case "FAILED":
+    case "REVERSED":
+    case "CANCELLED":
+      return "failed";
+    default:
+      return "pending";
+  }
 }

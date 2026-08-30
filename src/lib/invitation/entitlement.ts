@@ -3,8 +3,18 @@ import type { invitations } from "@/lib/db/schema";
 
 export type Invitation = InferSelectModel<typeof invitations>;
 
-export const FREE_TRIAL_EDIT_DAYS = 7;
+export const FREE_TRIAL_EDIT_DAYS = 3;
 export const FREE_TRIAL_MAX_PHOTOS = 5;
+
+/** Kuota bikin undangan untuk akun gratis. */
+export const FREE_INVITATION_QUOTA = 1;
+/** Tambahan kuota per paket berbayar (Basic / Premium): +1 masing-masing. */
+export const PAID_PACKAGE_QUOTA_BONUS = 1;
+
+/** Total undangan yang boleh dibuat user = 1 gratis + bonus dari paket. */
+export function maxInvitationsFor(quotaBonus: number | null | undefined): number {
+  return FREE_INVITATION_QUOTA + Math.max(0, quotaBonus ?? 0);
+}
 
 /** Builder terkunci: trial yang masa editnya lewat & belum dibayar. */
 export function isEditLocked(inv: Pick<Invitation, "plan" | "isPaid" | "editExpiresAt">): boolean {

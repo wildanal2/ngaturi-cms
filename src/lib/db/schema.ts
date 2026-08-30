@@ -90,6 +90,8 @@ export const userProfiles = pgTable("user_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   phone: varchar("phone", { length: 50 }),
   freeInvitationUsed: boolean("free_invitation_used").notNull().default(false),
+  /** Extra invitation slots earned by buying paket (Basic/Premium): +1 each. */
+  invitationQuotaBonus: integer("invitation_quota_bonus").notNull().default(0),
   businessSubscriptionExpiresAt: timestamp("business_subscription_expires_at"),
   metadata: jsonb("metadata").notNull().default(sql`'{}'::jsonb`),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -214,9 +216,6 @@ export const invitations = pgTable(
     index("idx_invitations_user").on(t.userId),
     index("idx_invitations_status").on(t.status),
     index("idx_invitations_event_date").on(t.eventDate),
-    uniqueIndex("idx_invitations_one_free_trial")
-      .on(t.userId)
-      .where(sql`plan = 'free_trial'`),
   ],
 );
 

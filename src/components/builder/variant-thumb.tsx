@@ -8,6 +8,21 @@ import { useBuilder } from "@/stores/builder-store";
 const BASE_WIDTH = 390; // mobile canvas width the components are designed for
 const MAX_H = 260; // tallest a thumbnail may get
 
+/** demo props so a variant renders something in the picker even when it
+ *  needs data the user provides later (music track, etc.) */
+function thumbProps(type: string, variantKey: string): Record<string, unknown> {
+  const base = variantDefaultProps(type, variantKey);
+  if (type === "music") {
+    return {
+      ...base,
+      audio_url: "about:blank",
+      track_title: "Lagu Contoh",
+      track_artist: "Ngaturi",
+    };
+  }
+  return base;
+}
+
 /**
  * Live miniature render of a section variant, scaled so the WHOLE
  * component fits the card (fit-to-width for short sections, fit-to-height
@@ -66,7 +81,7 @@ export function VariantThumb({
         }}
       >
         <Component
-          props={variantDefaultProps(type, variantKey)}
+          props={thumbProps(type, variantKey)}
           global={global}
           isPreview
           inCanvas
