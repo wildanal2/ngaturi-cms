@@ -44,14 +44,16 @@ export default async function TemplatePreviewPage({
       </div>
 
       <div className="relative mx-auto max-w-lg">
-        <InvitationCover
-          names={
-            (t.sections.find((s) => s.type === "hero")?.props
-              ?.couple_names as string) ?? t.name
-          }
-          guestName={null}
-          global={t.global_settings}
-        />
+        {!t.sections.some((s) => s.type === "cover") ? (
+          <InvitationCover
+            names={
+              (t.sections.find((s) => s.type === "hero")?.props
+                ?.couple_names as string) ?? t.name
+            }
+            guestName={null}
+            global={t.global_settings}
+          />
+        ) : null}
         <InvitationRenderer
           sections={sections}
           global={t.global_settings}

@@ -34,6 +34,12 @@ import { GuestbookCards } from "./guestbook";
 import { MusicSection } from "./music";
 import { NavigationBar } from "./navigation";
 import {
+  CoverClassic,
+  CoverPhoto,
+  CoverBotanical,
+  CoverMinimal,
+} from "./cover";
+import {
   dummyHero,
   dummyBride,
   dummyGroom,
@@ -54,6 +60,7 @@ import {
   ClosingProps,
   MusicProps2,
   NavigationProps,
+  CoverProps,
 } from "./schema";
 
 const nowPlus = (days: number) =>
@@ -185,7 +192,91 @@ const sPhotoShape: StyleOption = {
   ],
 };
 
+const coverFields: Field[] = [
+  { kind: "text", key: "names", label: "Nama (mis. Dinda & Raka)" },
+  { kind: "text", key: "tagline", label: "Teks atas" },
+  { kind: "text", key: "note", label: "Kalimat sebelum nama tamu" },
+  { kind: "text", key: "button_label", label: "Teks tombol" },
+];
+const coverPhotoField: Field = {
+  kind: "image",
+  key: "background_image",
+  label: "Foto sampul",
+};
+const sCoverOverlay: StyleOption = {
+  key: "overlay",
+  label: "Kegelapan foto",
+  default: "medium",
+  options: [
+    { value: "light", label: "Terang" },
+    { value: "medium", label: "Sedang" },
+    { value: "dark", label: "Gelap" },
+  ],
+};
+const coverDefaults = {
+  names: "Dinda & Raka",
+  tagline: "The Wedding Of",
+  note: "Kepada Bapak/Ibu/Saudara/i",
+  button_label: "Buka Undangan",
+};
+
 export const SectionRegistry: Record<string, SectionDefinition> = {
+  cover: {
+    type: "cover",
+    name: "Sampul / Buka Undangan",
+    description: "Halaman pembuka sebelum isi undangan",
+    icon: "BookOpen",
+    category: "hero",
+    variants: {
+      classic: {
+        name: "Klasik",
+        description: "Warna solid / foto, teks di tengah",
+        component: CoverClassic,
+        propsSchema: CoverProps,
+        fields: [...coverFields, coverPhotoField],
+        styleOptions: [sCoverOverlay],
+        defaultProps: { ...coverDefaults },
+      },
+      photo: {
+        name: "Foto Fullscreen",
+        description: "Foto memenuhi layar",
+        component: CoverPhoto,
+        propsSchema: CoverProps,
+        fields: [...coverFields, coverPhotoField],
+        styleOptions: [
+          sCoverOverlay,
+          {
+            key: "align",
+            label: "Posisi teks",
+            default: "center",
+            options: [
+              { value: "top", label: "Atas" },
+              { value: "center", label: "Tengah" },
+              { value: "bottom", label: "Bawah" },
+            ],
+          },
+        ],
+        defaultProps: { ...coverDefaults },
+      },
+      botanical: {
+        name: "Botani",
+        description: "Ornamen bunga + foto bulat",
+        component: CoverBotanical,
+        propsSchema: CoverProps,
+        fields: [...coverFields, coverPhotoField],
+        defaultProps: { ...coverDefaults },
+      },
+      minimal: {
+        name: "Minimalis",
+        description: "Tipografi besar, tanpa foto",
+        component: CoverMinimal,
+        propsSchema: CoverProps,
+        fields: coverFields,
+        defaultProps: { ...coverDefaults },
+      },
+    },
+  },
+
   hero: {
     type: "hero",
     name: "Sampul / Pembuka",
@@ -777,6 +868,13 @@ export function variantDefaultProps(type: string, variantKey: string) {
   // isi gambar contoh publik kalau belum ada
   if (type === "hero" && !base.background_image) {
     base.background_image = dummyHero(variantKey);
+  }
+  if (
+    type === "cover" &&
+    variantKey !== "minimal" &&
+    !base.background_image
+  ) {
+    base.background_image = dummyHero(`cover-${variantKey}`);
   }
   if (type === "couple-intro") {
     const bride = (base.bride ?? {}) as Record<string, unknown>;

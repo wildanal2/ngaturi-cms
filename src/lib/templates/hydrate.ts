@@ -38,6 +38,7 @@ export function hydrateTemplateSections(
     for (const [k, v] of Object.entries(s.props)) {
       props[k] = mergeValue(defaults[k], v);
     }
-    return { ...s, id: `t-${i}`, props };
+    // array position is the source of truth for order
+    return { ...s, id: `t-${i}`, order: i, props };
   });
 }

@@ -34,6 +34,7 @@ export const TEMPLATES: TemplatePreset[] = [
       animation: "fade-up",
     },
     sections: [
+      s("cover", "botanical", 0, { names: "Kana & Arya", tagline: "The Wedding Of", s_palette: "noir" }),
       s("hero", "botanical", 0, {
         couple_names: "Kana & Arya",
         tagline: "The Wedding Of",
@@ -76,6 +77,7 @@ export const TEMPLATES: TemplatePreset[] = [
       animation: "fade-up",
     },
     sections: [
+      s("cover", "botanical", 0, { names: "Kana & Arya", tagline: "The Wedding Of" }),
       s("hero", "botanical", 0, {
         couple_names: "Kana & Arya",
         tagline: "The Wedding Of",
@@ -116,6 +118,7 @@ export const TEMPLATES: TemplatePreset[] = [
       animation: "fade-up",
     },
     sections: [
+      s("cover", "classic", 0, { names: "Dinda & Raka" }),
       s("hero", "centered", 0, {
         couple_names: "Dinda & Raka",
         tagline: "The Wedding Of",
@@ -152,6 +155,7 @@ export const TEMPLATES: TemplatePreset[] = [
       animation: "fade-up",
     },
     sections: [
+      s("cover", "classic", 0, { names: "Fatimah & Umar", tagline: "بسم الله" }),
       s("hero", "split", 0, { couple_names: "Fatimah & Umar", tagline: "بسم الله" }),
       s("quote", "centered", 1, {
         text: "Semoga Allah memberkahi kalian, dan menyatukan kalian berdua dalam kebaikan.",
@@ -182,6 +186,7 @@ export const TEMPLATES: TemplatePreset[] = [
       animation: "fade-left",
     },
     sections: [
+      s("cover", "photo", 0, { names: "Khitan Arkan", tagline: "Syukuran Khitan" }),
       s("hero", "centered", 0, {
         couple_names: "Khitan Arkan",
         tagline: "Syukuran Khitan",

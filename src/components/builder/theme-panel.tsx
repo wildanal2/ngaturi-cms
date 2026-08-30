@@ -1,7 +1,6 @@
 "use client";
 
 import { useBuilder } from "@/stores/builder-store";
-import { ImageInput } from "./field-editors";
 
 const PRESETS = [
   { name: "Forest", primary: "#34503f", secondary: "#7a2e3c", bg: "#fbf8f3" },
@@ -12,7 +11,7 @@ const PRESETS = [
   { name: "Sage", primary: "#5c6f52", secondary: "#8a5a44", bg: "#f7f8f4" },
 ];
 
-export function ThemePanel({ invitationId }: { invitationId: string }) {
+export function ThemePanel() {
   const global = useBuilder((s) => s.global);
   const setGlobal = useBuilder((s) => s.setGlobal);
   const locked = useBuilder((s) => s.locked);
@@ -120,81 +119,9 @@ export function ThemePanel({ invitationId }: { invitationId: string }) {
         </select>
       </label>
 
-      {/* ---- Sampul (Buka Undangan) ---- */}
-      <div className="space-y-3 border-t border-line pt-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Sampul undangan</span>
-          <button
-            type="button"
-            disabled={locked}
-            onClick={() =>
-              setGlobal({ cover_enabled: global.cover_enabled === false })
-            }
-            className={`relative h-6 w-11 rounded-full transition-colors ${
-              global.cover_enabled === false ? "bg-line" : "bg-forest"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
-                global.cover_enabled === false ? "left-0.5" : "left-[22px]"
-              }`}
-            />
-          </button>
-        </div>
-        <p className="text-xs text-muted">
-          Halaman &ldquo;Buka Undangan&rdquo; yang tampil sebelum isi undangan.
-        </p>
-
-        {global.cover_enabled !== false ? (
-          <>
-            <label className="block text-sm">
-              <span className="mb-1 block text-ink-soft">Foto sampul</span>
-              <ImageInput
-                value={global.cover_image ?? ""}
-                disabled={locked}
-                invitationId={invitationId}
-                onChange={(url) => setGlobal({ cover_image: url })}
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-ink-soft">Teks atas</span>
-              <input
-                value={global.cover_tagline ?? ""}
-                disabled={locked}
-                placeholder="The Wedding Of"
-                onChange={(e) => setGlobal({ cover_tagline: e.target.value })}
-                className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-ink-soft">
-                Kalimat sebelum nama tamu
-              </span>
-              <input
-                value={global.cover_note ?? ""}
-                disabled={locked}
-                placeholder="Kepada Bapak/Ibu/Saudara/i"
-                onChange={(e) => setGlobal({ cover_note: e.target.value })}
-                className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-ink-soft">Teks tombol</span>
-              <input
-                value={global.cover_button ?? ""}
-                disabled={locked}
-                placeholder="Buka Undangan"
-                onChange={(e) => setGlobal({ cover_button: e.target.value })}
-                className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
-              />
-            </label>
-          </>
-        ) : null}
-      </div>
-
       <p className="text-xs text-muted">
-        Musik latar & navigasi kini jadi bagian tersendiri — tambahkan lewat
-        tombol &ldquo;Tambah bagian&rdquo;.
+        Sampul (Buka Undangan), musik latar &amp; navigasi kini jadi bagian
+        tersendiri — tambahkan lewat tombol &ldquo;Tambah bagian&rdquo;.
       </p>
     </div>
   );

@@ -24,7 +24,11 @@ async function main() {
   for (const d of DEMOS) {
     const t = TEMPLATES.find((x) => x.id === d.tpl);
     if (!t) continue;
-    const sections = t.sections.map((sec, i) => ({ ...sec, id: `demo-${i}` }));
+    const sections = t.sections.map((sec, i) => ({
+      ...sec,
+      id: `demo-${i}`,
+      order: i,
+    }));
     const heroIdx = sections.findIndex((s) => s.type === "hero");
     if (heroIdx >= 0) {
       sections[heroIdx] = {

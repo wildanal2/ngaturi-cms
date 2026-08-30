@@ -14,7 +14,7 @@ export function Inspector({ invitationId }: { invitationId: string }) {
   const setVariant = useBuilder((s) => s.setVariant);
 
   const section = sections.find((s) => s.id === selectedId) ?? null;
-  if (!section) return <ThemePanel invitationId={invitationId} />;
+  if (!section) return <ThemePanel />;
 
   const def = SectionRegistry[section.type];
   if (!def) return null;

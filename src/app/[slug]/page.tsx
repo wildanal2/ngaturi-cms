@@ -77,16 +77,20 @@ export default async function InvitationPage({
     }
   });
 
+  const hasCoverSection = inv.sections.some((s) => s.type === "cover");
+
   return (
     <>
-      <InvitationCover
-        names={
-          (inv.sections.find((s) => s.type === "hero")?.props
-            ?.couple_names as string) ?? inv.eventTitle ?? "Undangan"
-        }
-        guestName={guestName}
-        global={inv.global}
-      />
+      {!hasCoverSection && inv.global.cover_enabled !== false ? (
+        <InvitationCover
+          names={
+            (inv.sections.find((s) => s.type === "hero")?.props
+              ?.couple_names as string) ?? inv.eventTitle ?? "Undangan"
+          }
+          guestName={guestName}
+          global={inv.global}
+        />
+      ) : null}
       <InvitationRenderer
         sections={inv.sections}
         global={inv.global}

@@ -80,6 +80,14 @@ export const GiftProps = z.object({
   ),
 });
 
+export const CoverProps = z.object({
+  names: z.string().optional(),
+  tagline: z.string().optional(),
+  note: z.string().optional(),
+  button_label: z.string().optional(),
+  background_image: z.string().optional(),
+});
+
 export const MapProps = z.object({
   venue_name: z.string().optional(),
   address: z.string().optional(),
@@ -144,6 +152,7 @@ export const SECTION_PROPS_SCHEMAS: Record<string, z.ZodType> = {
   closing: ClosingProps,
   music: MusicProps2,
   navigation: NavigationProps,
+  cover: CoverProps,
 };
 
 export const SectionSchema = z.object({

@@ -39,7 +39,7 @@ export function InvitationRenderer({
 
   // fixed-position chrome must live outside the animated flow: a wrapper
   // running a CSS transform becomes the containing block for position:fixed.
-  const OVERLAY = new Set(["music", "navigation"]);
+  const OVERLAY = new Set(["cover", "music", "navigation"]);
 
   return (
     <div className="mx-auto max-w-lg" style={invitationRootStyle(global)}>
