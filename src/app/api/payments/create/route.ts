@@ -5,10 +5,8 @@ import { getSession } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations, payments } from "@/lib/db/schema";
 import { PLANS, RENEWAL_PRICE, type PaidPlan } from "@/lib/payments/plans";
-import {
-  createSnapTransaction,
-  isPaymentConfigured,
-} from "@/lib/payments/midtrans";
+import { createCheckout, isPaymentConfigured } from "@/lib/payments/doku";
+import { env } from "@/lib/env";
 
 const Body = z.object({
   invitationId: z.string(),
@@ -51,16 +49,17 @@ export async function POST(req: Request) {
   const tier: PaidPlan = plan ?? "basic";
   const amount =
     kind === "invitation_renewal" ? RENEWAL_PRICE : PLANS[tier].price;
-  const orderId = `NG-${kind === "invitation_renewal" ? "RNW" : "UNL"}-${inv.id.slice(0, 8)}-${Date.now()}`;
+  // invoice_number: alphanumeric + dash, <= 64
+  const orderId = `NG${kind === "invitation_renewal" ? "RNW" : "UNL"}-${inv.id.slice(0, 8)}-${Date.now()}`;
   const itemName =
     kind === "invitation_renewal"
       ? "Perpanjangan undangan 90 hari"
-      : `Upgrade undangan — ${PLANS[tier].name}`;
+      : `Upgrade undangan ${PLANS[tier].name}`;
 
   await db.insert(payments).values({
     userId: session.user.id,
     invitationId: inv.id,
-    provider: "midtrans",
+    provider: "doku",
     providerOrderId: orderId,
     amount: String(amount),
     currency: "IDR",
@@ -70,13 +69,20 @@ export async function POST(req: Request) {
   });
 
   try {
-    const snap = await createSnapTransaction({
+    const checkout = await createCheckout({
       orderId,
       amount,
-      customer: { name: session.user.name, email: session.user.email },
       itemName,
+      customer: { name: session.user.name, email: session.user.email },
+      callbackUrl: `${env.NEXT_PUBLIC_APP_URL}/invitations/${inv.id}`,
     });
-    return NextResponse.json({ token: snap.token, redirectUrl: snap.redirect_url });
+    if (checkout.tokenId) {
+      await db
+        .update(payments)
+        .set({ providerPaymentId: checkout.tokenId })
+        .where(eq(payments.providerOrderId, orderId));
+    }
+    return NextResponse.json({ redirectUrl: checkout.url });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Gagal membuat transaksi." },

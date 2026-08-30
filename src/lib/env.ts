@@ -32,9 +32,9 @@ const schema = z.object({
   // Optional (fitur menyusul)
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),
-  MIDTRANS_SERVER_KEY: z.string().optional(),
-  NEXT_PUBLIC_MIDTRANS_CLIENT_KEY: z.string().optional(),
-  MIDTRANS_IS_PRODUCTION: z
+  DOKU_CLIENT_ID: z.string().optional(),
+  DOKU_SECRET_KEY: z.string().optional(),
+  DOKU_IS_PRODUCTION: z
     .string()
     .optional()
     .transform((v) => v === "true"),

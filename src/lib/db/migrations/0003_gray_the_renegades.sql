@@ -1,0 +1,1 @@
+ALTER TYPE "public"."payment_provider" ADD VALUE 'doku' BEFORE 'manual';

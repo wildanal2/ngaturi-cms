@@ -2,57 +2,63 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations, payments, userProfiles } from "@/lib/db/schema";
-import { verifyWebhookSignature } from "@/lib/payments/midtrans";
+import { verifyNotification } from "@/lib/payments/doku";
 import { RENEWAL_DAYS } from "@/lib/payments/plans";
 
-const PAID_STATUSES = new Set(["capture", "settlement"]);
+// DOKU notification. status: SUCCESS | FAILED | PENDING | EXPIRED
+const PAID = "SUCCESS";
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  if (!body?.order_id || !body?.signature_key) {
-    return NextResponse.json({ error: "bad request" }, { status: 400 });
-  }
-  if (!verifyWebhookSignature(body)) {
+  const raw = await req.text();
+  if (!verifyNotification(req.headers, raw)) {
     return NextResponse.json({ error: "bad signature" }, { status: 403 });
+  }
+
+  let body: {
+    order?: { invoice_number?: string };
+    transaction?: { status?: string; original_request_id?: string };
+  };
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return NextResponse.json({ error: "bad body" }, { status: 400 });
+  }
+
+  const invoice = body.order?.invoice_number;
+  const status = body.transaction?.status ?? "PENDING";
+  if (!invoice) {
+    return NextResponse.json({ error: "no invoice" }, { status: 400 });
   }
 
   const [pay] = await db
     .select()
     .from(payments)
-    .where(eq(payments.providerOrderId, body.order_id))
+    .where(eq(payments.providerOrderId, invoice))
     .limit(1);
   if (!pay) {
     return NextResponse.json({ error: "unknown order" }, { status: 404 });
   }
-  // idempotent: kalau sudah paid, abaikan
   if (pay.status === "paid") return NextResponse.json({ ok: true });
 
-  const txStatus: string = body.transaction_status;
-  const fraud: string = body.fraud_status ?? "accept";
   const now = new Date();
-
   await db
     .update(payments)
     .set({
       status:
-        PAID_STATUSES.has(txStatus) && fraud === "accept"
+        status === PAID
           ? "paid"
-          : txStatus === "expire"
+          : status === "EXPIRED"
             ? "expired"
-            : txStatus === "deny" || txStatus === "cancel"
+            : status === "FAILED"
               ? "failed"
               : "pending",
-      providerPaymentId: body.transaction_id ?? null,
-      rawWebhook: body,
-      paidAt: PAID_STATUSES.has(txStatus) ? now : null,
+      rawWebhook: JSON.parse(raw),
+      paidAt: status === PAID ? now : null,
     })
     .where(eq(payments.id, pay.id));
 
-  if (!(PAID_STATUSES.has(txStatus) && fraud === "accept")) {
-    return NextResponse.json({ ok: true });
-  }
+  if (status !== PAID) return NextResponse.json({ ok: true });
 
-  // apply grant
   if (pay.kind === "invitation_unlock" && pay.invitationId) {
     await db
       .update(invitations)

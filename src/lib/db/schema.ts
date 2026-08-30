@@ -396,6 +396,7 @@ export const paymentStatus = pgEnum("payment_status", [
 export const paymentProvider = pgEnum("payment_provider", [
   "midtrans",
   "xendit",
+  "doku",
   "manual",
 ]);
 export const purchaseKind = pgEnum("purchase_kind", [

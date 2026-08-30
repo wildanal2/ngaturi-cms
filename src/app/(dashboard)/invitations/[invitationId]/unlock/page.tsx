@@ -3,8 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
-import { env } from "@/lib/env";
-import { isPaymentConfigured } from "@/lib/payments/midtrans";
+import { isPaymentConfigured } from "@/lib/payments/doku";
 import { UnlockOptions } from "@/components/dashboard/unlock-options";
 
 export default async function UnlockPage({
@@ -45,7 +44,6 @@ export default async function UnlockPage({
         <UnlockOptions
           invitationId={inv.id}
           configured={isPaymentConfigured()}
-          clientKey={env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? ""}
         />
       )}
     </div>
