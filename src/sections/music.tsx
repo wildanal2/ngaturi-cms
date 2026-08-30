@@ -72,7 +72,7 @@ function Fab({
     <div
       className={
         inCanvas
-          ? `pointer-events-auto sticky ${bottom} z-30 mx-4 mb-4 flex w-max ${
+          ? `pointer-events-auto flex w-max px-4 ${
               position === "left" ? "" : "ml-auto"
             }`
           : `fixed ${bottom} ${side} z-40`
@@ -215,7 +215,7 @@ export function MusicBar({ props, inCanvas }: SectionRenderProps) {
     <div
       className={
         inCanvas
-          ? "sticky bottom-16 z-30 mx-auto mb-4 w-[88%] max-w-sm"
+          ? "mx-auto w-[88%] max-w-sm"
           : "fixed inset-x-0 bottom-16 z-40 mx-auto max-w-sm px-3"
       }
     >

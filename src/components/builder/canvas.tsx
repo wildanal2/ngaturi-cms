@@ -19,6 +19,10 @@ export function Canvas({ invitationId }: { invitationId: string }) {
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
+  // music renders as a floating FAB — pin it over the device viewport so it
+  // stays visible while scrolling the preview, mirroring the live page.
+  const flowSections = ordered.filter((s) => s.type !== "music");
+  const musicSections = ordered.filter((s) => s.type === "music");
 
   // scroll the preview to the selected section (e.g. clicked in the left list)
   useEffect(() => {
@@ -44,7 +48,7 @@ export function Canvas({ invitationId }: { invitationId: string }) {
             </div>
           ) : null}
 
-          {ordered.map((section) => {
+          {flowSections.map((section) => {
             const variant = getVariant(section.type, section.variant);
             const def = SectionRegistry[section.type];
             const selected = selectedId === section.id;
@@ -90,6 +94,40 @@ export function Canvas({ invitationId }: { invitationId: string }) {
           <p className="py-3 text-center text-[11px] text-black/40">
             Dibuat dengan Ngaturi
           </p>
+
+          {musicSections.length > 0 ? (
+            <div className="pointer-events-none sticky bottom-0 z-40 h-0">
+              {musicSections.map((section) => {
+                const variant = getVariant(section.type, section.variant);
+                if (!variant) return null;
+                const Component = variant.component;
+                const selected = selectedId === section.id;
+                return (
+                  <div
+                    key={section.id}
+                    data-section-id={section.id}
+                    onClickCapture={(e) => {
+                      e.stopPropagation();
+                      clickInCanvas.current = true;
+                      select(section.id);
+                    }}
+                    className={`pointer-events-auto absolute inset-x-0 bottom-3 cursor-pointer ${
+                      selected ? "outline-2 outline-forest" : ""
+                    }`}
+                  >
+                    <Component
+                      props={section.props}
+                      global={global}
+                      invitationId={invitationId}
+                      isPreview
+                      inCanvas
+                      siblingTypes={siblingTypes}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </DeviceFrame>
 
