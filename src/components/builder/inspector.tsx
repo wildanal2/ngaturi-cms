@@ -4,6 +4,7 @@ import { useBuilder, getDeep, setDeep } from "@/stores/builder-store";
 import { SectionRegistry } from "@/sections/registry";
 import { FieldRenderer, type FieldContext } from "./field-editors";
 import { ThemePanel } from "./theme-panel";
+import { VariantThumb } from "./variant-thumb";
 
 export function Inspector({ invitationId }: { invitationId: string }) {
   const sections = useBuilder((s) => s.sections);
@@ -45,24 +46,27 @@ export function Inspector({ invitationId }: { invitationId: string }) {
           <span className="mb-2 block text-xs font-medium tracking-wide text-muted uppercase">
             Tampilan
           </span>
-          <div className="grid gap-2">
+          <div className="grid gap-2.5">
             {variants.map(([key, v]) => (
               <button
                 key={key}
                 disabled={locked}
                 onClick={() => setVariant(section.id, key)}
-                className={`rounded-xl border p-2.5 text-left transition-colors ${
+                className={`overflow-hidden rounded-xl border text-left transition-colors ${
                   section.variant === key
-                    ? "border-forest bg-cream-200"
+                    ? "border-forest ring-1 ring-forest"
                     : "border-line hover:border-forest/50"
                 }`}
               >
-                <span className="block text-sm font-medium">{v.name}</span>
-                {v.description ? (
-                  <span className="block text-xs text-muted">
-                    {v.description}
-                  </span>
-                ) : null}
+                <VariantThumb type={section.type} variantKey={key} />
+                <div className="p-2">
+                  <span className="block text-sm font-medium">{v.name}</span>
+                  {v.description ? (
+                    <span className="block text-xs text-muted">
+                      {v.description}
+                    </span>
+                  ) : null}
+                </div>
               </button>
             ))}
           </div>
