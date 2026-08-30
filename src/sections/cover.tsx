@@ -25,18 +25,27 @@ function useOpen() {
   };
 }
 
-/** Shared shell: fixed overlay on the real page, inline block in the builder. */
+/** Shared shell: fixed full-height overlay on the real page, inline block
+ *  in the builder. Scrolls internally if content is taller than the screen. */
 function CoverShell({
   inCanvas,
   open,
   children,
   bg,
+  align = "center",
 }: {
   inCanvas?: boolean;
   open: boolean;
   children: React.ReactNode;
   bg?: string;
+  align?: "top" | "center" | "bottom";
 }) {
+  const justify =
+    align === "top"
+      ? "justify-start pt-20"
+      : align === "bottom"
+        ? "justify-end pb-20"
+        : "justify-center";
   return (
     <div
       data-invitation-cover={inCanvas ? undefined : true}
@@ -44,17 +53,23 @@ function CoverShell({
       hidden={!inCanvas && open}
       className={
         inCanvas
-          ? "relative flex min-h-[78%] flex-col items-center justify-center overflow-hidden px-6 py-16 text-center text-white"
-          : "fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden px-6 text-center text-white"
+          ? "relative min-h-[600px] w-full overflow-hidden"
+          : "fixed inset-0 z-50 overflow-y-auto overscroll-contain"
       }
       style={{ backgroundColor: bg ?? "var(--inv-primary)" }}
     >
-      {inCanvas ? (
-        <span className="absolute top-1 left-1 z-20 rounded bg-white/20 px-1.5 py-0.5 text-[10px]">
-          Sampul
-        </span>
-      ) : null}
-      {children}
+      <div
+        className={`relative flex ${
+          inCanvas ? "min-h-[600px]" : "min-h-dvh"
+        } flex-col items-center ${justify} px-6 py-16 text-center text-white`}
+      >
+        {inCanvas ? (
+          <span className="absolute top-1 left-1 z-20 rounded bg-white/20 px-1.5 py-0.5 text-[10px]">
+            Sampul
+          </span>
+        ) : null}
+        {children}
+      </div>
     </div>
   );
 }
@@ -139,32 +154,13 @@ export function CoverPhoto({ props, guestName, inCanvas }: SectionRenderProps) {
   const p = props as CoverProps;
   const { open, reveal } = useOpen();
   const align =
-    p.s_align === "top"
-      ? "justify-start pt-24"
-      : p.s_align === "bottom"
-        ? "justify-end pb-24"
-        : "justify-center";
+    p.s_align === "top" ? "top" : p.s_align === "bottom" ? "bottom" : "center";
   return (
-    <div
-      data-invitation-cover={inCanvas ? undefined : true}
-      data-open={open ? "1" : "0"}
-      hidden={!inCanvas && open}
-      className={`${
-        inCanvas
-          ? "relative min-h-[78%]"
-          : "fixed inset-0 z-50"
-      } flex flex-col items-center ${align} overflow-hidden px-6 text-center text-white`}
-      style={{ backgroundColor: "var(--inv-primary)" }}
-    >
+    <CoverShell inCanvas={inCanvas} open={open} align={align}>
       <Photo src={p.background_image} opacity={overlayVal(p.s_overlay)} />
-      {inCanvas ? (
-        <span className="absolute top-1 left-1 z-20 rounded bg-white/20 px-1.5 py-0.5 text-[10px]">
-          Sampul
-        </span>
-      ) : null}
       <Body p={p} guestName={guestName} />
       <OpenButton label={p.button_label} onClick={reveal} />
-    </div>
+    </CoverShell>
   );
 }
 
