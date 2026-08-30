@@ -47,28 +47,39 @@ export function Inspector({ invitationId }: { invitationId: string }) {
             Tampilan
           </span>
           <div className="grid grid-cols-2 gap-2.5">
-            {variants.map(([key, v]) => (
-              <button
-                key={key}
-                disabled={locked}
-                onClick={() => setVariant(section.id, key)}
-                className={`overflow-hidden rounded-xl border text-left transition-colors ${
-                  section.variant === key
-                    ? "border-forest ring-1 ring-forest"
-                    : "border-line hover:border-forest/50"
-                }`}
-              >
-                <VariantThumb type={section.type} variantKey={key} />
-                <div className="p-2">
-                  <span className="block text-sm font-medium">{v.name}</span>
-                  {v.description ? (
-                    <span className="block text-xs text-muted">
-                      {v.description}
-                    </span>
-                  ) : null}
+            {variants.map(([key, v]) => {
+              const active = section.variant === key;
+              return (
+                <div
+                  key={key}
+                  role="button"
+                  tabIndex={locked ? -1 : 0}
+                  aria-pressed={active}
+                  onClick={() => !locked && setVariant(section.id, key)}
+                  onKeyDown={(e) => {
+                    if (!locked && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      setVariant(section.id, key);
+                    }
+                  }}
+                  className={`cursor-pointer overflow-hidden rounded-xl border text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-forest ${
+                    active
+                      ? "border-forest ring-1 ring-forest"
+                      : "border-line hover:border-forest/50"
+                  } ${locked ? "pointer-events-none opacity-60" : ""}`}
+                >
+                  <VariantThumb type={section.type} variantKey={key} />
+                  <div className="p-2">
+                    <span className="block text-sm font-medium">{v.name}</span>
+                    {v.description ? (
+                      <span className="block text-xs text-muted">
+                        {v.description}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : null}
