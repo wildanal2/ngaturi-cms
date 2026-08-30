@@ -199,3 +199,120 @@ h3 {
   outline: 2px solid var(--inv-primary);
   outline-offset: 1px;
 }
+
+/* ============================================================
+ * MARKETING / LANDING — scroll reveal + ambient motion
+ * ============================================================ */
+@keyframes m-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--m-ty, 26px)) translateX(var(--m-tx, 0))
+      scale(var(--m-sc, 1));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes m-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--m-rot, 0deg));
+  }
+  50% {
+    transform: translateY(-10px) rotate(calc(var(--m-rot, 0deg) + 2deg));
+  }
+}
+@keyframes m-spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes m-shimmer {
+  0% {
+    background-position: -120% 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+.m-reveal {
+  opacity: 0;
+}
+.m-reveal.is-in {
+  animation: m-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.m-reveal[data-dir="up"] {
+  --m-ty: 30px;
+}
+.m-reveal[data-dir="down"] {
+  --m-ty: -30px;
+}
+.m-reveal[data-dir="left"] {
+  --m-tx: 34px;
+  --m-ty: 0;
+}
+.m-reveal[data-dir="right"] {
+  --m-tx: -34px;
+  --m-ty: 0;
+}
+.m-reveal[data-dir="zoom"] {
+  --m-sc: 0.92;
+  --m-ty: 0;
+}
+
+/* stagger children of an .is-in container */
+.m-stagger > * {
+  opacity: 0;
+}
+.m-stagger.is-in > * {
+  animation: m-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.m-stagger.is-in > *:nth-child(1) { animation-delay: 0.05s; }
+.m-stagger.is-in > *:nth-child(2) { animation-delay: 0.12s; }
+.m-stagger.is-in > *:nth-child(3) { animation-delay: 0.19s; }
+.m-stagger.is-in > *:nth-child(4) { animation-delay: 0.26s; }
+.m-stagger.is-in > *:nth-child(5) { animation-delay: 0.33s; }
+.m-stagger.is-in > *:nth-child(n + 6) { animation-delay: 0.4s; }
+
+.m-float {
+  animation: m-float 7s ease-in-out infinite;
+}
+.m-float-slow {
+  animation: m-float 11s ease-in-out infinite;
+}
+.m-spin-slow {
+  animation: m-spin-slow 40s linear infinite;
+}
+
+/* gold text shimmer for the headline accent */
+.m-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-gold) 0%,
+    #e7c98a 45%,
+    var(--color-gold) 60%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: m-shimmer 6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-reveal,
+  .m-reveal.is-in,
+  .m-stagger > *,
+  .m-stagger.is-in > * {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  .m-float,
+  .m-float-slow,
+  .m-spin-slow,
+  .m-shimmer {
+    animation: none !important;
+  }
+}
