@@ -40,6 +40,10 @@ export const auth = betterAuth({
     google: {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
+      // minta refresh_token dari Google (disimpan di tabel accounts) supaya
+      // access token Google bisa di-refresh tanpa login ulang
+      accessType: "offline",
+      prompt: "select_account consent",
     },
   },
 
@@ -51,9 +55,27 @@ export const auth = betterAuth({
   },
 
   session: {
-    expiresIn: 60 * 60 * 24 * 30, // 30 hari
-    updateAge: 60 * 60 * 24, // refresh tiap 1 hari
+    expiresIn: 60 * 60 * 24 * 60, // 60 hari
+    updateAge: 60 * 60 * 24, // rolling: tiap kunjungan >1 hari, sesi diperpanjang lagi
+    // cache sesi di cookie bertanda tangan → sebagian besar request tidak
+    // perlu menyentuh Redis, jadi sesi tidak "hilang" saat Redis lambat
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
   },
+
+  advanced: {
+    useSecureCookies: env.NODE_ENV === "production",
+    defaultCookieAttributes: {
+      sameSite: "lax",
+      path: "/",
+    },
+  },
+
+  trustedOrigins: [env.BETTER_AUTH_URL, env.NEXT_PUBLIC_APP_URL].filter(
+    (v, i, a) => v && a.indexOf(v) === i,
+  ),
 
   databaseHooks: {
     user: {
