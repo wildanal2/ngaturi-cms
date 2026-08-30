@@ -1,21 +1,11 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui/button";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
+import { ShowcaseGrid } from "@/components/marketing/showcase-grid";
 import { getRecentInvitations } from "@/lib/invitation/showcase";
 
 export const revalidate = 600;
-
-const EVENT_LABEL: Record<string, string> = {
-  wedding: "Pernikahan",
-  khitan: "Khitan",
-  tahlil: "Tahlil",
-  aqiqah: "Aqiqah",
-  engagement: "Lamaran",
-  birthday: "Ulang tahun",
-  generic: "Acara",
-};
 
 const FEATURES = [
   {
@@ -105,39 +95,22 @@ export default async function Home() {
         {/* Undangan Terbaru */}
         {recent.length >= 1 ? (
           <section className="mx-auto max-w-6xl px-5 py-20">
-            <div className="flex items-end justify-between">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 className="text-3xl sm:text-4xl">Undangan Terbaru</h2>
                 <p className="mt-2 text-ink-soft">
                   Baru saja dibuat orang lain dengan Ngaturi.
                 </p>
               </div>
+              <Link
+                href="/undangan-terbaru"
+                className="text-sm font-medium text-forest hover:underline"
+              >
+                Lihat semua →
+              </Link>
             </div>
-            <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {recent.map((r) => (
-                <Link
-                  key={r.slug}
-                  href={`/${r.slug}`}
-                  className="group overflow-hidden rounded-2xl border border-line bg-paper"
-                >
-                  <div className="relative aspect-[1200/630] w-full bg-cream-200">
-                    <Image
-                      src={r.image}
-                      alt={r.title}
-                      fill
-                      unoptimized
-                      className="object-contain transition-transform group-hover:scale-[1.03]"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <p className="truncate text-sm font-medium">{r.title}</p>
-                    <p className="text-xs text-muted">
-                      {EVENT_LABEL[r.eventType] ?? "Acara"}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+            <div className="mt-10">
+              <ShowcaseGrid items={recent} />
             </div>
           </section>
         ) : null}

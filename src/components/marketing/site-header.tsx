@@ -14,6 +14,9 @@ export function SiteHeader() {
           <Link href="/pricing" className="hover:text-ink">
             Harga
           </Link>
+          <Link href="/undangan-terbaru" className="hover:text-ink">
+            Pengguna mencoba
+          </Link>
         </nav>
         <div className="flex items-center gap-2">
           <ButtonLink href="/login" variant="ghost" size="sm">
