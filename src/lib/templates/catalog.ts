@@ -55,15 +55,8 @@ export const TEMPLATES: TemplatePreset[] = [
           "/themes/sage-emas-klasik/ornament-bl-3.png",
         ],
       }),
-      s("hero", "botanical", 1, {
-        couple_names: "Firda & Wildan",
-        tagline: "The Wedding Of",
-        event_date: inDays(45),
-        background_image: "/themes/sage-emas-klasik/bride.jpg",
-        background_texture: "/themes/sage-emas-klasik/bg-floating.png",
-        s_palette: "cream",
-      }),
-      s("couple-intro", "card", 2, {
+      /* undangan_1: langsung Cover → Mempelai (tanpa hero) */
+      s("couple-intro", "card", 1, {
         bride: {
           name: "Firda",
           full_name: "Firdausil Jannah",
@@ -82,6 +75,7 @@ export const TEMPLATES: TemplatePreset[] = [
           instagram: "wildan._.al",
           photo: "/themes/sage-emas-klasik/groom.jpg",
         },
+        section_icon: "/themes/sage-emas-klasik/icon-mempelai.svg",
         background_image: "/themes/sage-emas-klasik/bg-floating.png",
         divider_image: "/themes/sage-emas-klasik/divider.png",
         ornament_tr_images: [
@@ -95,8 +89,7 @@ export const TEMPLATES: TemplatePreset[] = [
           "/themes/sage-emas-klasik/ornament-bl-3.png",
         ],
       }),
-      s("countdown", "plain", 3, {}),
-      s("event-details", "formal", 4, {
+      s("event-details", "formal", 2, {
         intro:
           "Bukan karena bertemu lalu berjodoh, tapi karena berjodohlah maka kami dipertemukan. Kami memutuskan untuk menggapai ridho Allah dalam ibadah pernikahan.",
         events: [
@@ -111,23 +104,99 @@ export const TEMPLATES: TemplatePreset[] = [
               "https://www.google.com/maps/search/?api=1&query=-7.626779,112.729736",
           },
         ],
+        background_image: "/themes/sage-emas-klasik/bg-floating.png",
+        divider_image: "/themes/sage-emas-klasik/divider.png",
+        ornament_tr_images: [
+          "/themes/sage-emas-klasik/ornament-tr-1.png",
+          "/themes/sage-emas-klasik/ornament-tr-2.png",
+          "/themes/sage-emas-klasik/ornament-tr-3.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-emas-klasik/ornament-bl-1.png",
+          "/themes/sage-emas-klasik/ornament-bl-2.png",
+          "/themes/sage-emas-klasik/ornament-bl-3.png",
+        ],
       }),
-      s("map-location", "embed", 5, {}),
-      s("quote", "bordered", 6, {
+      s("map-location", "embed", 3, {}),
+      s("quote", "bordered", 4, {
         text: "Dan di antara tanda-tanda kekuasaan-Nya ialah diciptakan-Nya untukmu pasangan hidup dari jenismu sendiri, supaya kamu merasa tenteram di sampingnya, dan dijadikan-Nya rasa kasih dan sayang di antara kamu.",
         source: "Q.S. Ar-Rum: 21",
+        background_image: "/themes/sage-emas-klasik/bg-floating.png",
+        ornament_tr_images: [
+          "/themes/sage-emas-klasik/ornament-tr-1.png",
+          "/themes/sage-emas-klasik/ornament-tr-2.png",
+          "/themes/sage-emas-klasik/ornament-tr-3.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-emas-klasik/ornament-bl-1.png",
+          "/themes/sage-emas-klasik/ornament-bl-2.png",
+          "/themes/sage-emas-klasik/ornament-bl-3.png",
+        ],
       }),
-      s("gallery", "spotlight", 7, { images: [] }),
+      s("gallery", "spotlight", 5, {
+        images: [],
+        section_icon: "/themes/sage-emas-klasik/icon-galeri.svg",
+        background_image: "/themes/sage-emas-klasik/bg-floating.png",
+        ornament_tr_images: [
+          "/themes/sage-emas-klasik/ornament-tr-1.png",
+          "/themes/sage-emas-klasik/ornament-tr-2.png",
+          "/themes/sage-emas-klasik/ornament-tr-3.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-emas-klasik/ornament-bl-1.png",
+          "/themes/sage-emas-klasik/ornament-bl-2.png",
+          "/themes/sage-emas-klasik/ornament-bl-3.png",
+        ],
+      }),
+      s("guestbook", "chat", 6, {
+        section_icon: "/themes/sage-emas-klasik/icon-bukutamu.svg",
+        background_image: "/themes/sage-emas-klasik/bg-floating.png",
+        divider_image: "/themes/sage-emas-klasik/divider.png",
+        ornament_tr_images: [
+          "/themes/sage-emas-klasik/ornament-tr-1.png",
+          "/themes/sage-emas-klasik/ornament-tr-2.png",
+          "/themes/sage-emas-klasik/ornament-tr-3.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-emas-klasik/ornament-bl-1.png",
+          "/themes/sage-emas-klasik/ornament-bl-2.png",
+          "/themes/sage-emas-klasik/ornament-bl-3.png",
+        ],
+      }),
+      s("countdown", "plain", 7, {
+        save_the_date_image: "/themes/sage-emas-klasik/save-the-date.gif",
+        background_image: "/themes/sage-emas-klasik/bg-floating.png",
+        ornament_tr_images: [
+          "/themes/sage-emas-klasik/ornament-tr-1.png",
+          "/themes/sage-emas-klasik/ornament-tr-2.png",
+          "/themes/sage-emas-klasik/ornament-tr-3.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-emas-klasik/ornament-bl-1.png",
+          "/themes/sage-emas-klasik/ornament-bl-2.png",
+          "/themes/sage-emas-klasik/ornament-bl-3.png",
+        ],
+      }),
       s("rsvp", "form-card", 8, {}),
-      s("guestbook", "chat", 9, {}),
-      s("gift", "minimal", 10, {}),
-      s("closing", "thankyou", 11, {
+      s("gift", "minimal", 9, {}),
+      s("closing", "thankyou", 10, {
         names: "Firda & Wildan",
         message:
           "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
+        background_image: "/themes/sage-emas-klasik/bg-floating.png",
+        ornament_tr_images: [
+          "/themes/sage-emas-klasik/ornament-tr-1.png",
+          "/themes/sage-emas-klasik/ornament-tr-2.png",
+          "/themes/sage-emas-klasik/ornament-tr-3.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-emas-klasik/ornament-bl-1.png",
+          "/themes/sage-emas-klasik/ornament-bl-2.png",
+          "/themes/sage-emas-klasik/ornament-bl-3.png",
+        ],
       }),
-      s("music", "disc", 12, {}),
-      s("navigation", "bar", 13, {}),
+      s("music", "disc", 11, {}),
+      s("navigation", "bar", 12, {}),
     ],
   },
   {

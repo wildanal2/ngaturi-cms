@@ -1,6 +1,6 @@
 import { CalendarPlus, Navigation } from "lucide-react";
 import type { SectionRenderProps } from "../types";
-import { Divider, FloatingLeaves } from "../ornaments";
+import { pickDecor, decorBgStyle, DecorOrnaments, DecorDivider } from "../shared";
 import { formatTimeRange } from "../shared";
 
 type EventItem = {
@@ -40,14 +40,26 @@ function DateBlock({ iso }: { iso: string }) {
   );
 }
 
-/** Formal event card: intro paragraph + a large day/date/year block per event. */
+/** Formal event card: intro paragraph + a large day/date/year block per event.
+ *  Supports background texture and layered leaf ornaments. */
 export function EventFormal({ props }: SectionRenderProps) {
-  const p = props as { intro?: string; events?: EventItem[] };
+  const p = props as {
+    intro?: string;
+    events?: EventItem[];
+    background_image?: string;
+    ornament_tr_images?: string[];
+    ornament_bl_images?: string[];
+    divider_image?: string;
+  };
+  const d = pickDecor(p);
   return (
-    <section className="relative overflow-hidden px-6 py-14">
-      <FloatingLeaves />
+    <section
+      className="relative overflow-hidden px-6 py-14"
+      style={decorBgStyle(d)}
+    >
+      <DecorOrnaments d={d} />
       <div className="relative mx-auto max-w-md rounded-3xl bg-white p-8 text-center shadow-lg">
-        <Divider className="mx-auto h-4 w-40 text-[var(--inv-secondary)] opacity-70" />
+        <DecorDivider d={d} className="mx-auto h-4 w-20 object-contain text-[var(--inv-secondary)] opacity-70" />
         <p className="mt-3 text-[var(--inv-ink)]">Our Wedding Event</p>
         {p.intro ? (
           <p className="mt-4 text-sm leading-relaxed text-[var(--inv-ink)] opacity-90">
@@ -57,7 +69,7 @@ export function EventFormal({ props }: SectionRenderProps) {
 
         {(p.events ?? []).map((e, i) => (
           <div key={i} className="mt-10 flex flex-col items-center inv-stagger">
-            <Divider className="h-4 w-28 text-[var(--inv-secondary)] opacity-60" />
+            <DecorDivider d={d} className="h-4 w-16 object-contain text-[var(--inv-secondary)] opacity-60" />
             <h3 className="mt-3 font-[family-name:var(--inv-font)] text-2xl text-[var(--inv-primary)]">
               {e.name}
             </h3>

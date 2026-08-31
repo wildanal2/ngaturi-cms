@@ -1,6 +1,76 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
-import { Divider } from "./ornaments";
+import { Divider, DividerImage, FloatingLeaves, FloatingLeavesImage } from "./ornaments";
+
+/** Common theme-decoration props that any section can accept via its props bag. */
+export type ThemeDecor = {
+  background_image?: string;
+  ornament_tr_images?: string[];
+  ornament_bl_images?: string[];
+  divider_image?: string;
+  section_icon?: string;
+  save_the_date_image?: string;
+};
+
+/** Extract ThemeDecor fields from an arbitrary props record. */
+export function pickDecor(props: Record<string, unknown>): ThemeDecor {
+  return {
+    background_image: props.background_image as string | undefined,
+    ornament_tr_images: props.ornament_tr_images as string[] | undefined,
+    ornament_bl_images: props.ornament_bl_images as string[] | undefined,
+    divider_image: props.divider_image as string | undefined,
+    section_icon: props.section_icon as string | undefined,
+    save_the_date_image: props.save_the_date_image as string | undefined,
+  };
+}
+
+/** Background style from a decor bag. */
+export function decorBgStyle(d: ThemeDecor): React.CSSProperties | undefined {
+  if (!d.background_image) return undefined;
+  return {
+    backgroundImage: `url('${d.background_image}')`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  };
+}
+
+/** Render the right ornament component: image layers when supplied, SVG otherwise. */
+export function DecorOrnaments({ d }: { d: ThemeDecor }) {
+  const hasImages = d.ornament_tr_images?.length && d.ornament_bl_images?.length;
+  if (hasImages)
+    return (
+      <FloatingLeavesImage
+        trImages={d.ornament_tr_images!}
+        blImages={d.ornament_bl_images!}
+      />
+    );
+  return <FloatingLeaves />;
+}
+
+/** Render divider: image when supplied, SVG otherwise. */
+export function DecorDivider({
+  d,
+  className,
+}: {
+  d: ThemeDecor;
+  className?: string;
+}) {
+  if (d.divider_image)
+    return (
+      <DividerImage
+        src={d.divider_image}
+        className={className ?? "mx-auto mt-3 h-4 w-16 object-contain opacity-70"}
+      />
+    );
+  return (
+    <Divider
+      className={
+        className ??
+        "mx-auto mt-3 h-4 w-32 text-[var(--inv-secondary)] opacity-70"
+      }
+    />
+  );
+}
 
 export function SectionShell({
   children,

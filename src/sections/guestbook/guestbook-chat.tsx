@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import type { SectionRenderProps } from "../types";
-import { Divider, FloatingLeaves } from "../ornaments";
+import { pickDecor, decorBgStyle, DecorOrnaments, DecorDivider } from "../shared";
 import { TurnstileField } from "../turnstile-field";
 
 type Msg = { id: string; name: string; message: string; createdAt: string };
@@ -75,10 +75,13 @@ function Bubble({ m }: { m: Msg }) {
 
 /** Chat-bubble guestbook with avatar picker + circular char counters. */
 export function GuestbookChat({
+  props,
   invitationId,
   guestName,
   isPreview,
 }: SectionRenderProps) {
+  const p = props as Record<string, unknown>;
+  const d = pickDecor(p);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [page, setPage] = useState(1);
   const [name, setName] = useState(() => guestName ?? "");
@@ -119,15 +122,22 @@ export function GuestbookChat({
   const shown = msgs.slice(0, page * PAGE);
 
   return (
-    <section className="relative overflow-hidden px-6 py-16">
-      <FloatingLeaves />
+    <section
+      className="relative overflow-hidden px-6 py-16"
+      style={decorBgStyle(d)}
+    >
+      <DecorOrnaments d={d} />
       <div className="relative mx-auto flex max-w-md flex-col items-center">
-        <p className="text-[var(--inv-ink)]">Buku Tamu &amp; Ucapan</p>
+        {d.section_icon ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={d.section_icon} alt="" className="h-9 w-9" />
+        ) : null}
+        <p className="mt-2 text-[var(--inv-ink)]">Buku Tamu &amp; RSVP</p>
         <div className="mt-4 w-full rounded-3xl bg-[var(--inv-bg)] p-6 text-center shadow-lg">
           <p className="font-[family-name:var(--inv-font)] text-2xl font-bold text-[var(--inv-primary)]">
             Buku Tamu
           </p>
-          <Divider className="mx-auto mt-2 h-4 w-32 text-[var(--inv-secondary)] opacity-70" />
+          <DecorDivider d={d} />
 
           <div className="mt-5 min-h-[160px] space-y-3 border-b border-black/10 pb-5">
             {shown.length === 0 ? (
