@@ -31,9 +31,9 @@ export function ShowcaseGrid({ items }: { items: ShowcaseItem[] }) {
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
           </div>
-          <div className="p-3">
+          <div className="p-4">
             <p className="truncate text-sm font-medium">{r.title}</p>
-            <p className="text-xs text-muted">
+            <p className="mt-0.5 text-xs text-muted">
               {EVENT_LABEL[r.eventType] ?? "Acara"}
             </p>
           </div>

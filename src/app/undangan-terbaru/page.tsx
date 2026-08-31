@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { SiteHeader } from "@/components/marketing/site-header";
-import { SiteFooter } from "@/components/marketing/site-footer";
+import { MarketingPage, PageHeading } from "@/components/marketing/page-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { ShowcaseGrid } from "@/components/marketing/showcase-grid";
 import { getRecentInvitations } from "@/lib/invitation/showcase";
@@ -18,35 +17,31 @@ export default async function UndanganTerbaruPage() {
   const items = await getRecentInvitations(60);
 
   return (
-    <>
-      <SiteHeader />
-      <main className="mx-auto max-w-6xl flex-1 px-5 py-16">
-        <h1 className="text-4xl">Undangan Terbaru</h1>
-        <p className="mt-2 text-ink-soft">
-          Baru saja dibuat orang lain dengan Ngaturi. Klik untuk membuka.
-        </p>
+    <MarketingPage>
+      <PageHeading
+        title="Undangan Terbaru"
+        description="Baru saja dibuat orang lain dengan Ngaturi. Klik salah satu untuk membukanya."
+      />
 
-        {items.length === 0 ? (
-          <div className="mt-12 rounded-2xl border border-dashed border-line p-12 text-center text-ink-soft">
-            Belum ada undangan yang dipublikasikan.
-          </div>
-        ) : (
-          <div className="mt-10">
-            <ShowcaseGrid items={items} />
-          </div>
-        )}
-
-        <div className="mt-16 rounded-2xl border border-line bg-cream-200/50 p-8 text-center">
-          <h2 className="text-2xl">Buat undanganmu sendiri</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
-            Gratis untuk undangan pertama. Pilih template, isi, bagikan.
-          </p>
-          <ButtonLink href="/login" size="lg" className="mt-5">
-            Mulai gratis
-          </ButtonLink>
+      {items.length === 0 ? (
+        <div className="mt-12 rounded-2xl border border-dashed border-line p-12 text-center text-ink-soft">
+          Belum ada undangan yang dipublikasikan.
         </div>
-      </main>
-      <SiteFooter />
-    </>
+      ) : (
+        <div className="mt-10 sm:mt-12">
+          <ShowcaseGrid items={items} />
+        </div>
+      )}
+
+      <div className="mt-16 rounded-2xl border border-line bg-cream-200/50 p-8 text-center sm:mt-20">
+        <h2 className="text-2xl">Buat undanganmu sendiri</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
+          Gratis untuk undangan pertama. Pilih template, isi, lalu bagikan.
+        </p>
+        <ButtonLink href="/login" size="lg" className="mt-5">
+          Mulai gratis
+        </ButtonLink>
+      </div>
+    </MarketingPage>
   );
 }
