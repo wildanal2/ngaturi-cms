@@ -173,6 +173,7 @@ export function MusicPickerField({
                       </p>
                       <p className="truncate text-xs text-muted">
                         {t.artist ?? "—"}
+                        {t.genre ? ` · ${t.genre}` : ""}
                         {t.license ? ` · ${t.license}` : ""}
                       </p>
                       {t.picks > 0 ? (
@@ -201,7 +202,16 @@ export function MusicPickerField({
             })}
           </ul>
         )
-      ) : (
+      ) : null}
+
+      {tab === "catalog" && tracks && tracks.length > 0 ? (
+        <p className="pt-1 text-[10px] leading-relaxed text-muted">
+          Musik oleh Kevin MacLeod (incompetech.com), lisensi Creative Commons
+          BY 4.0 — bebas dipakai termasuk untuk undangan.
+        </p>
+      ) : null}
+
+      {tab === "url" ? (
         <div className="space-y-2">
           <input
             type="url"
@@ -239,7 +249,7 @@ export function MusicPickerField({
             }}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
