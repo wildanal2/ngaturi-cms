@@ -15,7 +15,7 @@ export default function LoginPage() {
 
 function LoginForm() {
   const params = useSearchParams();
-  const next = params.get("next") ?? params.get("redirect") ?? "/dashboard";
+  const next = params.get("next") ?? params.get("redirect") ?? "/invitations";
   const [loading, setLoading] = useState(false);
 
   async function handleGoogle() {

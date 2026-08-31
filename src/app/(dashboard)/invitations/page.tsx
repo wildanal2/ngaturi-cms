@@ -35,6 +35,10 @@ export default async function InvitationsPage({
   const atLimit = used >= limit;
   const showQuotaNotice = (await searchParams).quota === "full";
 
+  const published = mine.filter((i) => i.status === "published").length;
+  const totalAttending = [...stats.values()].reduce((n, s) => n + s.attending, 0);
+  const totalMessages = [...stats.values()].reduce((n, s) => n + s.messages, 0);
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -52,6 +56,14 @@ export default async function InvitationsPage({
           <ButtonLink href="/invitations/new">+ Buat undangan</ButtonLink>
         )}
       </header>
+
+      {used > 0 ? (
+        <section className="grid gap-3 sm:grid-cols-3">
+          <Stat label="Undangan terbit" value={published} />
+          <Stat label="Total tamu hadir" value={totalAttending} />
+          <Stat label="Total ucapan" value={totalMessages} />
+        </section>
+      ) : null}
 
       {/* quota meter */}
       <div className="rounded-xl border border-line bg-paper p-4">
@@ -123,6 +135,15 @@ export default async function InvitationsPage({
         </Link>{" "}
         atau hubungi tim kami.
       </p>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-line bg-paper p-4">
+      <p className="text-2xl font-medium">{value}</p>
+      <p className="text-sm text-ink-soft">{label}</p>
     </div>
   );
 }

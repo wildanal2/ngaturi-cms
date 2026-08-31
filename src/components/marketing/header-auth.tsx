@@ -13,8 +13,8 @@ export function HeaderAuth() {
   if (!isPending && data?.user) {
     return (
       <div className="flex items-center gap-2">
-        <ButtonLink href="/dashboard" variant="ghost" size="sm">
-          Dashboard
+        <ButtonLink href="/invitations" variant="ghost" size="sm">
+          Undangan saya
         </ButtonLink>
         <ButtonLink href="/invitations/new" size="sm">
           Buat undangan

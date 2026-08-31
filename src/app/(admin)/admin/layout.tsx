@@ -32,10 +32,10 @@ export default async function AdminLayout({
             </Link>
           ))}
           <Link
-            href="/dashboard"
+            href="/invitations"
             className="mt-4 rounded-lg px-3 py-2 text-sm text-muted hover:bg-cream-200"
           >
-            ← Kembali ke dashboard
+            ← Kembali ke undangan
           </Link>
         </nav>
       </aside>

@@ -14,10 +14,10 @@ export async function requireUser(): Promise<Session> {
   return session;
 }
 
-/** Wajib admin — redirect ke /dashboard kalau bukan admin. */
+/** Wajib admin — redirect ke /invitations kalau bukan admin. */
 export async function requireAdmin(): Promise<Session> {
   const session = await requireUser();
   const role = (session.user as { role?: string }).role;
-  if (role !== "admin") redirect("/dashboard");
+  if (role !== "admin") redirect("/invitations");
   return session;
 }
