@@ -23,8 +23,9 @@ interface Track {
   license: string | null;
   genre: string | null;
   picks?: number;
-  source?: "catalog" | "jamendo";
-  shareUrl?: string | null;
+  source?: "catalog" | "jamendo" | "itunes";
+  previewOnly?: boolean;
+  linkUrl?: string | null;
 }
 
 export function MusicPickerField({
@@ -43,7 +44,7 @@ export function MusicPickerField({
 
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<{ q: string; items: Track[] } | null>(null);
-  const [provider, setProvider] = useState<string | null>(null);
+  const [sources, setSources] = useState<string[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -68,10 +69,10 @@ export function MusicPickerField({
       fetch(`/api/music/search?q=${encodeURIComponent(q)}`, {
         signal: ctrl.signal,
       })
-        .then((r) => (r.ok ? r.json() : { results: [], provider: null }))
+        .then((r) => (r.ok ? r.json() : { results: [], sources: [] }))
         .then((d) => {
           setHits({ q, items: d.results ?? [] });
-          setProvider(d.provider ?? null);
+          setSources(d.sources ?? []);
         })
         .catch(() => {});
     }, 350);
@@ -116,7 +117,14 @@ export function MusicPickerField({
     ctx.write("track_title", t.title);
     ctx.write("track_artist", t.artist ?? "");
     ctx.write("cover_url", t.coverUrl ?? "");
-    toast.success(`Lagu dipilih: ${t.title}`);
+    if (t.previewOnly) {
+      toast(`"${t.title}" — cuplikan 30 detik (berhak cipta).`, {
+        description:
+          "Untuk lagu versi penuh, gunakan file milikmu sendiri di tab Upload / URL.",
+      });
+    } else {
+      toast.success(`Lagu dipilih: ${t.title}`);
+    }
   }
 
   function clearTrack() {
@@ -206,10 +214,21 @@ export function MusicPickerField({
                 </span>
               ) : null}
             </p>
-            <p className="truncate text-xs text-muted">
-              {t.artist ?? "—"}
-              {t.genre ? ` · ${t.genre}` : ""}
-              {t.license ? ` · ${t.license}` : ""}
+            <p className="flex items-center gap-1 truncate text-xs text-muted">
+              {t.source === "itunes" ? (
+                <span className="rounded bg-ink/10 px-1 py-px text-[9px] font-medium text-ink">
+                  iTunes · 30dtk
+                </span>
+              ) : t.source === "jamendo" ? (
+                <span className="rounded bg-ink/10 px-1 py-px text-[9px] font-medium text-ink">
+                  Jamendo · CC
+                </span>
+              ) : null}
+              <span className="truncate">
+                {t.artist ?? "—"}
+                {t.genre ? ` · ${t.genre}` : ""}
+                {t.source !== "itunes" && t.license ? ` · ${t.license}` : ""}
+              </span>
             </p>
             {!searchMode && (t.picks ?? 0) > 0 ? (
               <div className="mt-1 h-1 w-full overflow-hidden rounded bg-line">
@@ -352,10 +371,8 @@ export function MusicPickerField({
               </p>
             ) : list.length === 0 ? (
               <p className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
-                Tidak ada hasil untuk “{query}”.
-                {provider
-                  ? ""
-                  : " Untuk cari dari pustaka lebih besar, aktifkan penyedia musik, atau pakai tab “Upload / URL”."}
+                Tidak ada hasil untuk “{query}”. Coba judul yang lebih pendek,
+                atau pakai tab “Upload / URL”.
               </p>
             ) : (
               <ul className="max-h-72 space-y-1.5 overflow-y-auto">
@@ -374,9 +391,7 @@ export function MusicPickerField({
 
           <p className="pt-1 text-[10px] leading-relaxed text-muted">
             {searchMode
-              ? `Lagu komersial (Ed Sheeran, Christina Perri, dll.) tidak tersedia karena hak cipta${
-                  provider ? ` — hasil ${provider} adalah versi cover/instrumental berlisensi bebas` : ""
-                }. Punya file lagu sendiri? Pakai tab “Upload / URL”.`
+              ? `Sumber: ${sources.join(", ") || "Katalog"}. Hasil iTunes = cuplikan 30 detik (berhak cipta) — untuk lagu penuh pakai file sendiri di tab “Upload / URL”.`
               : "Katalog: Kevin MacLeod (incompetech.com), lisensi Creative Commons BY 4.0 — bebas dipakai termasuk untuk undangan."}
           </p>
         </>
