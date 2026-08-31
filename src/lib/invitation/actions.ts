@@ -4,7 +4,7 @@ import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { invitations, userProfiles } from "@/lib/db/schema";
+import { invitations, payments, userProfiles } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
 import { getTemplate } from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
@@ -165,4 +165,27 @@ export async function unpublishInvitation(invitationId: string): Promise<void> {
     .where(eq(invitations.id, invitationId));
   updateTag(`invitation:${invitationId}`);
   updateTag(`invitation:slug:${inv.slug}`);
+}
+
+/**
+ * Hapus undangan beserta seluruh data terkait (RSVP, ucapan, kunjungan,
+ * undangan per-tamu, media). Riwayat pembayaran disimpan tapi ditautkan
+ * lepas dari undangan. Membebaskan kembali 1 slot kuota.
+ */
+export async function deleteInvitation(invitationId: string): Promise<never> {
+  const inv = await loadOwned(invitationId);
+
+  await db.transaction(async (tx) => {
+    // payments.invitation_id has no ON DELETE — unlink so the row survives
+    await tx
+      .update(payments)
+      .set({ invitationId: null })
+      .where(eq(payments.invitationId, inv.id));
+    // the rest (rsvp, guestbook, views, guest invites, media) cascade
+    await tx.delete(invitations).where(eq(invitations.id, inv.id));
+  });
+
+  updateTag(`invitation:${inv.id}`);
+  updateTag(`invitation:slug:${inv.slug}`);
+  redirect("/invitations");
 }

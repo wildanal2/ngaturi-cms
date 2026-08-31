@@ -146,7 +146,7 @@ export function InvitationCard({
             href={`/invitations/${inv.id}`}
             className="rounded-full border border-line px-4 py-2 hover:bg-cream-200"
           >
-            Tamu &amp; ucapan
+            Kelola &amp; RSVP
           </Link>
         </div>
 

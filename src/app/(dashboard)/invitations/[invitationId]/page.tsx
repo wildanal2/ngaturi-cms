@@ -13,6 +13,7 @@ import { env } from "@/lib/env";
 import { moderateMessage } from "@/lib/invitation/moderation";
 import { ShareBox } from "@/components/dashboard/share-box";
 import { ViewsChart } from "@/components/dashboard/views-chart";
+import { DeleteInvitation } from "@/components/dashboard/delete-invitation";
 
 export default async function InvitationDetailPage({
   params,
@@ -199,6 +200,14 @@ export default async function InvitationDetailPage({
             <li className="text-muted">Belum ada ucapan.</li>
           ) : null}
         </ul>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-lg">Pengaturan lanjutan</h2>
+        <DeleteInvitation
+          invitationId={inv.id}
+          title={inv.eventTitle ?? inv.slug}
+        />
       </section>
     </div>
   );
