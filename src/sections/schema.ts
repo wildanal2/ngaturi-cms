@@ -108,6 +108,7 @@ export const MusicProps2 = z.object({
   track_artist: z.string().optional(),
   cover_url: z.string().optional(),
   autoplay: z.boolean().optional(),
+  start_at: z.coerce.number().min(0).optional(),
 });
 
 export const NavigationProps = z.object({});

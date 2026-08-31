@@ -38,6 +38,7 @@ export function MusicPickerField({
   const [tracks, setTracks] = useState<Track[] | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [previewTime, setPreviewTime] = useState(0);
   const [uploading, setUploading] = useState(false);
 
   const [query, setQuery] = useState("");
@@ -154,11 +155,23 @@ export function MusicPickerField({
   const list: Track[] = searchMode ? (freshHits ?? []) : (tracks ?? []);
   const maxPicks = Math.max(1, ...(tracks?.map((t) => t.picks ?? 0) ?? [1]));
 
-  function TrackRow({ t, rank }: { t: Track; rank: number }) {
+  const startAt = Number(ctx.read("start_at")) || 0;
+  function commitStart(raw: string) {
+    const s = raw.trim();
+    if (!s) return ctx.write("start_at", 0);
+    const m = s.match(/^(?:(\d+):)?(\d{1,2})$/);
+    const secs = m
+      ? (Number(m[1] ?? 0) * 60 + Number(m[2]))
+      : Math.max(0, Math.round(Number(s) || 0));
+    ctx.write("start_at", secs);
+  }
+
+  const renderRow = (t: Track, rank: number) => {
     const active = currentTrackId === t.id;
     const trending = !searchMode && rank < 3 && (t.picks ?? 0) > 0;
     return (
       <li
+        key={t.id}
         className={`rounded-lg border p-2 ${
           active ? "border-forest bg-cream-200" : "border-line"
         }`}
@@ -221,7 +234,10 @@ export function MusicPickerField({
         </div>
       </li>
     );
-  }
+  };
+
+  const fmt = (s: number) =>
+    `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
   return (
     <div className="space-y-2 text-sm">
@@ -243,6 +259,40 @@ export function MusicPickerField({
         </div>
       ) : null}
 
+      {currentUrl ? (
+        <div className="space-y-1.5 rounded-lg border border-line px-3 py-2">
+          <label className="flex items-center justify-between gap-2 text-xs text-ink-soft">
+            Mulai lagu dari (reff / momen)
+            <input
+              key={currentTrackId + currentUrl}
+              defaultValue={startAt ? fmt(startAt) : ""}
+              disabled={ctx.disabled}
+              onBlur={(e) => commitStart(e.target.value)}
+              placeholder="0:00"
+              className="w-16 rounded border border-line bg-paper px-2 py-1 text-center"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={ctx.disabled || previewId === null}
+            onClick={() => {
+              const s = Math.floor(audioRef.current?.currentTime ?? 0);
+              ctx.write("start_at", s);
+              toast.success(`Mulai dari ${fmt(s)}`);
+            }}
+            className="w-full rounded border border-line py-1 text-xs hover:bg-cream-200 disabled:opacity-50"
+          >
+            {previewId
+              ? `Tandai posisi pratinjau saat ini (${fmt(previewTime)})`
+              : "Putar pratinjau lalu tandai posisinya"}
+          </button>
+          <p className="text-[10px] leading-relaxed text-muted">
+            Saat undangan dibuka, lagu diputar &amp; diulang dari titik ini —
+            bukan dari awal. Kosongkan untuk mulai dari 0:00.
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex gap-1 rounded-full bg-cream-200 p-0.5 text-xs">
         {(["catalog", "url"] as const).map((t) => (
           <button
@@ -259,6 +309,7 @@ export function MusicPickerField({
 
       <audio
         ref={audioRef}
+        onTimeUpdate={(e) => setPreviewTime(e.currentTarget.currentTime)}
         onEnded={() => setPreviewId(null)}
         onError={() => {
           if (loadingId || previewId) toast.error("Lagu tidak bisa diputar.");
@@ -308,9 +359,7 @@ export function MusicPickerField({
               </p>
             ) : (
               <ul className="max-h-72 space-y-1.5 overflow-y-auto">
-                {list.map((t, i) => (
-                  <TrackRow key={t.id} t={t} rank={i} />
-                ))}
+                {list.map((t, i) => renderRow(t, i))}
               </ul>
             )
           ) : list.length === 0 ? (
@@ -319,9 +368,7 @@ export function MusicPickerField({
             </p>
           ) : (
             <ul className="max-h-72 space-y-1.5 overflow-y-auto">
-              {list.map((t, i) => (
-                <TrackRow key={t.id} t={t} rank={i} />
-              ))}
+              {list.map((t, i) => renderRow(t, i))}
             </ul>
           )}
 

@@ -12,10 +12,11 @@ type MusicProps = {
   track_artist?: string;
   cover_url?: string;
   autoplay?: boolean;
+  start_at?: number;
   s_position?: string;
 };
 
-function usePlayer(canControl?: boolean, autoplay = true) {
+function usePlayer(canControl?: boolean, autoplay = true, startAt = 0) {
   const ref = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -23,8 +24,25 @@ function usePlayer(canControl?: boolean, autoplay = true) {
     const a = ref.current;
     if (!a || !canControl) return;
     a.volume = 0.55;
+
+    const seekStart = () => {
+      if (startAt > 0 && a.currentTime < 1) {
+        try {
+          a.currentTime = Math.min(startAt, (a.duration || startAt + 1) - 0.5);
+        } catch {}
+      }
+    };
+    // loop back to the chosen "reff" moment rather than 0:00
+    const onLoop = () => {
+      a.currentTime = startAt;
+      void a.play();
+    };
+    a.addEventListener("loadedmetadata", seekStart);
+    a.addEventListener("ended", onLoop);
+
     const onOpen = () => {
       if (!autoplay) return;
+      seekStart();
       a.play()
         .then(() => setPlaying(true))
         .catch(() => setPlaying(false));
@@ -37,14 +55,22 @@ function usePlayer(canControl?: boolean, autoplay = true) {
       window.removeEventListener("ngaturi:open", onOpen);
       a.removeEventListener("play", sync);
       a.removeEventListener("pause", sync);
+      a.removeEventListener("loadedmetadata", seekStart);
+      a.removeEventListener("ended", onLoop);
     };
-  }, [canControl, autoplay]);
+  }, [canControl, autoplay, startAt]);
 
   const toggle = () => {
     const a = ref.current;
     if (!a) return;
-    if (a.paused) a.play().then(() => setPlaying(true)).catch(() => {});
-    else {
+    if (a.paused) {
+      if (startAt > 0 && a.currentTime < 1) {
+        try {
+          a.currentTime = startAt;
+        } catch {}
+      }
+      a.play().then(() => setPlaying(true)).catch(() => {});
+    } else {
       a.pause();
       setPlaying(false);
     }
@@ -122,14 +148,14 @@ function Sleeve({
 /* ---------- 1. DISC — cover art record ---------- */
 export function MusicDisc({ props, inCanvas }: SectionRenderProps) {
   const p = props as MusicProps;
-  const { ref, playing, toggle } = usePlayer(true, p.autoplay);
+  const { ref, playing, toggle } = usePlayer(true, p.autoplay, p.start_at ?? 0);
   const spinning = playing || Boolean(inCanvas);
   if (!p.audio_url && !inCanvas) return null;
 
   return (
     <Fab inCanvas={inCanvas} position={p.s_position} bottom="bottom-24">
       {p.audio_url ? (
-        <audio ref={ref} src={p.audio_url} loop preload="none" />
+        <audio ref={ref} src={p.audio_url} preload="none" />
       ) : null}
       <button
         onClick={toggle}
@@ -150,14 +176,14 @@ export function MusicDisc({ props, inCanvas }: SectionRenderProps) {
 /* ---------- 2. VINYL — floating turntable FAB (piringan hitam) ---------- */
 export function MusicVinyl({ props, inCanvas }: SectionRenderProps) {
   const p = props as MusicProps;
-  const { ref, playing, toggle } = usePlayer(true, p.autoplay);
+  const { ref, playing, toggle } = usePlayer(true, p.autoplay, p.start_at ?? 0);
   const spinning = playing || Boolean(inCanvas);
   if (!p.audio_url && !inCanvas) return null;
 
   return (
     <Fab inCanvas={inCanvas} position={p.s_position} bottom="bottom-24">
       {p.audio_url ? (
-        <audio ref={ref} src={p.audio_url} loop preload="none" />
+        <audio ref={ref} src={p.audio_url} preload="none" />
       ) : null}
       <button
         onClick={toggle}
@@ -203,7 +229,7 @@ export function MusicVinyl({ props, inCanvas }: SectionRenderProps) {
 /* ---------- 3. BAR — floating mini-player ---------- */
 export function MusicBar({ props, inCanvas }: SectionRenderProps) {
   const p = props as MusicProps;
-  const { ref, playing, toggle } = usePlayer(true, p.autoplay);
+  const { ref, playing, toggle } = usePlayer(true, p.autoplay, p.start_at ?? 0);
   const spinning = playing || Boolean(inCanvas);
   if (!p.audio_url && !inCanvas) return null;
 
@@ -216,7 +242,7 @@ export function MusicBar({ props, inCanvas }: SectionRenderProps) {
       }
     >
       {p.audio_url ? (
-        <audio ref={ref} src={p.audio_url} loop preload="none" />
+        <audio ref={ref} src={p.audio_url} preload="none" />
       ) : null}
       <div className="flex items-center gap-3 rounded-full bg-ink/85 py-1.5 pl-1.5 pr-3 text-white shadow-lg backdrop-blur">
         <Sleeve cover={p.cover_url} playing={spinning} size={36} />
@@ -239,13 +265,13 @@ export function MusicBar({ props, inCanvas }: SectionRenderProps) {
 /* ---------- 4. PILL — compact ---------- */
 export function MusicPill({ props, inCanvas }: SectionRenderProps) {
   const p = props as MusicProps;
-  const { ref, playing, toggle } = usePlayer(true, p.autoplay);
+  const { ref, playing, toggle } = usePlayer(true, p.autoplay, p.start_at ?? 0);
   if (!p.audio_url && !inCanvas) return null;
 
   return (
     <Fab inCanvas={inCanvas} position={p.s_position} bottom="bottom-20">
       {p.audio_url ? (
-        <audio ref={ref} src={p.audio_url} loop preload="none" />
+        <audio ref={ref} src={p.audio_url} preload="none" />
       ) : null}
       <button
         onClick={toggle}
