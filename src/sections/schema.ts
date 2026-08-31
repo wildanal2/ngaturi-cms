@@ -89,6 +89,50 @@ export const CoverProps = z.object({
   note: z.string().optional(),
   button_label: z.string().optional(),
   background_image: z.string().optional(),
+  s_overlay: z.string().optional(),
+  s_align: z.string().optional(),
+  seal_label: z.string().optional(),
+  envelope_color: z.string().optional(),
+  accent_color: z.string().optional(),
+});
+
+export const StoryProps = z.object({
+  eyebrow: z.string().optional(),
+  title: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        year: z.string().optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        image: z.string().optional(),
+      }),
+    )
+    .default([]),
+});
+
+export const FamilyProps = z.object({
+  eyebrow: z.string().optional(),
+  title: z.string().optional(),
+  intro: z.string().optional(),
+  groups: z
+    .array(
+      z.object({
+        title: z.string().optional(),
+        // string (satu nama per baris) atau array — keduanya diterima
+        names: z.union([z.array(z.string()), z.string()]).optional(),
+      }),
+    )
+    .default([]),
+  members: z
+    .array(
+      z.object({
+        name: z.string().optional(),
+        role: z.string().optional(),
+        photo: z.string().optional(),
+      }),
+    )
+    .default([]),
 });
 
 export const MapProps = z.object({
@@ -147,6 +191,8 @@ export const GlobalSettingsSchema = z.object({
 export const SECTION_PROPS_SCHEMAS: Record<string, z.ZodType> = {
   hero: HeroProps,
   "couple-intro": CoupleIntroProps,
+  story: StoryProps,
+  family: FamilyProps,
   "event-details": EventDetailsProps,
   gallery: GalleryProps,
   countdown: CountdownProps,

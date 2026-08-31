@@ -35,6 +35,32 @@ export function SectionTitle({ children }: { children: ReactNode }) {
   );
 }
 
+/** Eyebrow (small uppercase) + serif title + leaf divider. */
+export function SectionHeader({
+  eyebrow,
+  title,
+}: {
+  eyebrow?: string;
+  title?: string;
+}) {
+  if (!eyebrow && !title) return null;
+  return (
+    <div className="mb-8 flex flex-col items-center gap-2 text-center">
+      {eyebrow ? (
+        <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--inv-secondary)]">
+          {eyebrow}
+        </p>
+      ) : null}
+      {title ? (
+        <h2 className="font-[family-name:var(--inv-font)] text-2xl text-[var(--inv-primary)]">
+          {title}
+        </h2>
+      ) : null}
+      <Divider className="inv-ornament inv-ornament--drift h-4 w-40 text-[var(--inv-secondary)] opacity-70" />
+    </div>
+  );
+}
+
 export function formatEventDate(iso: string | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);

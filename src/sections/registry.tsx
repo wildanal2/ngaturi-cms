@@ -3,6 +3,8 @@ import type { SectionDefinition } from "./types";
 import { coverSection } from "./cover";
 import { heroSection } from "./hero";
 import { coupleSection } from "./couple";
+import { storySection } from "./story";
+import { familySection } from "./family";
 import { eventsSection } from "./events";
 import { countdownSection } from "./countdown";
 import { gallerySection } from "./gallery";
@@ -25,6 +27,8 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
   cover: coverSection,
   hero: heroSection,
   "couple-intro": coupleSection,
+  story: storySection,
+  family: familySection,
   "event-details": eventsSection,
   countdown: countdownSection,
   gallery: gallerySection,

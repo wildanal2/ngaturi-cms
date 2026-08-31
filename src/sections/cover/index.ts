@@ -7,8 +7,16 @@ import { CoverPhoto } from "./cover-photo";
 import { CoverBotanical } from "./cover-botanical";
 import { CoverMinimal } from "./cover-minimal";
 import { CoverFloating } from "./cover-floating";
+import { CoverWaxSeal } from "./cover-wax-seal";
 
-export { CoverClassic, CoverPhoto, CoverBotanical, CoverMinimal, CoverFloating };
+export {
+  CoverClassic,
+  CoverPhoto,
+  CoverBotanical,
+  CoverMinimal,
+  CoverFloating,
+  CoverWaxSeal,
+};
 
 export const coverSection: SectionDefinition = {
   type: "cover",
@@ -75,6 +83,24 @@ export const coverSection: SectionDefinition = {
       propsSchema: CoverProps,
       fields: coverFields,
       defaultProps: { ...coverDefaults },
+    },
+    "wax-seal": {
+      name: "Amplop + Segel Lilin",
+      description: "Amplop kain gelap dengan lipatan diagonal & segel lilin diklik",
+      component: CoverWaxSeal,
+      propsSchema: CoverProps,
+      fields: [
+        ...coverFields,
+        { kind: "text", key: "seal_label", label: "Teks di bawah segel" },
+        { kind: "color", key: "envelope_color", label: "Warna amplop" },
+        { kind: "color", key: "accent_color", label: "Warna teks emas" },
+      ],
+      defaultProps: {
+        ...coverDefaults,
+        seal_label: "Klik segel untuk membuka",
+        envelope_color: "#182742",
+        accent_color: "#c8a15e",
+      },
     },
   },
 };

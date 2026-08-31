@@ -103,6 +103,100 @@ export const TEMPLATES: TemplatePreset[] = [
     ],
   },
   {
+    id: "navy-elegan",
+    name: "Navy Elegan",
+    description:
+      "Amplop navy dengan segel lilin, tipografi serif, kisah cinta & daftar keluarga — klasik dan formal.",
+    category: "wedding",
+    tier: "premium",
+    thumbnail: "/templates/navy-elegan/card",
+    global_settings: {
+      font_family: "Cormorant",
+      color_primary: "#1f2937",
+      color_secondary: "#7d92b8",
+      color_background: "#f2f4f9",
+      animation: "fade",
+    },
+    sections: [
+      s("cover", "wax-seal", 0, {
+        names: "Renaldi & Marina",
+        tagline: "The Wedding Of",
+        note: "Kepada Yth. Bapak/Ibu/Saudara/i",
+        seal_label: "Klik segel untuk membuka",
+        envelope_color: "#182742",
+        accent_color: "#c8a15e",
+      }),
+      s("hero", "botanical", 1, {
+        couple_names: "Renaldi & Marina",
+        tagline: "The Wedding Of",
+        event_date: inDays(60),
+        s_palette: "cream",
+      }),
+      s("quote", "bordered", 2, {
+        text: "Dan di antara tanda-tanda kekuasaan-Nya, Dia menciptakan pasangan hidup untukmu dari jenismu sendiri, supaya kamu cenderung dan merasa tenteram kepadanya.",
+        source: "Q.S. Ar-Rum: 21",
+      }),
+      s("couple-intro", "stacked", 3, {
+        bride: {
+          name: "Marina",
+          full_name: "Khansa Putri Maharani, S.Kom.",
+          child_order: "Putri dari",
+          parents: "Bapak Ahmad & Ibu Siti",
+          instagram: "khansa",
+        },
+        groom: {
+          name: "Renaldi",
+          full_name: "Muhammad Setiawan Hidayat, S.T.",
+          child_order: "Putra dari",
+          parents: "Bapak Budi & Ibu Rina",
+          instagram: "setiawan",
+        },
+      }),
+      s("story", "timeline", 4, {}),
+      s("event-details", "formal", 5, {
+        intro:
+          "Dengan memohon rahmat dan ridho Allah SWT, kami bermaksud menyelenggarakan acara pernikahan putra-putri kami.",
+        events: [
+          {
+            name: "Akad Nikah",
+            date: inDays(60),
+            start_time: "08:00",
+            end_time: "10:00",
+            venue_name: "Masjid Al-Falah",
+            address: "Jl. Mawar No. 12, Jakarta Selatan",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=-6.261493,106.810600",
+          },
+          {
+            name: "Resepsi",
+            date: inDays(60),
+            start_time: "11:00",
+            end_time: "14:00",
+            venue_name: "Ballroom Hotel Mulia, Senayan",
+            address: "Jl. Asia Afrika No. 8, Jakarta Pusat",
+          },
+        ],
+      }),
+      s("family", "invited", 6, {}),
+      s("family", "party", 7, {}),
+      s("gallery", "spotlight", 8, { images: [] }),
+      s("countdown", "rings", 9, {}),
+      s("gift", "minimal", 10, {
+        intro:
+          "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
+      }),
+      s("rsvp", "form-card", 11, {}),
+      s("guestbook", "chat", 12, {}),
+      s("closing", "thankyou", 13, {
+        names: "Renaldi & Marina",
+        message:
+          "Merupakan suatu kehormatan dan kebahagiaan bagi kami sekeluarga apabila Bapak/Ibu/Saudara/i berkenan hadir untuk memberikan doa restu.",
+      }),
+      s("music", "disc", 14, {}),
+      s("navigation", "dock", 15, {}),
+    ],
+  },
+  {
     id: "kana-noir",
     name: "Elegan Hijau Emas",
     description: "Hijau tua mewah dengan aksen emas — kesan berkelas untuk resepsi malam.",

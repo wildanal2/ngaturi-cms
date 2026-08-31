@@ -178,6 +178,63 @@ export function FloatingLeaves({ tone }: { tone?: string }) {
   );
 }
 
+/** Wax seal — a rounded blob with a pressed monogram/leaf, drawn from scratch. */
+export function WaxSeal({
+  className,
+  initials,
+}: {
+  className?: string;
+  initials?: string;
+}) {
+  return (
+    <svg viewBox="0 0 100 100" className={className} aria-hidden>
+      <defs>
+        <radialGradient id="wax-g" cx="38%" cy="32%" r="75%">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="1" />
+          <stop offset="60%" stopColor="currentColor" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.35" />
+        </radialGradient>
+      </defs>
+      {/* irregular wax blob */}
+      <path
+        d="M50 6c9 0 12 7 20 9s17-1 21 7-3 15-1 24 8 13 4 21-14 5-20 11-8 15-17 15-13-8-21-10-17 2-22-6 3-14 1-23-8-14-4-22 13-6 19-12S41 6 50 6z"
+        fill="url(#wax-g)"
+      />
+      {/* pressed rim */}
+      <circle
+        cx="50"
+        cy="50"
+        r="30"
+        fill="none"
+        stroke="#000"
+        strokeOpacity="0.18"
+        strokeWidth="2"
+      />
+      {initials ? (
+        <text
+          x="50"
+          y="50"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize="26"
+          fontFamily="Georgia, serif"
+          fill="#fff"
+          fillOpacity="0.85"
+        >
+          {initials.slice(0, 2).toUpperCase()}
+        </text>
+      ) : (
+        <g fill="#fff" fillOpacity="0.8">
+          <ellipse cx="50" cy="42" rx="6" ry="11" />
+          <ellipse cx="42" cy="54" rx="10" ry="5" transform="rotate(-30 42 54)" />
+          <ellipse cx="58" cy="54" rx="10" ry="5" transform="rotate(30 58 54)" />
+          <rect x="49" y="50" width="2" height="16" rx="1" />
+        </g>
+      )}
+    </svg>
+  );
+}
+
 /** Horizontal leafy sprig — good beside a name or under a title. */
 export function LeafSprig({ className }: { className?: string }) {
   return (
