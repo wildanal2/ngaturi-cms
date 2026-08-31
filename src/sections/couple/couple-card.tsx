@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { AtSign } from "lucide-react";
 import type { SectionRenderProps } from "../types";
-import { Divider, FloatingLeaves } from "../ornaments";
+import { Divider, DividerImage, FloatingLeaves, FloatingLeavesImage } from "../ornaments";
 import type { Person } from "./person";
 
 function Half({ person }: { person: Person }) {
@@ -47,15 +47,45 @@ function Half({ person }: { person: Person }) {
 
 /** White floating card, bride above groom, botanical corners. */
 export function CoupleCard({ props }: SectionRenderProps) {
-  const p = props as { bride?: Person; groom?: Person };
+  const p = props as {
+    bride?: Person;
+    groom?: Person;
+    ornament_tr_images?: string[];
+    ornament_bl_images?: string[];
+    divider_image?: string;
+    background_image?: string;
+  };
+
+  const hasImageOrnaments =
+    p.ornament_tr_images?.length && p.ornament_bl_images?.length;
+
+  const bgStyle: React.CSSProperties | undefined = p.background_image
+    ? {
+        backgroundImage: `url('${p.background_image}')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : undefined;
+
   return (
-    <section className="relative overflow-hidden px-6 py-16">
-      <FloatingLeaves />
+    <section className="relative overflow-hidden px-6 py-16" style={bgStyle}>
+      {hasImageOrnaments ? (
+        <FloatingLeavesImage
+          trImages={p.ornament_tr_images!}
+          blImages={p.ornament_bl_images!}
+        />
+      ) : (
+        <FloatingLeaves />
+      )}
       <div className="relative mx-auto max-w-md rounded-3xl bg-white p-8 shadow-lg">
         <p className="text-center text-sm font-medium tracking-[0.3em] text-[var(--inv-secondary)] uppercase">
           Mempelai
         </p>
-        <Divider className="mx-auto mt-3 h-4 w-32 text-[var(--inv-secondary)] opacity-70" />
+        {p.divider_image ? (
+          <DividerImage src={p.divider_image} className="mx-auto mt-3 h-4 w-16 object-contain opacity-70" />
+        ) : (
+          <Divider className="mx-auto mt-3 h-4 w-32 text-[var(--inv-secondary)] opacity-70" />
+        )}
         <div className="mt-8 flex flex-col items-center gap-8 inv-stagger">
           <Half person={p.bride ?? {}} />
           <span className="font-[family-name:var(--inv-font)] text-3xl text-[var(--inv-secondary)]">

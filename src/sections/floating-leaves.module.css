@@ -1,0 +1,68 @@
+/* Layered leaf ornament animations — ported from undangan_1 Daun.module.css.
+   Each layer sways with a slightly different timing / axis to create depth. */
+
+.layer {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* ---- top-right corner (3 layers) ---- */
+.tr1 { animation: shakeatas1 6s linear infinite; }
+.tr2 { animation: shakeatas2 6s linear infinite; }
+.tr3 { animation: shakeatas3 6s linear infinite; }
+
+/* ---- bottom-left corner (3 layers) ---- */
+.bl1 { animation: shakebawah4 6s linear infinite; }
+.bl2 { animation: shakebawah5 8s linear infinite; }
+.bl3 { animation: shakebawah6 10s linear infinite; }
+
+@keyframes shakeatas1 {
+  0%   { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+  50%  { transform: translate3d(6px, 5px, 0px) rotate3d(0, 0, 3, 2deg) scale3d(1.05, 1.05, 1.05); }
+  100% { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+}
+
+@keyframes shakeatas2 {
+  0%   { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+  40%  { transform: translate3d(3px, 2px, 0px) rotate3d(0, 0, 1, -1deg) scale3d(1.02, 1.02, 1.02); }
+  60%  { transform: translate3d(6px, 4px, 0px) rotate3d(0, 0, 2, -2deg) scale3d(1.04, 1.04, 1.04); }
+  80%  { transform: translate3d(3px, 2px, 0px) rotate3d(0, 0, 1, -1deg) scale3d(1.02, 1.02, 1.02); }
+  100% { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+}
+
+@keyframes shakeatas3 {
+  0%   { transform: translate3d(6px, 4px, 0px) rotate3d(0, 0, 2, -2deg) scale3d(1.04, 1.04, 1.04); }
+  40%  { transform: translate3d(3px, 2px, 0px) rotate3d(0, 0, 1, -1deg) scale3d(1.02, 1.02, 1.02); }
+  60%  { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+  80%  { transform: translate3d(3px, 2px, 0px) rotate3d(0, 0, 1, -1deg) scale3d(1.02, 1.02, 1.02); }
+  100% { transform: translate3d(6px, 4px, 0px) rotate3d(0, 0, 2, -2deg) scale3d(1.04, 1.04, 1.04); }
+}
+
+@keyframes shakebawah4 {
+  0%   { transform: translate3d(6px, -8px, 0px) rotate3d(0, 0, 2, -2deg) scale3d(1.06, 1.06, 1.06); }
+  60%  { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+  100% { transform: translate3d(6px, -8px, 0px) rotate3d(0, 0, 2, -2deg) scale3d(1.06, 1.06, 1.06); }
+}
+
+@keyframes shakebawah5 {
+  0%   { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+  30%  { transform: translate3d(-4px, -6px, 0px) rotate3d(0, 0, 2, -3deg) scale3d(1.05, 1.05, 1.05); }
+  50%  { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+  80%  { transform: translate3d(4px, -6px, 0px) rotate3d(0, 0, 1, 2deg) scale3d(1.05, 1.05, 1.05); }
+  100% { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+}
+
+@keyframes shakebawah6 {
+  0%   { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+  30%  { transform: translate3d(-4px, -6px, 0px) rotate3d(0, 0, 2, -3deg) scale3d(1.05, 1.05, 1.05); }
+  50%  { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+  80%  { transform: translate3d(4px, -6px, 0px) rotate3d(0, 0, 1, 2deg) scale3d(1.05, 1.05, 1.05); }
+  100% { transform: translate3d(0px, 0px, 0px) rotate3d(0, 0, 0, 0deg) scale3d(1, 1, 1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr1, .tr2, .tr3, .bl1, .bl2, .bl3 {
+    animation: none;
+  }
+}

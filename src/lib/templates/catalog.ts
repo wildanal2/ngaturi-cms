@@ -42,11 +42,25 @@ export const TEMPLATES: TemplatePreset[] = [
         tagline: "The Wedding Of",
         note: "Kepada Yth. Bapak/Ibu/Saudara/i :",
         button_label: "Buka Undangan",
+        background_image: "/themes/sage-emas-klasik/bg-floating.png",
+        divider_image: "/themes/sage-emas-klasik/divider.png",
+        ornament_tr_images: [
+          "/themes/sage-emas-klasik/ornament-tr-1.png",
+          "/themes/sage-emas-klasik/ornament-tr-2.png",
+          "/themes/sage-emas-klasik/ornament-tr-3.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-emas-klasik/ornament-bl-1.png",
+          "/themes/sage-emas-klasik/ornament-bl-2.png",
+          "/themes/sage-emas-klasik/ornament-bl-3.png",
+        ],
       }),
       s("hero", "botanical", 1, {
         couple_names: "Firda & Wildan",
         tagline: "The Wedding Of",
         event_date: inDays(45),
+        background_image: "/themes/sage-emas-klasik/bride.jpg",
+        background_texture: "/themes/sage-emas-klasik/bg-floating.png",
         s_palette: "cream",
       }),
       s("couple-intro", "card", 2, {
@@ -57,6 +71,7 @@ export const TEMPLATES: TemplatePreset[] = [
           parents: "Bapak Much Arifin & Ibu Nurul Hidayati",
           residence: "Baujeng - Pasuruan",
           instagram: "firda.u.j",
+          photo: "/themes/sage-emas-klasik/bride.jpg",
         },
         groom: {
           name: "Wildan",
@@ -65,7 +80,20 @@ export const TEMPLATES: TemplatePreset[] = [
           parents: "Bapak Syamsun & Ibu Muhibbatul Azizah",
           residence: "Jogoroto - Jombang",
           instagram: "wildan._.al",
+          photo: "/themes/sage-emas-klasik/groom.jpg",
         },
+        background_image: "/themes/sage-emas-klasik/bg-floating.png",
+        divider_image: "/themes/sage-emas-klasik/divider.png",
+        ornament_tr_images: [
+          "/themes/sage-emas-klasik/ornament-tr-1.png",
+          "/themes/sage-emas-klasik/ornament-tr-2.png",
+          "/themes/sage-emas-klasik/ornament-tr-3.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-emas-klasik/ornament-bl-1.png",
+          "/themes/sage-emas-klasik/ornament-bl-2.png",
+          "/themes/sage-emas-klasik/ornament-bl-3.png",
+        ],
       }),
       s("countdown", "plain", 3, {}),
       s("event-details", "formal", 4, {
@@ -125,24 +153,41 @@ export const TEMPLATES: TemplatePreset[] = [
         seal_label: "Klik segel untuk membuka",
         envelope_color: "#182742",
         accent_color: "#c8a15e",
+        texture_image: "/themes/navy-elegan/texture-navy.webp",
+        seal_image: "/themes/navy-elegan/wax-seal.png",
       }),
-      s("hero", "botanical", 1, {
+      s("hero", "garland", 1, {
+        bismillah: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم",
         couple_names: "Renaldi & Marina",
         tagline: "The Wedding Of",
         event_date: inDays(60),
-        s_palette: "cream",
+        background_image: "/themes/navy-elegan/bg-watercolor.webp",
+        couple_image: "/themes/navy-elegan/couple-illustration.webp",
+        garland_left_image: "/themes/navy-elegan/garland-top-left.webp",
+        garland_right_image: "/themes/navy-elegan/garland-top-right.webp",
+        flower_left_image: "/themes/navy-elegan/flower-column-left.webp",
+        flower_right_image: "/themes/navy-elegan/flower-column-right.webp",
       }),
       s("quote", "bordered", 2, {
         text: "Dan di antara tanda-tanda kekuasaan-Nya, Dia menciptakan pasangan hidup untukmu dari jenismu sendiri, supaya kamu cenderung dan merasa tenteram kepadanya.",
         source: "Q.S. Ar-Rum: 21",
       }),
-      s("couple-intro", "stacked", 3, {
+      s("couple-intro", "duo-portrait", 3, {
+        eyebrow: "The Bride & Groom",
+        title: "Calon Mempelai",
+        background_image: "/themes/navy-elegan/bg-watercolor.webp",
+        divider_image: "/themes/navy-elegan/couple-illustration.webp",
+        flower_left_image: "/themes/navy-elegan/flower-column-left.webp",
+        flower_right_image: "/themes/navy-elegan/flower-column-right.webp",
+        s_photo_shape: "arch",
+        s_ornament: "corners",
         bride: {
           name: "Marina",
           full_name: "Khansa Putri Maharani, S.Kom.",
           child_order: "Putri dari",
           parents: "Bapak Ahmad & Ibu Siti",
           instagram: "khansa",
+          photo: "/themes/navy-elegan/bride-illustration.webp",
         },
         groom: {
           name: "Renaldi",
@@ -150,9 +195,31 @@ export const TEMPLATES: TemplatePreset[] = [
           child_order: "Putra dari",
           parents: "Bapak Budi & Ibu Rina",
           instagram: "setiawan",
+          photo: "/themes/navy-elegan/groom-illustration.webp",
         },
       }),
-      s("story", "timeline", 4, {}),
+      s("story", "timeline", 4, {
+        items: [
+          {
+            year: "2020",
+            title: "Pertemuan Pertama",
+            description: "Kami pertama bertemu di kampus, tak menyangka akan sejauh ini.",
+            image: "/themes/navy-elegan/story-2020.jpg",
+          },
+          {
+            year: "2022",
+            title: "Menjalin Komitmen",
+            description: "Kami memutuskan untuk menjalani hubungan yang lebih serius.",
+            image: "/themes/navy-elegan/gallery-1.jpg",
+          },
+          {
+            year: "2025",
+            title: "Lamaran",
+            description: "Acara lamaran sederhana bersama kedua keluarga.",
+            image: "/themes/navy-elegan/couple-illustration.webp",
+          },
+        ],
+      }),
       s("event-details", "formal", 5, {
         intro:
           "Dengan memohon rahmat dan ridho Allah SWT, kami bermaksud menyelenggarakan acara pernikahan putra-putri kami.",
@@ -179,7 +246,13 @@ export const TEMPLATES: TemplatePreset[] = [
       }),
       s("family", "invited", 6, {}),
       s("family", "party", 7, {}),
-      s("gallery", "spotlight", 8, { images: [] }),
+      s("gallery", "spotlight", 8, {
+        images: [
+          { url: "/themes/navy-elegan/story-2020.jpg", caption: "Awal perjalanan kami" },
+          { url: "/themes/navy-elegan/gallery-1.jpg", caption: "Momen kebersamaan" },
+          { url: "/themes/navy-elegan/couple-illustration.webp", caption: "Menuju hari bahagia" },
+        ],
+      }),
       s("countdown", "rings", 9, {}),
       s("gift", "minimal", 10, {
         intro:

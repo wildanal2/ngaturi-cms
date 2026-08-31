@@ -81,7 +81,11 @@ export const coverSection: SectionDefinition = {
       description: "Dedaunan bergoyang di sudut, nama tulisan tangan bertumpuk",
       component: CoverFloating,
       propsSchema: CoverProps,
-      fields: coverFields,
+      fields: [
+        ...coverFields,
+        { kind: "image", key: "background_image", label: "Tekstur latar (opsional)" },
+        { kind: "image", key: "divider_image", label: "Gambar divider (opsional)" },
+      ],
       defaultProps: { ...coverDefaults },
     },
     "wax-seal": {
@@ -94,6 +98,8 @@ export const coverSection: SectionDefinition = {
         { kind: "text", key: "seal_label", label: "Teks di bawah segel" },
         { kind: "color", key: "envelope_color", label: "Warna amplop" },
         { kind: "color", key: "accent_color", label: "Warna teks emas" },
+        { kind: "image", key: "texture_image", label: "Tekstur amplop (opsional)" },
+        { kind: "image", key: "seal_image", label: "Gambar segel (opsional)" },
       ],
       defaultProps: {
         ...coverDefaults,

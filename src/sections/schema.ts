@@ -4,7 +4,14 @@ export const HeroProps = z.object({
   couple_names: z.string().min(1),
   event_date: z.string(),
   tagline: z.string().optional(),
+  bismillah: z.string().optional(),
   background_image: z.string().optional(),
+  couple_image: z.string().optional(),
+  background_texture: z.string().optional(),
+  garland_left_image: z.string().optional(),
+  garland_right_image: z.string().optional(),
+  flower_left_image: z.string().optional(),
+  flower_right_image: z.string().optional(),
   overlay_opacity: z.number().min(0).max(1).default(0.45),
   has_countdown: z.boolean().default(true),
 });
@@ -23,6 +30,14 @@ export const PersonProps = z.object({
 export const CoupleIntroProps = z.object({
   bride: PersonProps,
   groom: PersonProps,
+  eyebrow: z.string().optional(),
+  title: z.string().optional(),
+  background_image: z.string().optional(),
+  divider_image: z.string().optional(),
+  flower_left_image: z.string().optional(),
+  flower_right_image: z.string().optional(),
+  s_photo_shape: z.string().optional(),
+  s_ornament: z.string().optional(),
 });
 
 export const EventDetailsProps = z.object({
@@ -94,6 +109,14 @@ export const CoverProps = z.object({
   seal_label: z.string().optional(),
   envelope_color: z.string().optional(),
   accent_color: z.string().optional(),
+  texture_image: z.string().optional(),
+  seal_image: z.string().optional(),
+  /** Layered ornament images for top-right corner (3 layers, back→front). */
+  ornament_tr_images: z.array(z.string()).optional(),
+  /** Layered ornament images for bottom-left corner (3 layers, back→front). */
+  ornament_bl_images: z.array(z.string()).optional(),
+  /** Divider image (replaces SVG divider when set). */
+  divider_image: z.string().optional(),
 });
 
 export const StoryProps = z.object({

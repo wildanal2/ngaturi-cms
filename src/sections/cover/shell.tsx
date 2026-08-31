@@ -31,12 +31,14 @@ export function CoverShell({
   children,
   bg,
   align = "center",
+  style,
 }: {
   inCanvas?: boolean;
   open: boolean;
   children: React.ReactNode;
   bg?: string;
   align?: "top" | "center" | "bottom";
+  style?: React.CSSProperties;
 }) {
   const justify =
     align === "top"
@@ -54,7 +56,7 @@ export function CoverShell({
           ? "relative min-h-[600px] w-full overflow-hidden"
           : "fixed inset-0 z-50 overflow-y-auto overscroll-contain"
       }
-      style={{ backgroundColor: bg ?? "var(--inv-primary)" }}
+      style={{ backgroundColor: bg ?? "var(--inv-primary)", ...style }}
     >
       <div
         className={`relative flex ${

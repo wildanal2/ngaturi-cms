@@ -4,6 +4,84 @@
  * tint them via `--inv-primary` / `--inv-secondary`.
  */
 
+import styles from "./floating-leaves.module.css";
+
+/* ---- Image-based ornament layers (matches undangan_1 DaunAtas/DaunBawah) ---- */
+
+/**
+ * Layered PNG leaf ornaments — 3 images per corner, each layer sways
+ * independently for a parallax depth effect. When `trImages` or `blImages`
+ * are provided, renders the real leaf PNGs. Falls back to SVG when absent.
+ */
+export function FloatingLeavesImage({
+  trImages,
+  blImages,
+}: {
+  trImages: string[];
+  blImages: string[];
+}) {
+  const trClasses = [styles.tr1, styles.tr2, styles.tr3];
+  const blClasses = [styles.bl1, styles.bl2, styles.bl3];
+  /* positions matching undangan_1: DaunAtas top-right, DaunBawah bottom-left */
+  const trPositions = [
+    "absolute -top-10 right-3",
+    "absolute -top-8 -right-5",
+    "absolute -top-16 -right-20",
+  ];
+  const blPositions = [
+    "absolute -bottom-6 left-4",
+    "absolute -bottom-8 -left-10",
+    "absolute -bottom-40 -left-5",
+  ];
+
+  return (
+    <>
+      {/* Top-right corner layers */}
+      <span
+        className="pointer-events-none absolute top-0 right-0 flex"
+        style={{ width: "40%" }}
+      >
+        {trImages.map((src, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`tr-${i}`}
+            src={src}
+            alt=""
+            className={`${styles.layer} ${trClasses[i] ?? ""} ${trPositions[i] ?? ""} w-full`}
+          />
+        ))}
+      </span>
+      {/* Bottom-left corner layers */}
+      <span
+        className="pointer-events-none absolute bottom-0 left-0 flex"
+        style={{ width: "40%" }}
+      >
+        {blImages.map((src, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`bl-${i}`}
+            src={src}
+            alt=""
+            className={`${styles.layer} ${blClasses[i] ?? ""} ${blPositions[i] ?? ""} w-full`}
+          />
+        ))}
+      </span>
+    </>
+  );
+}
+
+/** Image divider — drop-in replacement for SVG Divider when a PNG is provided. */
+export function DividerImage({
+  src,
+  className,
+}: {
+  src: string;
+  className?: string;
+}) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="" className={className} />;
+}
+
 /** Detailed eucalyptus corner spray (place at a corner, rotate/flip to taste). */
 export function CornerFloral({ className }: { className?: string }) {
   return (
