@@ -109,7 +109,7 @@ export default async function InvitationDetailPage({
       {!inv.isPaid ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm">
           <span>
-            Paket <b>Gratis</b> — ada watermark & masa edit 7 hari.
+            Paket <b>Gratis</b> — ada watermark &amp; masa edit 3 hari.
           </span>
           <a
             href={`/invitations/${inv.id}/unlock`}

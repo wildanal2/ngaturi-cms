@@ -32,3 +32,56 @@ export function editExpiresAtFor(plan: Invitation["plan"], createdAt = new Date(
 export function hasWatermark(inv: Pick<Invitation, "plan" | "isPaid">): boolean {
   return !inv.isPaid && inv.plan === "free_trial";
 }
+
+/** Nama paket yang ramah untuk ditampilkan ke pengguna awam. */
+export function planLabel(
+  inv: Pick<Invitation, "plan" | "isPaid">,
+): "Gratis" | "Basic" | "Premium" {
+  if (!inv.isPaid || inv.plan === "free_trial") return "Gratis";
+  return inv.plan === "premium" ? "Premium" : "Basic";
+}
+
+export type InvitationStage =
+  | "draft"
+  | "published"
+  | "edit-locked"
+  | "expired";
+
+/** Satu status ringkas untuk kartu undangan + kalimat "langkah berikutnya". */
+export function invitationStage(
+  inv: Pick<
+    Invitation,
+    "status" | "plan" | "isPaid" | "editExpiresAt" | "isEditLocked" | "expiresAt"
+  >,
+): { stage: InvitationStage; label: string; hint: string; tone: "neutral" | "good" | "warn" } {
+  if (inv.status === "expired" || (inv.expiresAt && inv.expiresAt.getTime() < Date.now())) {
+    return {
+      stage: "expired",
+      label: "Kedaluwarsa",
+      hint: "Masa tayang undangan sudah berakhir. Perpanjang untuk menayangkan lagi.",
+      tone: "warn",
+    };
+  }
+  if (inv.status === "published") {
+    return {
+      stage: "published",
+      label: "Sudah terbit",
+      hint: "Undangan aktif. Bagikan tautannya ke tamu lewat WhatsApp.",
+      tone: "good",
+    };
+  }
+  if (isEditLocked(inv) || inv.isEditLocked) {
+    return {
+      stage: "edit-locked",
+      label: "Masa edit habis",
+      hint: "Undangan tetap bisa dilihat, tapi untuk mengubah isinya upgrade dulu.",
+      tone: "warn",
+    };
+  }
+  return {
+    stage: "draft",
+    label: "Draf",
+    hint: "Masih draf. Lengkapi isinya lalu tekan Terbitkan di dalam editor.",
+    tone: "neutral",
+  };
+}

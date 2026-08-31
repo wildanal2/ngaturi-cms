@@ -4,8 +4,10 @@ import {
   FREE_TRIAL_EDIT_DAYS,
   editExpiresAtFor,
   hasWatermark,
+  invitationStage,
   isEditLocked,
   maxInvitationsFor,
+  planLabel,
 } from "./entitlement";
 
 const inv = (o: Partial<Invitation>) => o as Invitation;
@@ -59,5 +61,50 @@ describe("hasWatermark", () => {
     expect(hasWatermark(inv({ plan: "free_trial", isPaid: false }))).toBe(true);
     expect(hasWatermark(inv({ plan: "free_trial", isPaid: true }))).toBe(false);
     expect(hasWatermark(inv({ plan: "basic", isPaid: true }))).toBe(false);
+  });
+});
+
+describe("planLabel", () => {
+  it("maps to friendly names", () => {
+    expect(planLabel(inv({ plan: "free_trial", isPaid: false }))).toBe("Gratis");
+    expect(planLabel(inv({ plan: "basic", isPaid: true }))).toBe("Basic");
+    expect(planLabel(inv({ plan: "premium", isPaid: true }))).toBe("Premium");
+    expect(planLabel(inv({ plan: "basic", isPaid: false }))).toBe("Gratis");
+  });
+});
+
+describe("invitationStage", () => {
+  const base = {
+    status: "draft" as const,
+    plan: "free_trial" as const,
+    isPaid: false,
+    editExpiresAt: new Date(Date.now() + 86_400_000),
+    isEditLocked: false,
+    expiresAt: null,
+  };
+
+  it("draft → tells the user to publish", () => {
+    expect(invitationStage(base).stage).toBe("draft");
+    expect(invitationStage(base).hint).toMatch(/Terbitkan/i);
+  });
+  it("published → good tone + share hint", () => {
+    const s = invitationStage({ ...base, status: "published" });
+    expect(s.stage).toBe("published");
+    expect(s.tone).toBe("good");
+  });
+  it("expired edit window on an unpaid draft → edit-locked", () => {
+    const s = invitationStage({
+      ...base,
+      editExpiresAt: new Date(Date.now() - 86_400_000),
+    });
+    expect(s.stage).toBe("edit-locked");
+  });
+  it("past expiresAt → expired", () => {
+    const s = invitationStage({
+      ...base,
+      status: "published",
+      expiresAt: new Date(Date.now() - 86_400_000),
+    });
+    expect(s.stage).toBe("expired");
   });
 });
