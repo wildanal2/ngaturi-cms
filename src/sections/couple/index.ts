@@ -6,8 +6,9 @@ import { CoupleSideBySide } from "./couple-side-by-side";
 import { CoupleStacked } from "./couple-stacked";
 import { CouplePolaroid } from "./couple-polaroid";
 import { CoupleCard } from "./couple-card";
+import { CoupleDuoPortrait } from "./couple-duo-portrait";
 
-export { CoupleSideBySide, CoupleStacked, CouplePolaroid, CoupleCard };
+export { CoupleSideBySide, CoupleStacked, CouplePolaroid, CoupleCard, CoupleDuoPortrait };
 
 export const coupleSection: SectionDefinition = {
   type: "couple-intro",
@@ -22,6 +23,39 @@ export const coupleSection: SectionDefinition = {
     if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
   },
   variants: {
+    "duo-portrait": {
+      name: "Dua Portrait Arch",
+      description: "Dua foto arch berdampingan dengan watercolor dan bunga sudut khas kana1",
+      component: CoupleDuoPortrait,
+      propsSchema: CoupleIntroProps,
+      fields: [
+        { kind: "text", key: "eyebrow", label: "Teks kecil di atas" },
+        { kind: "text", key: "title", label: "Judul" },
+        ...coupleFields,
+        { kind: "image", key: "background_image", label: "Latar watercolor" },
+        { kind: "image", key: "divider_image", label: "Ilustrasi pembatas bawah" },
+        { kind: "image", key: "flower_left_image", label: "Bunga bawah kiri" },
+        { kind: "image", key: "flower_right_image", label: "Bunga bawah kanan" },
+      ],
+      styleOptions: [
+        sPhotoShape,
+        {
+          key: "ornament",
+          label: "Ornamen",
+          default: "corners",
+          options: [
+            { value: "corners", label: "Bunga sudut" },
+            { value: "plain", label: "Polos" },
+          ],
+        },
+      ],
+      defaultProps: {
+        eyebrow: "The Bride & Groom",
+        title: "Calon Mempelai",
+        bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi" },
+        groom: { name: "Raka", full_name: "Raka Wibowo" },
+      },
+    },
     "side-by-side": {
       name: "Bersebelahan",
       description: "Dua foto sejajar",

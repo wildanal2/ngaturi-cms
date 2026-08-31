@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { SectionRenderProps } from "../types";
 import { WaxSeal } from "../ornaments";
 import { CoverShell, useOpen, type CoverProps } from "./shell";
@@ -8,6 +9,8 @@ type WaxProps = CoverProps & {
   seal_label?: string;
   accent_color?: string;
   envelope_color?: string;
+  texture_image?: string;
+  seal_image?: string;
 };
 
 /**
@@ -25,12 +28,16 @@ export function CoverWaxSeal({ props, guestName, inCanvas }: SectionRenderProps)
 
   return (
     <CoverShell inCanvas={inCanvas} open={open} bg={envelope}>
-      {/* woven-fabric texture via layered gradients */}
+      {/* Woven fabric from the preset, overlaid with the original subtle weave. */}
       <span
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-60"
         style={{
-          backgroundImage: `repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 2px, transparent 2px 4px), repeating-linear-gradient(-45deg, rgba(0,0,0,.05) 0 2px, transparent 2px 4px)`,
+          backgroundImage: p.texture_image
+            ? `url("${p.texture_image}"), repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 2px, transparent 2px 4px), repeating-linear-gradient(-45deg, rgba(0,0,0,.05) 0 2px, transparent 2px 4px)`
+            : "repeating-linear-gradient(45deg, rgba(255,255,255,.03) 0 2px, transparent 2px 4px), repeating-linear-gradient(-45deg, rgba(0,0,0,.05) 0 2px, transparent 2px 4px)",
+          backgroundPosition: "center",
+          backgroundSize: p.texture_image ? "cover, auto, auto" : undefined,
         }}
       />
       {/* vignette */}
@@ -81,9 +88,19 @@ export function CoverWaxSeal({ props, guestName, inCanvas }: SectionRenderProps)
           aria-label={p.seal_label ?? "Klik segel untuk membuka"}
           className="mt-10 h-24 w-24 transition-transform duration-300 hover:scale-105"
         >
-          <span className="inv-ornament inv-ornament--drift block h-full w-full text-[#9c2b2b] drop-shadow-[0_10px_22px_rgba(0,0,0,0.45)]">
-            <WaxSeal className="h-full w-full" initials={initials} />
-          </span>
+          {p.seal_image ? (
+            <Image
+              src={p.seal_image}
+              alt=""
+              width={96}
+              height={96}
+              className="h-full w-full drop-shadow-[0_10px_22px_rgba(0,0,0,0.45)]"
+            />
+          ) : (
+            <span className="inv-ornament inv-ornament--drift block h-full w-full text-[#9c2b2b] drop-shadow-[0_10px_22px_rgba(0,0,0,0.45)]">
+              <WaxSeal className="h-full w-full" initials={initials} />
+            </span>
+          )}
         </button>
         <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.3em]">
           {p.seal_label ?? "Klik segel untuk membuka"}

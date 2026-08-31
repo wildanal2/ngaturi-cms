@@ -7,8 +7,9 @@ import { HeroSplit } from "./hero-split";
 import { HeroMinimal } from "./hero-minimal";
 import { HeroBotanical } from "./hero-botanical";
 import { HeroArch } from "./hero-arch";
+import { HeroGarland } from "./hero-garland";
 
-export { HeroCentered, HeroSplit, HeroMinimal, HeroBotanical, HeroArch };
+export { HeroCentered, HeroSplit, HeroMinimal, HeroBotanical, HeroArch, HeroGarland };
 
 const baseDefaults = {
   couple_names: "Dinda & Raka",
@@ -73,12 +74,40 @@ export const heroSection: SectionDefinition = {
       ],
       defaultProps: { ...baseDefaults },
     },
+    garland: {
+      name: "Garland Navy",
+      description: "Watercolor biru, garland bunga, dan ilustrasi pasangan penuh",
+      component: HeroGarland,
+      propsSchema: HeroProps,
+      fields: [
+        ...heroBase,
+        { kind: "text", key: "bismillah", label: "Basmalah (opsional)" },
+        { kind: "image", key: "background_image", label: "Latar watercolor" },
+        { kind: "image", key: "couple_image", label: "Ilustrasi pasangan" },
+        { kind: "image", key: "garland_left_image", label: "Bunga atas kiri" },
+        { kind: "image", key: "garland_right_image", label: "Bunga atas kanan" },
+        { kind: "image", key: "flower_left_image", label: "Bunga bawah kiri" },
+        { kind: "image", key: "flower_right_image", label: "Bunga bawah kanan" },
+      ],
+      defaultProps: {
+        ...baseDefaults,
+        bismillah: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم",
+      },
+    },
     botanical: {
       name: "Botani (bunga)",
       description: "Foto bulat, garland atas + eucalyptus di sudut",
       component: HeroBotanical,
       propsSchema: HeroProps,
-      fields: [...heroBase, { kind: "image", key: "background_image", label: "Foto" }],
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Foto" },
+        { kind: "image", key: "background_texture", label: "Tekstur latar (opsional)" },
+        { kind: "image", key: "garland_left_image", label: "Bunga atas kiri (opsional)" },
+        { kind: "image", key: "garland_right_image", label: "Bunga atas kanan (opsional)" },
+        { kind: "image", key: "flower_left_image", label: "Bunga bawah kiri (opsional)" },
+        { kind: "image", key: "flower_right_image", label: "Bunga bawah kanan (opsional)" },
+      ],
       styleOptions: [
         {
           key: "palette",

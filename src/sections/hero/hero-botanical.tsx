@@ -10,6 +10,11 @@ export function HeroBotanical({ props, guestName }: SectionRenderProps) {
     event_date?: string;
     tagline?: string;
     background_image?: string;
+    background_texture?: string;
+    garland_left_image?: string;
+    garland_right_image?: string;
+    flower_left_image?: string;
+    flower_right_image?: string;
     s_palette?: string;
   };
   const noir = p.s_palette === "noir";
@@ -25,17 +30,65 @@ export function HeroBotanical({ props, guestName }: SectionRenderProps) {
           : "var(--inv-bg)",
       }}
     >
-      <TopGarland
-        className={`inv-ornament inv-ornament--drift pointer-events-none absolute inset-x-0 top-0 h-24 w-full ${orn} opacity-80`}
-      />
-      <CornerFloral
-        className={`inv-ornament inv-ornament--slow pointer-events-none absolute -bottom-6 -left-8 h-52 w-52 ${orn} opacity-90`}
-      />
-      <CornerFloral
-        className={`inv-ornament inv-ornament--flip pointer-events-none absolute -right-8 -bottom-6 h-52 w-52 ${orn} opacity-90`}
-      />
+      {p.background_texture ? (
+        <Image
+          src={p.background_texture}
+          alt=""
+          fill
+          sizes="100vw"
+          className="pointer-events-none z-0 object-cover opacity-80"
+        />
+      ) : null}
+      {p.garland_left_image ? (
+        <Image
+          src={p.garland_left_image}
+          alt=""
+          width={360}
+          height={180}
+          className="pointer-events-none absolute left-0 top-0 z-[1] h-auto w-3/5 max-w-[360px] object-contain"
+        />
+      ) : (
+        <TopGarland
+          className={`inv-ornament inv-ornament--drift pointer-events-none absolute inset-x-0 top-0 z-[1] h-24 w-full ${orn} opacity-80`}
+        />
+      )}
+      {p.garland_right_image ? (
+        <Image
+          src={p.garland_right_image}
+          alt=""
+          width={360}
+          height={180}
+          className="pointer-events-none absolute right-0 top-0 z-[1] h-auto w-3/5 max-w-[360px] object-contain"
+        />
+      ) : null}
+      {p.flower_left_image ? (
+        <Image
+          src={p.flower_left_image}
+          alt=""
+          width={240}
+          height={480}
+          className="pointer-events-none absolute -bottom-6 -left-8 z-[1] h-64 w-auto object-contain object-left-bottom"
+        />
+      ) : (
+        <CornerFloral
+          className={`inv-ornament inv-ornament--slow pointer-events-none absolute -bottom-6 -left-8 z-[1] h-52 w-52 ${orn} opacity-90`}
+        />
+      )}
+      {p.flower_right_image ? (
+        <Image
+          src={p.flower_right_image}
+          alt=""
+          width={240}
+          height={480}
+          className="pointer-events-none absolute -bottom-6 -right-8 z-[1] h-64 w-auto object-contain object-right-bottom"
+        />
+      ) : (
+        <CornerFloral
+          className={`inv-ornament inv-ornament--flip pointer-events-none absolute -right-8 -bottom-6 z-[1] h-52 w-52 ${orn} opacity-90`}
+        />
+      )}
 
-      <div className="relative">
+      <div className="relative z-10">
         {guestName ? (
           <p className="mb-3 text-xs tracking-widest uppercase opacity-80">
             Kepada Yth. {guestName}

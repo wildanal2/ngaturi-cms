@@ -81,7 +81,7 @@ export function GuestbookChat({
 }: SectionRenderProps) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [page, setPage] = useState(1);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => guestName ?? "");
   const [message, setMessage] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
   const [pendingNote, setPendingNote] = useState(false);
@@ -158,7 +158,6 @@ export function GuestbookChat({
                 value={name}
                 maxLength={NAME_MAX}
                 onChange={(e) => setName(e.target.value)}
-                defaultValue={guestName ?? ""}
                 placeholder="Tulis nama Anda…"
                 className="w-full rounded border border-black/15 bg-white px-3 py-2 pr-9 text-sm"
               />
