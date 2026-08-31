@@ -53,9 +53,9 @@ const TESTIMONIALS = [
 ];
 
 const FAQ = [
-  ["Apakah benar-benar gratis?", "Undangan pertama gratis dengan masa edit 3 hari — bisa publish, terima RSVP & ucapan. Setelah itu builder terkunci sampai kamu upgrade (mulai Rp 49rb, sekali bayar per undangan)."],
+  ["Apakah benar-benar gratis?", "Ya. Selama masa coba (3 hari edit) kamu bisa pakai SEMUA fitur — termasuk yang Premium seperti undangan per-tamu. Bedanya cuma ada watermark. Setelah 3 hari, builder terkunci sampai kamu upgrade (mulai Rp 49rb, sekali bayar per undangan). Undangan yang sudah dipublikasikan tetap tayang."],
   ["Undangan tetap online setelah masa trial?", "Ya. Undangan yang sudah dipublikasikan tetap tayang meski masa edit berakhir — hanya penyuntingannya yang terkunci."],
-  ["Bisa personalisasi nama tamu?", "Bisa (paket Premium). Buat tautan personal per tamu — nama tamu tampil di sampul, jumlah tamu terkontrol, plus link WhatsApp siap kirim."],
+  ["Bisa personalisasi nama tamu?", "Bisa — gratis selama masa coba, atau permanen dengan paket Premium. Buat tautan personal per tamu: nama tamu tampil di sampul, jumlah tamu terkontrol, plus link WhatsApp siap kirim."],
   ["Bagaimana dengan foto — perlu diedit dulu?", "Tidak. Upload langsung dari builder, foto otomatis di-crop sesuai keinginan, di-resize, dan dikonversi ke WebP agar undangan tetap ringan."],
   ["Jenis acara apa saja yang didukung?", "Pernikahan, khitan, aqiqah, tahlil, lamaran, dan acara umum lainnya."],
 ];

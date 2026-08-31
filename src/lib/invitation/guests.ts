@@ -6,6 +6,7 @@ import { customAlphabet } from "nanoid";
 import { db } from "@/lib/db";
 import { guestInvites, invitations } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
+import { hasProFeatures } from "./entitlement";
 
 const token = customAlphabet("abcdefghijkmnpqrstuvwxyz23456789", 10);
 
@@ -30,8 +31,12 @@ export async function createGuestInvite(
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
   const inv = await ownedInvitation(invitationId);
-  if (!(inv.plan === "premium" || inv.plan === "business")) {
-    return { ok: false, error: "Fitur undangan per-tamu hanya untuk paket Premium." };
+  if (!hasProFeatures(inv)) {
+    return {
+      ok: false,
+      error:
+        "Undangan per-tamu tersedia gratis selama masa coba, atau dengan paket Premium.",
+    };
   }
   const guestName = String(formData.get("guest_name") ?? "").trim().slice(0, 200);
   if (!guestName) return { ok: false, error: "Nama tamu wajib diisi." };

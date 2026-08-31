@@ -33,6 +33,33 @@ export function hasWatermark(inv: Pick<Invitation, "plan" | "isPaid">): boolean 
   return !inv.isPaid && inv.plan === "free_trial";
 }
 
+type EntitlementInput = Pick<
+  Invitation,
+  "plan" | "isPaid" | "editExpiresAt" | "isEditLocked"
+>;
+
+/** Masa coba masih aktif: trial gratis yang belum dikunci / kedaluwarsa. */
+export function isTrialActive(inv: EntitlementInput): boolean {
+  return (
+    inv.plan === "free_trial" &&
+    !inv.isPaid &&
+    !inv.isEditLocked &&
+    !isEditLocked(inv)
+  );
+}
+
+/**
+ * Akses ke fitur Pro/Premium (undangan per-tamu, dsb). Selama masa coba
+ * SEMUA fitur terbuka — pembatasnya hanya watermark & masa edit 3 hari.
+ * Setelah dibayar: paket Premium/Business membuka fitur ini permanen.
+ */
+export function hasProFeatures(inv: EntitlementInput): boolean {
+  if (inv.isPaid && (inv.plan === "premium" || inv.plan === "business")) {
+    return true;
+  }
+  return isTrialActive(inv);
+}
+
 /** Nama paket yang ramah untuk ditampilkan ke pengguna awam. */
 export function planLabel(
   inv: Pick<Invitation, "plan" | "isPaid">,

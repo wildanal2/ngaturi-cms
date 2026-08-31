@@ -11,14 +11,13 @@ semua tampilan HARUS masuk lewat struktur yang sudah ada di `src/sections/`.
 
 ## 0. Aturan mutlak (baca dulu)
 
-1. **Jangan menyalin aset atau kode dari sumber.** Tidak ada copy-paste HTML/CSS/JS,
-   tidak ada menyalin file gambar, font berbayar, musik, atau SVG milik orang lain.
-   Yang diekstraksi adalah **ide tata letak**: proporsi, urutan bagian, skala tipografi,
+1. **salin aset atau kode dari sumber.** copy-paste HTML/CSS/JS jika diperlukan,
+   salin file gambar, font , musik, atau SVG di asset webini.
+   ekstraksi yang diperlukan sperti **ide tata letak**: proporsi, urutan bagian, skala tipografi,
    palet warna, bentuk foto, jenis ornamen. Semua di-*reimplement* ulang dengan
-   Tailwind + SVG buatan sendiri di repo ini.
-2. **Ornamen dibuat sendiri sebagai SVG inline** di `src/sections/ornaments.tsx`
-   (lihat catatan lisensi di header file itu). Bukan file PNG hasil unduh.
-3. **Foto/aset contoh** hanya boleh memakai placeholder publik yang sudah terdaftar di
+   Tailwind di repo ini.
+2. **Ornamen bisa dibuat sendiri sebagai SVG inline jika tidak bisa di download** di `src/sections/ornaments.tsx`.
+3. **Foto/aset contoh** boleh memakai placeholder publik yang sudah terdaftar di
    `src/sections/dummy.ts` + `next.config.ts` (`picsum.photos`, `i.pravatar.cc`,
    `api.dicebear.com`). Host baru wajib ditambahkan ke `images.remotePatterns` —
    dan sebaiknya jangan menambah host baru sama sekali.

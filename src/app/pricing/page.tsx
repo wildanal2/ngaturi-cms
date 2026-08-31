@@ -7,10 +7,16 @@ export const metadata: Metadata = { title: "Harga — Ngaturi" };
 
 const PLANS = [
   {
-    name: "Gratis",
+    name: "Gratis (masa coba)",
     price: "Rp 0",
-    note: "1 undangan · edit 3 hari",
-    features: ["Semua template dasar", "RSVP & buku tamu", "5 foto", "Watermark"],
+    note: "1 undangan · 3 hari coba semua fitur",
+    features: [
+      "Semua template & bagian",
+      "Coba SEMUA fitur Premium 3 hari",
+      "Undangan per-tamu (selama coba)",
+      "RSVP, buku tamu, galeri",
+      "Ada watermark",
+    ],
     cta: "Mulai gratis",
   },
   {

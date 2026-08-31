@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { guestInvites, invitations } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { GuestManager } from "@/components/dashboard/guest-manager";
+import { hasProFeatures, isTrialActive } from "@/lib/invitation/entitlement";
 
 export default async function GuestsPage({
   params,
@@ -31,7 +32,8 @@ export default async function GuestsPage({
     .where(eq(guestInvites.invitationId, invitationId))
     .orderBy(desc(guestInvites.createdAt));
 
-  const isPremium = inv.plan === "premium" || inv.plan === "business";
+  const allowed = hasProFeatures(inv);
+  const viaTrial = isTrialActive(inv);
   const baseUrl = `${env.NEXT_PUBLIC_APP_URL}/${inv.slug}`;
 
   return (
@@ -44,9 +46,12 @@ export default async function GuestsPage({
         </p>
       </div>
 
-      {!isPremium ? (
+      {!allowed ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm">
-          <span>Fitur ini tersedia di paket Premium.</span>
+          <span>
+            Masa coba undangan ini sudah berakhir. Aktifkan paket Premium untuk
+            memakai undangan per-tamu lagi.
+          </span>
           <a
             href={`/invitations/${inv.id}/unlock`}
             className="rounded-full bg-forest px-4 py-1.5 font-medium text-cream"
@@ -55,7 +60,14 @@ export default async function GuestsPage({
           </a>
         </div>
       ) : (
-        <GuestManager
+        <>
+          {viaTrial ? (
+            <p className="rounded-xl border border-forest/30 bg-forest/5 p-3 text-xs text-ink-soft">
+              Kamu sedang mencoba fitur Premium gratis. Fitur ini tetap aktif
+              selama masa edit undangan (3 hari) — upgrade untuk permanen.
+            </p>
+          ) : null}
+          <GuestManager
           invitationId={inv.id}
           baseUrl={baseUrl}
           guests={guests.map((g) => ({
@@ -69,6 +81,7 @@ export default async function GuestsPage({
             openedAt: g.openedAt?.toISOString() ?? null,
           }))}
         />
+        </>
       )}
     </div>
   );

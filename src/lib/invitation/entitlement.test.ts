@@ -3,9 +3,11 @@ import type { Invitation } from "./entitlement";
 import {
   FREE_TRIAL_EDIT_DAYS,
   editExpiresAtFor,
+  hasProFeatures,
   hasWatermark,
   invitationStage,
   isEditLocked,
+  isTrialActive,
   maxInvitationsFor,
   planLabel,
 } from "./entitlement";
@@ -70,6 +72,32 @@ describe("planLabel", () => {
     expect(planLabel(inv({ plan: "basic", isPaid: true }))).toBe("Basic");
     expect(planLabel(inv({ plan: "premium", isPaid: true }))).toBe("Premium");
     expect(planLabel(inv({ plan: "basic", isPaid: false }))).toBe("Gratis");
+  });
+});
+
+describe("trial gets pro features", () => {
+  const future = new Date(Date.now() + 86_400_000);
+  const past = new Date(Date.now() - 86_400_000);
+
+  it("active trial has pro features", () => {
+    const t = inv({ plan: "free_trial", isPaid: false, isEditLocked: false, editExpiresAt: future });
+    expect(isTrialActive(t)).toBe(true);
+    expect(hasProFeatures(t)).toBe(true);
+  });
+  it("expired trial loses pro features", () => {
+    const t = inv({ plan: "free_trial", isPaid: false, isEditLocked: false, editExpiresAt: past });
+    expect(isTrialActive(t)).toBe(false);
+    expect(hasProFeatures(t)).toBe(false);
+  });
+  it("manually locked trial loses pro features", () => {
+    const t = inv({ plan: "free_trial", isPaid: false, isEditLocked: true, editExpiresAt: future });
+    expect(hasProFeatures(t)).toBe(false);
+  });
+  it("paid premium always has pro features", () => {
+    expect(hasProFeatures(inv({ plan: "premium", isPaid: true, isEditLocked: false, editExpiresAt: null }))).toBe(true);
+  });
+  it("paid basic does NOT get pro features", () => {
+    expect(hasProFeatures(inv({ plan: "basic", isPaid: true, isEditLocked: false, editExpiresAt: null }))).toBe(false);
   });
 });
 
