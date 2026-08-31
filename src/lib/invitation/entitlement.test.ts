@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Invitation } from "./entitlement";
 import {
   FREE_TRIAL_EDIT_DAYS,
+  accountTier,
   editExpiresAtFor,
   hasProFeatures,
   hasWatermark,
@@ -98,6 +99,24 @@ describe("trial gets pro features", () => {
   });
   it("paid basic does NOT get pro features", () => {
     expect(hasProFeatures(inv({ plan: "basic", isPaid: true, isEditLocked: false, editExpiresAt: null }))).toBe(false);
+  });
+});
+
+describe("accountTier", () => {
+  const in2days = new Date(Date.now() + 2 * 86_400_000);
+  const trialInv = inv({ plan: "free_trial", isPaid: false, isEditLocked: false, editExpiresAt: in2days });
+  const premiumInv = inv({ plan: "premium", isPaid: true, isEditLocked: false, editExpiresAt: null });
+
+  it("no invitations → free", () => {
+    expect(accountTier([]).tier).toBe("free");
+  });
+  it("active trial → trial with days left", () => {
+    const r = accountTier([trialInv]);
+    expect(r.tier).toBe("trial");
+    expect(r.trialDaysLeft).toBe(2);
+  });
+  it("any paid premium → premium (wins over trial)", () => {
+    expect(accountTier([trialInv, premiumInv]).tier).toBe("premium");
   });
 });
 

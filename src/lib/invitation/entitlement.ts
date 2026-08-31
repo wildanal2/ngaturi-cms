@@ -60,6 +60,34 @@ export function hasProFeatures(inv: EntitlementInput): boolean {
   return isTrialActive(inv);
 }
 
+export type AccountTier = "premium" | "trial" | "free";
+
+/** Status akun untuk badge: berbayar Premium, sedang masa coba, atau gratis. */
+export function accountTier(invs: EntitlementInput[]): {
+  tier: AccountTier;
+  trialDaysLeft: number | null;
+} {
+  if (
+    invs.some(
+      (i) => i.isPaid && (i.plan === "premium" || i.plan === "business"),
+    )
+  ) {
+    return { tier: "premium", trialDaysLeft: null };
+  }
+  const trials = invs.filter((i) => isTrialActive(i));
+  if (trials.length > 0) {
+    const soonest = trials
+      .map((i) => i.editExpiresAt?.getTime())
+      .filter((n): n is number => typeof n === "number")
+      .sort((a, b) => a - b)[0];
+    const days = soonest
+      ? Math.max(0, Math.ceil((soonest - Date.now()) / 86_400_000))
+      : null;
+    return { tier: "trial", trialDaysLeft: days };
+  }
+  return { tier: "free", trialDaysLeft: null };
+}
+
 /** Nama paket yang ramah untuk ditampilkan ke pengguna awam. */
 export function planLabel(
   inv: Pick<Invitation, "plan" | "isPaid">,
