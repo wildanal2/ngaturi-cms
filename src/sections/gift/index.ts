@@ -1,6 +1,6 @@
 import type { SectionDefinition } from "../types";
 import { GiftProps } from "../schema";
-import { giftFields } from "../fields";
+import { bankLogo, giftFields } from "../fields";
 import { GiftCards } from "./gift-cards";
 import { GiftMinimal } from "./gift-minimal";
 
@@ -12,6 +12,16 @@ export const giftSection: SectionDefinition = {
   description: "Rekening & e-wallet hadiah",
   icon: "Gift",
   category: "content",
+  dummyProps: (_variantKey, base) => {
+    if (Array.isArray(base.bank_accounts)) {
+      base.bank_accounts = (base.bank_accounts as Record<string, unknown>[]).map(
+        (b) => ({
+          ...b,
+          logo_url: b.logo_url || bankLogo(String(b.bank_name || "bank")),
+        }),
+      );
+    }
+  },
   variants: {
     cards: {
       name: "Kartu Bank",

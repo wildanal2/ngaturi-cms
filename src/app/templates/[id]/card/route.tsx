@@ -2,6 +2,9 @@ import { ImageResponse } from "next/og";
 import { getTemplate } from "@/lib/templates/catalog";
 
 export const runtime = "nodejs";
+// Templates are defined in code — the card only changes on deploy.
+export const revalidate = 86400;
+
 const W = 600;
 const H = 800;
 
@@ -126,6 +129,13 @@ export async function GET(
         </div>
       </div>
     ),
-    { width: W, height: H },
+    {
+      width: W,
+      height: H,
+      headers: {
+        "Cache-Control":
+          "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800",
+      },
+    },
   );
 }

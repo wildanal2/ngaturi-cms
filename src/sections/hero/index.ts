@@ -1,5 +1,6 @@
 import type { SectionDefinition } from "../types";
 import { HeroProps } from "../schema";
+import { dummyHero } from "../dummy";
 import { heroBase, nowPlus, sOverlay, sTextPos } from "../fields";
 import { HeroCentered } from "./hero-centered";
 import { HeroSplit } from "./hero-split";
@@ -21,6 +22,9 @@ export const heroSection: SectionDefinition = {
   description: "Bagian pertama yang dilihat tamu",
   icon: "Sparkles",
   category: "hero",
+  dummyProps: (variantKey, base) => {
+    if (!base.background_image) base.background_image = dummyHero(variantKey);
+  },
   variants: {
     centered: {
       name: "Foto Fullscreen",

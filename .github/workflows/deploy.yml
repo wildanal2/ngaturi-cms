@@ -30,6 +30,8 @@ jobs:
         run: npx tsc --noEmit
       - name: Lint
         run: npx eslint .
+      - name: Unit tests
+        run: npm test
 
   deploy:
     needs: check

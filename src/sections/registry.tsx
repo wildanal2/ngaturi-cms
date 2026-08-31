@@ -1,12 +1,4 @@
 import type { SectionDefinition } from "./types";
-import {
-  dummyHero,
-  dummyBride,
-  dummyGroom,
-  dummyGallery,
-  dummyClosing,
-} from "./dummy";
-import { DUMMY_MAP_EMBED, DUMMY_MAP_LINK, bankLogo } from "./fields";
 
 import { coverSection } from "./cover";
 import { heroSection } from "./hero";
@@ -77,7 +69,11 @@ export function getSectionsByCategory() {
   })).filter((g) => g.sections.length > 0);
 }
 
-/** default props termasuk nilai styleOptions + gambar dummy publik. */
+/**
+ * Full default props for a variant: its `defaultProps`, plus each
+ * styleOption's default as `s_<key>`, plus any public placeholder data the
+ * section's own `dummyProps` fills in.
+ */
 export function variantDefaultProps(type: string, variantKey: string) {
   const v = getVariant(type, variantKey);
   if (!v) return {};
@@ -85,41 +81,6 @@ export function variantDefaultProps(type: string, variantKey: string) {
   for (const so of v.styleOptions ?? []) {
     base[`s_${so.key}`] = so.default;
   }
-
-  // isi gambar contoh publik kalau belum ada
-  if (type === "hero" && !base.background_image) {
-    base.background_image = dummyHero(variantKey);
-  }
-  if (type === "cover" && variantKey !== "minimal" && !base.background_image) {
-    base.background_image = dummyHero(`cover-${variantKey}`);
-  }
-  if (type === "couple-intro") {
-    const bride = (base.bride ?? {}) as Record<string, unknown>;
-    const groom = (base.groom ?? {}) as Record<string, unknown>;
-    if (!bride.photo) base.bride = { ...bride, photo: dummyBride };
-    if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
-  }
-  if (
-    type === "gallery" &&
-    Array.isArray(base.images) &&
-    base.images.length === 0
-  ) {
-    base.images = dummyGallery(variantKey);
-  }
-  if (type === "closing" && variantKey === "photo" && !base.photo) {
-    base.photo = dummyClosing();
-  }
-  if (type === "map-location") {
-    if (!base.embed_url) base.embed_url = DUMMY_MAP_EMBED;
-    if (!base.maps_url) base.maps_url = DUMMY_MAP_LINK;
-  }
-  if (type === "gift" && Array.isArray(base.bank_accounts)) {
-    base.bank_accounts = (base.bank_accounts as Record<string, unknown>[]).map(
-      (b) => ({
-        ...b,
-        logo_url: b.logo_url || bankLogo(String(b.bank_name || "bank")),
-      }),
-    );
-  }
+  SectionRegistry[type]?.dummyProps?.(variantKey, base);
   return base;
 }

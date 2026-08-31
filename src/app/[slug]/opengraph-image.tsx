@@ -7,6 +7,10 @@ import {
 export const alt = "Undangan";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+// Regenerate at most every 5 min — the card only changes when the couple
+// edit their cover photo / names, which is rare. Keeps Satori renders off
+// the hot path for social-media crawlers.
+export const revalidate = 300;
 
 /** Satori (next/og) only shapes Latin reliably — strip the rest. */
 function safe(text: string, fallback = ""): string {

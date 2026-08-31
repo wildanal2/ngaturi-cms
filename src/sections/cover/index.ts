@@ -1,5 +1,6 @@
 import type { SectionDefinition } from "../types";
 import { CoverProps } from "../schema";
+import { dummyHero } from "../dummy";
 import { coverDefaults, coverFields, coverPhotoField, sCoverOverlay } from "../fields";
 import { CoverClassic } from "./cover-classic";
 import { CoverPhoto } from "./cover-photo";
@@ -14,6 +15,11 @@ export const coverSection: SectionDefinition = {
   description: "Halaman pembuka sebelum isi undangan",
   icon: "BookOpen",
   category: "hero",
+  dummyProps: (variantKey, base) => {
+    if (variantKey !== "minimal" && !base.background_image) {
+      base.background_image = dummyHero(`cover-${variantKey}`);
+    }
+  },
   variants: {
     classic: {
       name: "Klasik",

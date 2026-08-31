@@ -1,5 +1,6 @@
 import type { SectionDefinition } from "../types";
 import { GalleryProps } from "../schema";
+import { dummyGallery } from "../dummy";
 import { columnsField, imagesArray } from "../fields";
 import { GalleryGrid } from "./gallery-grid";
 import { GalleryMasonry } from "./gallery-masonry";
@@ -13,6 +14,11 @@ export const gallerySection: SectionDefinition = {
   description: "Kumpulan foto",
   icon: "Images",
   category: "content",
+  dummyProps: (variantKey, base) => {
+    if (Array.isArray(base.images) && base.images.length === 0) {
+      base.images = dummyGallery(variantKey);
+    }
+  },
   variants: {
     grid: {
       name: "Grid Rapi",

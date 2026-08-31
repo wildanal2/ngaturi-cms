@@ -12,8 +12,9 @@ Spesifikasi lengkap di `PRD.md`.
 - **Tigris** (S3-compatible) — object storage, upload diproses `sharp` (resize 1920 + WebP)
 - **Tailwind CSS 4** + CSS Modules (isolasi gaya per-section)
 - **dnd-kit** (reorder), **zundo** (undo/redo), **sonner** (toast), **react-easy-crop**
-- **Midtrans** Snap — pembayaran
+- **DOKU** Jokul Checkout — pembayaran (sandbox default)
 - **Vercel** — hosting, Speed Insights, Analytics, Cron
+- **Vitest** — unit test (`npm test`): integritas registry, entitlement, hydrate, DOKU
 
 ## Setup
 
@@ -111,12 +112,16 @@ renderer → track view via `after()`. OG card: `src/app/[slug]/opengraph-image.
        └─ autosave 1.2s → server action saveComposition() → updateTag()
 ```
 
-### 5. Trial & pembayaran
+### 5. Kuota, trial & pembayaran
 
-- User baru: undangan pertama `plan=free_trial`, `edit_expires_at = +7 hari`.
+- Akun gratis: **1 undangan**, `plan=free_trial`, `edit_expires_at = +3 hari`.
+  Kuota dicek atomik (transaksi + `SELECT … FOR UPDATE` di `user_profiles`).
+- Beli paket Basic/Premium → `+1` kuota (`user_profiles.invitation_quota_bonus`).
 - Cron `lock-expired-edits` → `is_edit_locked=true`; undangan tetap online.
-- `/invitations/[id]/unlock` → Midtrans Snap → webhook `/api/webhooks/payment`
-  (verifikasi signature, idempoten) → `is_paid=true`, hapus watermark, buka edit.
+- `/invitations/[id]/unlock` → `POST /api/payments/create` → DOKU hosted checkout.
+- Balik: `GET /payment/callback` (re-check status) + S2S `POST /payment/webhook/doku`
+  (verifikasi signature, idempoten via `applyDokuResult`) → `is_paid=true`,
+  hapus watermark, buka edit, tambah kuota.
 
 ---
 

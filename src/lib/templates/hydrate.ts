@@ -16,8 +16,8 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> =>
 
 /** preset value wins, but empty values keep the (dummy) default; plain
  *  objects merge one level deep so e.g. `{ bride: { name } }` keeps the
- *  default `bride.photo`. */
-function mergeValue(def: unknown, override: unknown): unknown {
+ *  default `bride.photo`. Exported for tests. */
+export function mergeValue(def: unknown, override: unknown): unknown {
   if (isEmpty(override) && !isEmpty(def)) return def;
   if (isPlainObject(def) && isPlainObject(override)) {
     const out: Record<string, unknown> = { ...def };

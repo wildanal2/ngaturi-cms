@@ -1,5 +1,6 @@
 import type { SectionDefinition } from "../types";
 import { MapProps } from "../schema";
+import { DUMMY_MAP_EMBED, DUMMY_MAP_LINK } from "../fields";
 import { MapEmbed } from "./map-embed";
 import { MapButton } from "./map-button";
 
@@ -11,6 +12,10 @@ export const mapSection: SectionDefinition = {
   description: "Peta atau tombol ke Google Maps",
   icon: "MapPin",
   category: "content",
+  dummyProps: (_variantKey, base) => {
+    if (!base.embed_url) base.embed_url = DUMMY_MAP_EMBED;
+    if (!base.maps_url) base.maps_url = DUMMY_MAP_LINK;
+  },
   variants: {
     embed: {
       name: "Peta Tersemat",

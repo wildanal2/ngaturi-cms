@@ -21,54 +21,63 @@ export async function createInvitation(templateId: string): Promise<never> {
   const template = getTemplate(templateId);
   if (!template) throw new Error("Template tidak ditemukan");
 
-  const [[{ count }], [profile]] = await Promise.all([
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(invitations)
-      .where(eq(invitations.userId, session.user.id)),
-    db
-      .select({ bonus: userProfiles.invitationQuotaBonus })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, session.user.id))
-      .limit(1),
-  ]);
-
-  const limit = maxInvitationsFor(profile?.bonus);
-  if (count >= limit) {
-    // Kuota habis → arahkan ke halaman harga untuk menambah kapasitas.
-    redirect("/invitations?quota=full");
-  }
-
   const sections = hydrateTemplateSections(template).map((s) => ({
     ...s,
     id: crypto.randomUUID(),
   }));
 
-  const [row] = await db
-    .insert(invitations)
-    .values({
-      slug: makeSlug(template.name),
-      userId: session.user.id,
-      sourceTemplate: template.id,
-      sections,
-      globalSettings: template.global_settings,
-      plan: "free_trial",
-      hasWatermark: true,
-      editExpiresAt: editExpiresAtFor("free_trial"),
-      eventType: template.category,
-      status: "draft",
-    })
-    .returning({ id: invitations.id });
+  // Enforce the quota atomically: lock the user's profile row so two
+  // concurrent creates can't both pass the count check.
+  const result = await db.transaction(async (tx) => {
+    await tx
+      .insert(userProfiles)
+      .values({ userId: session.user.id })
+      .onConflictDoNothing();
 
-  await db
-    .insert(userProfiles)
-    .values({ userId: session.user.id, freeInvitationUsed: true })
-    .onConflictDoUpdate({
-      target: userProfiles.userId,
-      set: { freeInvitationUsed: true, updatedAt: new Date() },
-    });
+    const [profile] = await tx
+      .select({ bonus: userProfiles.invitationQuotaBonus })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, session.user.id))
+      .for("update")
+      .limit(1);
 
-  redirect(`/builder/${row.id}`);
+    const [{ count }] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invitations)
+      .where(eq(invitations.userId, session.user.id));
+
+    if (count >= maxInvitationsFor(profile?.bonus)) {
+      return { full: true as const };
+    }
+
+    const [row] = await tx
+      .insert(invitations)
+      .values({
+        slug: makeSlug(template.name),
+        userId: session.user.id,
+        sourceTemplate: template.id,
+        sections,
+        globalSettings: template.global_settings,
+        plan: "free_trial",
+        hasWatermark: true,
+        editExpiresAt: editExpiresAtFor("free_trial"),
+        eventType: template.category,
+        status: "draft",
+      })
+      .returning({ id: invitations.id });
+
+    await tx
+      .update(userProfiles)
+      .set({ freeInvitationUsed: true, updatedAt: new Date() })
+      .where(eq(userProfiles.userId, session.user.id));
+
+    return { id: row.id };
+  });
+
+  if ("full" in result) {
+    redirect("/invitations?quota=full");
+  }
+  redirect(`/builder/${result.id}`);
 }
 
 async function loadOwned(invitationId: string) {

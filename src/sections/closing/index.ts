@@ -1,5 +1,6 @@
 import type { SectionDefinition } from "../types";
 import { ClosingProps } from "../schema";
+import { dummyClosing } from "../dummy";
 import { ClosingSimple } from "./closing-simple";
 import { ClosingPhoto } from "./closing-photo";
 
@@ -11,6 +12,9 @@ export const closingSection: SectionDefinition = {
   description: "Ucapan penutup dari mempelai",
   icon: "Heart",
   category: "footer",
+  dummyProps: (variantKey, base) => {
+    if (variantKey === "photo" && !base.photo) base.photo = dummyClosing();
+  },
   variants: {
     simple: {
       name: "Teks Sederhana",

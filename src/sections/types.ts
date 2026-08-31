@@ -84,6 +84,12 @@ export interface SectionDefinition {
   category: "hero" | "content" | "interactive" | "footer";
   isPremium?: boolean;
   variants: Record<string, VariantDefinition>;
+  /**
+   * Fill in public placeholder data (dummy images, sample map URLs, …) that
+   * isn't part of `defaultProps`. Mutates `base` in place; runs after style
+   * defaults are applied. Keep it idempotent — only set what's missing.
+   */
+  dummyProps?: (variantKey: string, base: Record<string, unknown>) => void;
 }
 
 /** Field editor descriptors for the builder inspector. */

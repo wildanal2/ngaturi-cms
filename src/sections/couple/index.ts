@@ -1,5 +1,6 @@
 import type { SectionDefinition } from "../types";
 import { CoupleIntroProps } from "../schema";
+import { dummyBride, dummyGroom } from "../dummy";
 import { coupleFields, sPhotoShape } from "../fields";
 import { CoupleSideBySide } from "./couple-side-by-side";
 import { CoupleStacked } from "./couple-stacked";
@@ -13,6 +14,12 @@ export const coupleSection: SectionDefinition = {
   description: "Perkenalan kedua mempelai",
   icon: "Users",
   category: "content",
+  dummyProps: (_variantKey, base) => {
+    const bride = (base.bride ?? {}) as Record<string, unknown>;
+    const groom = (base.groom ?? {}) as Record<string, unknown>;
+    if (!bride.photo) base.bride = { ...bride, photo: dummyBride };
+    if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
+  },
   variants: {
     "side-by-side": {
       name: "Bersebelahan",
