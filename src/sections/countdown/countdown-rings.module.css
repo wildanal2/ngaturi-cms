@@ -1,0 +1,32 @@
+/* Isolated circular-progress styles (CSS Module — scoped). */
+
+.ring {
+  --size: 74px;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(
+    var(--inv-primary) calc(var(--pct) * 1%),
+    color-mix(in srgb, var(--inv-primary) 15%, transparent) 0
+  );
+}
+
+.inner {
+  width: calc(var(--size) - 14px);
+  height: calc(var(--size) - 14px);
+  border-radius: 50%;
+  background: var(--inv-bg);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  color: var(--inv-primary);
+}
+
+.label {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--inv-ink);
+}

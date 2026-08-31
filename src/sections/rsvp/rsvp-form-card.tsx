@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { SectionRenderProps } from "./types";
-import { SectionShell, SectionTitle } from "./shared";
-import { TurnstileField } from "./turnstile-field";
+import type { SectionRenderProps } from "../types";
+import { SectionShell, SectionTitle } from "../shared";
+import { TurnstileField } from "../turnstile-field";
 
 export function RsvpFormCard({
   props,

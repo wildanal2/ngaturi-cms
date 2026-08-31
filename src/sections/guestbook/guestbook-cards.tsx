@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { SectionRenderProps } from "./types";
-import { SectionShell, SectionTitle } from "./shared";
-import { TurnstileField } from "./turnstile-field";
+import type { SectionRenderProps } from "../types";
+import { SectionShell, SectionTitle } from "../shared";
+import { TurnstileField } from "../turnstile-field";
 
 type Msg = { id: string; name: string; message: string; createdAt: string };
 

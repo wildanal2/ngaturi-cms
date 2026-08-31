@@ -1,0 +1,21 @@
+/* Scoped styles for gallery variants (CSS Module). */
+
+.masonry {
+  column-gap: 0.5rem;
+}
+.masonry > * {
+  break-inside: avoid;
+  margin-bottom: 0.5rem;
+}
+
+.carousel {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.5rem;
+}
+.carousel > * {
+  flex: 0 0 78%;
+  scroll-snap-align: center;
+}

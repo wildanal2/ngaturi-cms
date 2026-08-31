@@ -120,14 +120,38 @@ renderer → track view via `after()`. OG card: `src/app/[slug]/opengraph-image.
 
 ---
 
+## Struktur folder section
+
+Tiap **tipe section** punya folder sendiri di `src/sections/<type>/`, dengan
+**satu file `.tsx` per varian** + CSS-nya sendiri (opsional) + `index.ts`:
+
+```
+src/sections/
+  registry.tsx        # type → SectionDefinition (impor tiap folder + helper)
+  fields.ts           # Field[] & StyleOption yang dipakai lintas section
+  types.ts  schema.ts  shared.tsx  reveal.tsx  ornaments.tsx  dummy.ts
+  countdown/
+    index.ts                     # rakit SectionDefinition "countdown"
+    use-countdown.tsx            # hook/util bersama antar varian
+    countdown-flip.tsx
+    countdown-flip.module.css    # CSS terisolasi khusus varian ini
+    countdown-rings.tsx
+    countdown-rings.module.css
+    countdown-minimal.tsx  countdown-pill.tsx  countdown-elegant.tsx
+  music/  cover/  hero/  couple/  events/  gallery/  quote/
+  gift/  map/  closing/  rsvp/  guestbook/  navigation/
+```
+
 ## Bikin komponen (varian section) baru
 
 Contoh: menambah varian **"neon"** untuk countdown.
 
-**1. Tulis komponennya** — `src/sections/countdown.tsx` (client) atau
-`src/sections/static-parts.tsx` (server). Terima `SectionRenderProps`:
+**1. Tulis komponennya** — file baru `src/sections/countdown/countdown-neon.tsx`.
+Terima `SectionRenderProps`:
 
 ```tsx
+import type { SectionRenderProps } from "../types";
+
 export function CountdownNeon({ props }: SectionRenderProps) {
   const p = props as { target_date?: string; s_glow?: string };
   // ... pakai var(--inv-primary) dsb utk warna tema
@@ -136,20 +160,24 @@ export function CountdownNeon({ props }: SectionRenderProps) {
 
 - Gaya berwarna tema: pakai `var(--inv-primary)`, `var(--inv-secondary)`,
   `var(--inv-bg)`, `var(--inv-ink)`, `var(--inv-font)`.
-- Butuh CSS terisolasi? bikin `*.module.css` di folder `sections/`.
+- Butuh CSS terisolasi? bikin `countdown-neon.module.css` di folder yang sama
+  (CSS Modules → scoped, tidak bocor ke varian lain).
+- Komponen client (pakai hook/event) → `"use client"` di baris pertama.
 - `isPreview` = jangan submit form / jangan auto-play.
 - `inCanvas` = jangan pakai `position: fixed` (lepas dari frame HP).
 
-**2. Daftarkan di registry** — `src/sections/registry.tsx`, di dalam
-`SectionRegistry.countdown.variants`:
+**2. Daftarkan di `src/sections/countdown/index.ts`** — impor + tambah ke
+`variants`:
 
 ```ts
+import { CountdownNeon } from "./countdown-neon";
+// ...
 neon: {
   name: "Neon",
   description: "Angka glow di latar gelap",
   component: CountdownNeon,
-  propsSchema: CountdownProps,       // src/sections/schema.ts
-  fields: countdownFields,           // field yang bisa diedit
+  propsSchema: CountdownProps,       // ../schema.ts
+  fields: countdownFields,           // ../fields.ts
   styleOptions: [
     { key: "glow", label: "Intensitas", default: "med",
       options: [{ value: "low", label: "Redup" }, { value: "high", label: "Terang" }] },
@@ -163,12 +191,16 @@ beserta chip **Gaya** dan form field-nya. Tidak perlu migrasi DB.
 
 ### Tipe section yang benar-benar baru
 
-1. Tambah skema props di `src/sections/schema.ts` + daftarkan di
+1. Bikin folder `src/sections/<type>/` dengan file varian + `index.ts` yang
+   mengekspor `export const <type>Section: SectionDefinition`
+   (`icon` = nama ikon lucide, `category` = `hero`/`content`/`interactive`/`footer`).
+2. Tambah skema props di `src/sections/schema.ts` + daftarkan di
    `SECTION_PROPS_SCHEMAS`.
-2. Tambah entri di `SectionRegistry` (`icon` = nama ikon lucide, `category`,
-   `variants`).
-3. Kalau perlu perilaku fixed/overlay (spt `music`/`navigation`), tambahkan
-   `type`-nya ke set `OVERLAY` di `renderer.tsx`.
+3. Impor `<type>Section` di `src/sections/registry.tsx` dan tambahkan ke
+   `SectionRegistry`. Menu "Tambah bagian" otomatis mengelompokkannya per
+   `category`.
+4. Kalau perlu perilaku fixed/overlay (spt `music`/`navigation`), tambahkan
+   `type`-nya ke set `OVERLAY` di `src/lib/invitation/renderer.tsx`.
 
 ---
 

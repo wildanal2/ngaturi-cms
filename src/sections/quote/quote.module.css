@@ -1,0 +1,15 @@
+/* Scoped hairline for the bordered quote variant (CSS Module). */
+
+.hairline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: color-mix(in srgb, var(--inv-primary) 45%, transparent);
+}
+.hairline::before,
+.hairline::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import * as Icons from "lucide-react";
-import type { SectionRenderProps } from "./types";
+import type { SectionRenderProps } from "../types";
 
 const TARGETS: { type: string; label: string; icon: string }[] = [
   { type: "hero", label: "Atas", icon: "Home" },

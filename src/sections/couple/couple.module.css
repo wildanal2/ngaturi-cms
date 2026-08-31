@@ -1,0 +1,13 @@
+/* Scoped styles for the polaroid couple variant (CSS Module). */
+
+.polaroid {
+  background: #fff;
+  padding: 0.6rem 0.6rem 1.4rem;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+}
+.tiltL {
+  transform: rotate(-4deg);
+}
+.tiltR {
+  transform: rotate(3deg);
+}

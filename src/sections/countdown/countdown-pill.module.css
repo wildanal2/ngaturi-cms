@@ -1,0 +1,17 @@
+/* Isolated compact-pill styles (CSS Module — scoped). */
+
+.pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--inv-primary) 30%, transparent);
+  color: var(--inv-ink);
+  font-size: 0.95rem;
+}
+
+.pill b {
+  font-size: 1.15rem;
+  color: var(--inv-primary);
+}
