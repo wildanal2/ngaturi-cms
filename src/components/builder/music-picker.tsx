@@ -1,11 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Play, Pause, TrendingUp, Music, Upload, Loader2 } from "lucide-react";
+import {
+  Play,
+  Pause,
+  TrendingUp,
+  Music,
+  Upload,
+  Loader2,
+  Search,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { FieldContext } from "./field-editors";
 
-interface CatalogTrack {
+interface Track {
   id: string;
   title: string;
   artist: string | null;
@@ -13,7 +22,9 @@ interface CatalogTrack {
   coverUrl: string | null;
   license: string | null;
   genre: string | null;
-  picks: number;
+  picks?: number;
+  source?: "catalog" | "jamendo";
+  shareUrl?: string | null;
 }
 
 export function MusicPickerField({
@@ -24,9 +35,14 @@ export function MusicPickerField({
   label: string;
 }) {
   const [tab, setTab] = useState<"catalog" | "url">("catalog");
-  const [tracks, setTracks] = useState<CatalogTrack[] | null>(null);
+  const [tracks, setTracks] = useState<Track[] | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<{ q: string; items: Track[] } | null>(null);
+  const [provider, setProvider] = useState<string | null>(null);
+
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -41,7 +57,29 @@ export function MusicPickerField({
       .catch(() => setTracks([]));
   }, []);
 
-  function preview(t: CatalogTrack) {
+  // debounced search
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/music/search?q=${encodeURIComponent(q)}`, {
+        signal: ctrl.signal,
+      })
+        .then((r) => (r.ok ? r.json() : { results: [], provider: null }))
+        .then((d) => {
+          setHits({ q, items: d.results ?? [] });
+          setProvider(d.provider ?? null);
+        })
+        .catch(() => {});
+    }, 350);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [query]);
+
+  function preview(t: Track) {
     const a = audioRef.current;
     if (!a) return;
     if (previewId === t.id) {
@@ -50,10 +88,12 @@ export function MusicPickerField({
       return;
     }
     a.src = t.audioUrl;
-    a.play().then(() => setPreviewId(t.id)).catch(() => {});
+    a.play()
+      .then(() => setPreviewId(t.id))
+      .catch(() => {});
   }
 
-  function choose(t: CatalogTrack) {
+  function choose(t: Track) {
     ctx.write("audio_url", t.audioUrl);
     ctx.write("track_id", t.id);
     ctx.write("track_title", t.title);
@@ -92,7 +132,71 @@ export function MusicPickerField({
     }
   }
 
-  const maxPicks = Math.max(1, ...(tracks?.map((t) => t.picks) ?? [1]));
+  const q = query.trim();
+  const searchMode = q.length >= 2;
+  const freshHits = hits && hits.q === q ? hits.items : null;
+  const list: Track[] = searchMode ? (freshHits ?? []) : (tracks ?? []);
+  const maxPicks = Math.max(1, ...(tracks?.map((t) => t.picks ?? 0) ?? [1]));
+
+  function TrackRow({ t, rank }: { t: Track; rank: number }) {
+    const active = currentTrackId === t.id;
+    const trending = !searchMode && rank < 3 && (t.picks ?? 0) > 0;
+    return (
+      <li
+        className={`rounded-lg border p-2 ${
+          active ? "border-forest bg-cream-200" : "border-line"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => preview(t)}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink/80 text-white"
+            aria-label="Pratinjau"
+          >
+            {previewId === t.id ? (
+              <Pause size={13} />
+            ) : (
+              <Play size={13} className="translate-x-[1px]" />
+            )}
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 truncate font-medium">
+              {t.title}
+              {trending ? (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-wine/10 px-1.5 py-px text-[10px] text-wine">
+                  <TrendingUp size={9} /> {t.picks}×
+                </span>
+              ) : null}
+            </p>
+            <p className="truncate text-xs text-muted">
+              {t.artist ?? "—"}
+              {t.genre ? ` · ${t.genre}` : ""}
+              {t.license ? ` · ${t.license}` : ""}
+            </p>
+            {!searchMode && (t.picks ?? 0) > 0 ? (
+              <div className="mt-1 h-1 w-full overflow-hidden rounded bg-line">
+                <div
+                  className="h-full bg-forest/60"
+                  style={{ width: `${((t.picks ?? 0) / maxPicks) * 100}%` }}
+                />
+              </div>
+            ) : null}
+          </div>
+          <button
+            onClick={() => choose(t)}
+            disabled={ctx.disabled}
+            className={`shrink-0 rounded-full px-3 py-1 text-xs ${
+              active
+                ? "bg-forest text-cream"
+                : "border border-line hover:bg-cream-200"
+            }`}
+          >
+            {active ? "Dipakai" : "Pakai"}
+          </button>
+        </div>
+      </li>
+    );
+  }
 
   return (
     <div className="space-y-2 text-sm">
@@ -123,7 +227,7 @@ export function MusicPickerField({
               tab === t ? "bg-paper shadow-sm" : "text-muted"
             }`}
           >
-            {t === "catalog" ? "Katalog" : "Upload / URL"}
+            {t === "catalog" ? "Katalog & Cari" : "Upload / URL"}
           </button>
         ))}
       </div>
@@ -131,84 +235,68 @@ export function MusicPickerField({
       <audio ref={audioRef} onEnded={() => setPreviewId(null)} hidden />
 
       {tab === "catalog" ? (
-        tracks === null ? (
-          <p className="py-4 text-center text-xs text-muted">Memuat…</p>
-        ) : tracks.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
-            Katalog musik belum diisi. Sementara, pakai tab &ldquo;Upload /
-            URL&rdquo;.
-          </p>
-        ) : (
-          <ul className="max-h-72 space-y-1.5 overflow-y-auto">
-            {tracks.map((t, i) => {
-              const active = currentTrackId === t.id;
-              const trending = i < 3 && t.picks > 0;
-              return (
-                <li
-                  key={t.id}
-                  className={`rounded-lg border p-2 ${
-                    active ? "border-forest bg-cream-200" : "border-line"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => preview(t)}
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink/80 text-white"
-                      aria-label="Pratinjau"
-                    >
-                      {previewId === t.id ? (
-                        <Pause size={13} />
-                      ) : (
-                        <Play size={13} className="translate-x-[1px]" />
-                      )}
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-1.5 truncate font-medium">
-                        {t.title}
-                        {trending ? (
-                          <span className="inline-flex items-center gap-0.5 rounded-full bg-wine/10 px-1.5 py-px text-[10px] text-wine">
-                            <TrendingUp size={9} /> {t.picks}×
-                          </span>
-                        ) : null}
-                      </p>
-                      <p className="truncate text-xs text-muted">
-                        {t.artist ?? "—"}
-                        {t.genre ? ` · ${t.genre}` : ""}
-                        {t.license ? ` · ${t.license}` : ""}
-                      </p>
-                      {t.picks > 0 ? (
-                        <div className="mt-1 h-1 w-full overflow-hidden rounded bg-line">
-                          <div
-                            className="h-full bg-forest/60"
-                            style={{ width: `${(t.picks / maxPicks) * 100}%` }}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                    <button
-                      onClick={() => choose(t)}
-                      disabled={ctx.disabled}
-                      className={`shrink-0 rounded-full px-3 py-1 text-xs ${
-                        active
-                          ? "bg-forest text-cream"
-                          : "border border-line hover:bg-cream-200"
-                      }`}
-                    >
-                      {active ? "Dipakai" : "Pakai"}
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )
-      ) : null}
+        <>
+          <div className="relative">
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted"
+            />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari judul / artis / genre…"
+              className="w-full rounded-lg border border-line bg-paper py-1.5 pl-8 pr-8"
+            />
+            {query ? (
+              <button
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted"
+                aria-label="Bersihkan"
+              >
+                <X size={14} />
+              </button>
+            ) : null}
+          </div>
 
-      {tab === "catalog" && tracks && tracks.length > 0 ? (
-        <p className="pt-1 text-[10px] leading-relaxed text-muted">
-          Musik oleh Kevin MacLeod (incompetech.com), lisensi Creative Commons
-          BY 4.0 — bebas dipakai termasuk untuk undangan.
-        </p>
+          {tracks === null ? (
+            <p className="py-4 text-center text-xs text-muted">Memuat…</p>
+          ) : searchMode ? (
+            freshHits === null ? (
+              <p className="flex items-center justify-center gap-1.5 py-4 text-xs text-muted">
+                <Loader2 size={13} className="animate-spin" /> Mencari…
+              </p>
+            ) : list.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
+                Tidak ada hasil untuk “{query}”.
+                {provider
+                  ? ""
+                  : " Untuk cari dari pustaka lebih besar, aktifkan penyedia musik, atau pakai tab “Upload / URL”."}
+              </p>
+            ) : (
+              <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+                {list.map((t, i) => (
+                  <TrackRow key={t.id} t={t} rank={i} />
+                ))}
+              </ul>
+            )
+          ) : list.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
+              Katalog musik belum diisi. Sementara, pakai tab “Upload / URL”.
+            </p>
+          ) : (
+            <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+              {list.map((t, i) => (
+                <TrackRow key={t.id} t={t} rank={i} />
+              ))}
+            </ul>
+          )}
+
+          <p className="pt-1 text-[10px] leading-relaxed text-muted">
+            {searchMode && provider
+              ? `Hasil juga dari ${provider} (Creative Commons). Cek lisensi tiap lagu sebelum dipakai komersial.`
+              : "Katalog: Kevin MacLeod (incompetech.com), lisensi Creative Commons BY 4.0 — bebas dipakai termasuk untuk undangan."}
+          </p>
+        </>
       ) : null}
 
       {tab === "url" ? (
