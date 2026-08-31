@@ -23,7 +23,7 @@ interface Track {
   license: string | null;
   genre: string | null;
   picks?: number;
-  source?: "catalog" | "deezer" | "itunes" | "jamendo";
+  source?: "catalog" | "deezer" | "itunes" | "jamendo" | "audius";
   previewOnly?: boolean;
   linkUrl?: string | null;
 }
@@ -245,6 +245,10 @@ export function MusicPickerField({
               ) : t.source === "jamendo" ? (
                 <span className="rounded bg-ink/10 px-1 py-px text-[9px] font-medium text-ink">
                   Jamendo · CC
+                </span>
+              ) : t.source === "audius" ? (
+                <span className="rounded bg-ink/10 px-1 py-px text-[9px] font-medium text-ink">
+                  Audius · full
                 </span>
               ) : null}
               <span className="truncate">

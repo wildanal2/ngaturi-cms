@@ -13,7 +13,7 @@ interface Result {
   coverUrl: string | null;
   license: string | null;
   genre: string | null;
-  source: "catalog" | "deezer" | "itunes" | "jamendo";
+  source: "catalog" | "deezer" | "itunes" | "jamendo" | "audius";
   previewOnly?: boolean;
   linkUrl?: string | null;
 }
@@ -35,13 +35,14 @@ export async function GET(req: Request) {
     return [] as Result[];
   };
 
-  const [local, deezer, itunes, jamendo] = await Promise.all([
+  const [local, deezer, itunes, jamendo, audius] = await Promise.all([
     searchCatalog(q),
     searchDeezer(q).catch(guard("deezer")),
     searchItunes(q).catch(guard("itunes")),
     env.JAMENDO_CLIENT_ID
       ? searchJamendo(q).catch(guard("jamendo"))
       : Promise.resolve([] as Result[]),
+    searchAudius(q).catch(guard("audius")),
   ]);
 
   // de-dupe commercial previews (title+artist appears on both deezer & itunes)
@@ -54,11 +55,12 @@ export async function GET(req: Request) {
   });
 
   return NextResponse.json({
-    results: [...local, ...commercial, ...jamendo],
+    results: [...local, ...commercial, ...audius, ...jamendo],
     sources: [
       ...(local.length ? ["Katalog"] : []),
       ...(deezer.length ? ["Deezer"] : []),
       ...(itunes.length ? ["iTunes"] : []),
+      ...(audius.length ? ["Audius"] : []),
       ...(jamendo.length ? ["Jamendo"] : []),
     ],
   });
@@ -83,6 +85,39 @@ async function searchCatalog(q: string): Promise<Result[]> {
       genre: t.genre,
       source: "catalog" as const,
     }));
+}
+
+interface AudiusTrack {
+  id: string;
+  title: string;
+  genre?: string;
+  mood?: string;
+  duration?: number;
+  user?: { name?: string };
+  artwork?: { "150x150"?: string; "480x480"?: string };
+}
+
+async function searchAudius(q: string): Promise<Result[]> {
+  const host = "https://api.audius.co";
+  const url = `${host}/v1/tracks/search?query=${encodeURIComponent(
+    q,
+  )}&app_name=ngaturi`;
+  const res = await fetch(url, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`audius ${res.status}`);
+  const data = (await res.json()) as { data?: AudiusTrack[] };
+  return (data.data ?? []).slice(0, 12).map((t) => ({
+    id: `audius:${t.id}`,
+    title: t.title,
+    artist: t.user?.name ?? null,
+    audioUrl: `${host}/v1/tracks/${t.id}/stream?app_name=ngaturi`,
+    coverUrl: t.artwork?.["480x480"] ?? t.artwork?.["150x150"] ?? null,
+    license: "Audius · streaming bebas",
+    genre: t.genre ?? t.mood ?? null,
+    source: "audius" as const,
+  }));
 }
 
 interface DeezerTrack {
