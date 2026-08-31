@@ -19,10 +19,11 @@ export function Canvas({ invitationId }: { invitationId: string }) {
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
-  // music renders as a real floating FAB — pinned over the device viewport so
-  // it stays visible while scrolling, mirroring the live page. In the section
-  // flow we keep a slim placeholder block so it's still visible & selectable.
-  const musicSections = ordered.filter((s) => s.type === "music");
+  // music + navigation float over the device viewport (pinned, non-scrolling)
+  // exactly like the live page. In the section flow they get a slim
+  // placeholder block so they stay visible & selectable.
+  const OVERLAY_TYPES = new Set(["music", "navigation"]);
+  const overlaySections = ordered.filter((s) => OVERLAY_TYPES.has(s.type));
 
   const selectHandler = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -44,24 +45,31 @@ export function Canvas({ invitationId }: { invitationId: string }) {
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [selectedId]);
 
-  const musicOverlay =
-    musicSections.length > 0 ? (
+  const floatingOverlay =
+    overlaySections.length > 0 ? (
       <>
-        {musicSections.map((section) => {
+        {overlaySections.map((section) => {
           const variant = getVariant(section.type, section.variant);
           if (!variant || section.visible === false) return null;
           const Component = variant.component;
-          const side = (section.props?.s_position as string) === "left";
-          const wide = section.variant === "bar";
+          const isMusic = section.type === "music";
+          // music places itself via its own Fab; navigation variants pin
+          // themselves (bottom bar / centre dock / side rail). Music still
+          // needs the wrapper to choose a corner.
+          const musicLeft = (section.props?.s_position as string) === "left";
+          const wide = isMusic && section.variant === "bar";
+          const wrapCls = isMusic
+            ? `pointer-events-auto absolute bottom-3 ${
+                wide ? "inset-x-0" : musicLeft ? "left-0" : "right-0"
+              }`
+            : "pointer-events-none absolute inset-0 [&_nav]:pointer-events-auto";
           return (
             <div
               key={section.id}
               data-section-id={section.id}
               onClickCapture={selectHandler(section.id)}
-              className={`pointer-events-auto absolute bottom-3 ${
-                wide ? "inset-x-0" : side ? "left-0" : "right-0"
-              } ${
-                selectedId === section.id
+              className={`${wrapCls} ${
+                selectedId === section.id && isMusic
                   ? "rounded-2xl outline outline-2 outline-forest"
                   : ""
               }`}
@@ -82,7 +90,7 @@ export function Canvas({ invitationId }: { invitationId: string }) {
 
   return (
     <div className="min-h-full px-6 py-8">
-      <DeviceFrame preset={preset} overlay={musicOverlay}>
+      <DeviceFrame preset={preset} overlay={floatingOverlay}>
         <div ref={scrollRef} style={invitationRootStyle(global)}>
           {ordered.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted">
@@ -97,7 +105,8 @@ export function Canvas({ invitationId }: { invitationId: string }) {
             if (!variant) return null;
             const Component = variant.component;
 
-            if (section.type === "music") {
+            if (OVERLAY_TYPES.has(section.type)) {
+              const isMusic = section.type === "music";
               return (
                 <div
                   key={section.id}
@@ -110,12 +119,15 @@ export function Canvas({ invitationId }: { invitationId: string }) {
                   } ${section.visible === false ? "opacity-40" : ""}`}
                 >
                   <p className="text-[11px] font-medium text-black/55">
-                    🎵 {def?.name ?? "Musik Latar"} · {variant.name}
+                    {isMusic ? "🎵" : "🧭"} {def?.name ?? section.type} ·{" "}
+                    {variant.name}
                   </p>
                   <p className="text-[10px] text-black/40">
-                    {(section.props?.track_title as string) ||
-                      "Belum ada lagu dipilih"}{" "}
-                    — tampil sebagai tombol mengambang di undangan
+                    {isMusic
+                      ? (section.props?.track_title as string) ||
+                        "Belum ada lagu dipilih"
+                      : "Menu mengambang"}{" "}
+                    — tampil mengambang di atas undangan
                   </p>
                 </div>
               );

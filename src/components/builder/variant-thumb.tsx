@@ -85,7 +85,11 @@ export function VariantThumb({
           global={global}
           isPreview
           inCanvas
-          siblingTypes={[]}
+          siblingTypes={
+            type === "navigation"
+              ? ["hero", "couple-intro", "event-details", "gallery", "rsvp", "gift"]
+              : []
+          }
         />
       </div>
     </div>
