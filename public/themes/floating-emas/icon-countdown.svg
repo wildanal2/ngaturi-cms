@@ -1,0 +1,16 @@
+<svg id="floating16_countdown" xmlns="http://www.w3.org/2000/svg" width="20.21" height="22.771" viewBox="0 0 20.21 22.771">
+  <circle id="Ellipse_1143" data-name="Ellipse 1143" cx="8.613" cy="8.613" r="8.613" transform="translate(1.738 4.795)" fill="none" stroke="#c18836" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+  <path id="Path_486715" data-name="Path 486715" d="M9430.5,5729.038v5.366h4.044" transform="translate(-9420.148 -5719.731)" fill="none" stroke="#c18836" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/>
+  <g id="Rectangle_6463" data-name="Rectangle 6463" transform="translate(7.166 0)" fill="none" stroke="#c18836" stroke-width="1.5">
+    <rect width="6.37" height="5.46" rx="2" stroke="none"/>
+    <rect x="0.75" y="0.75" width="4.87" height="3.96" rx="1.25" fill="none"/>
+  </g>
+  <g id="Rectangle_6464" data-name="Rectangle 6464" transform="translate(0 6.575) rotate(-45)" fill="none" stroke="#c18836" stroke-width="1.5">
+    <rect width="3.616" height="3.864" rx="1" stroke="none"/>
+    <rect x="0.75" y="0.75" width="2.116" height="2.364" rx="0.25" fill="none"/>
+  </g>
+  <g id="Rectangle_6465" data-name="Rectangle 6465" transform="translate(17.478 9.307) rotate(-135)" fill="none" stroke="#c18836" stroke-width="1.5">
+    <rect width="3.616" height="3.864" rx="1" stroke="none"/>
+    <rect x="0.75" y="0.75" width="2.116" height="2.364" rx="0.25" fill="none"/>
+  </g>
+</svg>

@@ -1,5 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Fraunces, Parisienne, Cormorant_Garamond } from "next/font/google";
+import {
+  Inter,
+  Fraunces,
+  Parisienne,
+  Philosopher,
+  Cormorant_Garamond,
+} from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -21,6 +27,13 @@ const parisienne = Parisienne({
   variable: "--font-parisienne",
   subsets: ["latin"],
   weight: "400",
+  display: "swap",
+});
+
+const philosopher = Philosopher({
+  variable: "--font-philosopher",
+  subsets: ["latin"],
+  weight: ["400", "700"],
   display: "swap",
 });
 
@@ -135,7 +148,7 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${inter.variable} ${fraunces.variable} ${parisienne.variable} ${cormorant.variable} h-full`}
+      className={`${inter.variable} ${fraunces.variable} ${parisienne.variable} ${philosopher.variable} ${cormorant.variable} h-full`}
     >
       <body className="flex min-h-full flex-col">
         <script

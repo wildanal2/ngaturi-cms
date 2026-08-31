@@ -7,6 +7,7 @@ import { CoverPhoto } from "./cover-photo";
 import { CoverBotanical } from "./cover-botanical";
 import { CoverMinimal } from "./cover-minimal";
 import { CoverFloating } from "./cover-floating";
+import { CoverFloating17 } from "./cover-floating17";
 import { CoverWaxSeal } from "./cover-wax-seal";
 
 export {
@@ -15,6 +16,7 @@ export {
   CoverBotanical,
   CoverMinimal,
   CoverFloating,
+  CoverFloating17,
   CoverWaxSeal,
 };
 
@@ -87,6 +89,34 @@ export const coverSection: SectionDefinition = {
         { kind: "image", key: "divider_image", label: "Gambar divider (opsional)" },
       ],
       defaultProps: { ...coverDefaults },
+    },
+    floating17: {
+      name: "Gerbang Foto Sage",
+      description: "Foto gelap responsif, monogram floral emas, dan tombol berdenyut",
+      component: CoverFloating17,
+      propsSchema: CoverProps,
+      fields: [
+        ...coverFields,
+        { kind: "text", key: "initials", label: "Inisial monogram" },
+        { kind: "text", key: "event_date", label: "Tanggal tampil" },
+        { kind: "image", key: "background_image", label: "Foto sampul mobile" },
+        { kind: "image", key: "background_desktop_image", label: "Foto sampul desktop" },
+        { kind: "image", key: "floral_left_image", label: "Floral kiri" },
+        { kind: "image", key: "floral_right_image", label: "Floral kanan" },
+        { kind: "image", key: "divider_image", label: "Garis dekoratif" },
+      ],
+      defaultProps: {
+        ...coverDefaults,
+        names: "Hani & Hari",
+        tagline: "Invitation",
+        initials: "HH",
+        event_date: "27 Januari 2024",
+        background_image: "/themes/sage-hijau-melayang/gate-mobile.jpg",
+        background_desktop_image: "/themes/sage-hijau-melayang/gate-desktop.jpg",
+        floral_left_image: "/themes/sage-hijau-melayang/gate-floral-left.svg",
+        floral_right_image: "/themes/sage-hijau-melayang/gate-floral-right.svg",
+        divider_image: "/themes/sage-hijau-melayang/gate-line.svg",
+      },
     },
     "wax-seal": {
       name: "Amplop + Segel Lilin",

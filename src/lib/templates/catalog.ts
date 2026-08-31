@@ -20,6 +20,32 @@ const s = (
 
 const inDays = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
 
+type ThemeAssets = {
+  bg: string;
+  divider: string;
+  tr: string[];
+  bl: string[];
+  root: string;
+};
+
+const themeAssets = (root: string): ThemeAssets => ({
+  root,
+  bg: `/themes/${root}/bg-floating.png`,
+  divider: `/themes/${root}/divider.png`,
+  tr: [1, 2, 3].map((i) => `/themes/${root}/ornament-tr-${i}.png`),
+  bl: [1, 2, 3].map((i) => `/themes/${root}/ornament-bl-${i}.png`),
+});
+
+const FLOATING_EMAS = themeAssets("floating-emas");
+const FLOATING_TERRACOTTA = themeAssets("floating-terracotta");
+
+const themeDecor = (theme: ThemeAssets) => ({
+  background_image: theme.bg,
+  divider_image: theme.divider,
+  ornament_tr_images: theme.tr,
+  ornament_bl_images: theme.bl,
+});
+
 export const TEMPLATES: TemplatePreset[] = [
   {
     id: "sage-emas-klasik",
@@ -382,150 +408,252 @@ export const TEMPLATES: TemplatePreset[] = [
     ],
   },
   {
-    id: "kana-botanical",
-    name: "Sage Bunga Lembut",
-    description: "Hijau sage kalem dengan hiasan bunga — manis dan natural.",
+    id: "floating-emas",
+    name: "Floating Emas",
+    description:
+      "Alcohol-ink hijau lembut bergaris emas, buket rose krem melayang di sudut, kartu putih membulat — mewah tapi tenang.",
     category: "wedding",
-    tier: "free",
-    thumbnail: "/templates/kana-botanical/card",
+    tier: "premium",
+    thumbnail: "/templates/floating-emas/card",
     global_settings: {
-      font_family: "Fraunces",
-      color_primary: "#5c6f52",
-      color_secondary: "#a4715a",
-      color_background: "#f6f4ee",
+      font_family: "Parisienne",
+      color_primary: "#c18836",
+      color_secondary: "#7f7d5e",
+      color_background: "#f0f4ed",
       animation: "fade-up",
     },
     sections: [
-      s("cover", "botanical", 0, { names: "Kana & Arya", tagline: "The Wedding Of" }),
-      s("hero", "botanical", 0, {
-        couple_names: "Kana & Arya",
+      s("cover", "floating", 0, {
+        names: "Naura & Fajar",
         tagline: "The Wedding Of",
-        event_date: new Date(Date.now() + 50 * 86400000).toISOString(),
+        note: "Kepada Yth. Bapak/Ibu/Saudara/i :",
+        button_label: "Buka Undangan",
+        ...themeDecor(FLOATING_EMAS),
       }),
       s("quote", "bordered", 1, {
-        text: "Semoga Allah menyatukan yang berserak dan memberkahi keduanya.",
-        source: "Doa pernikahan",
+        text: "Dan segala sesuatu Kami ciptakan berpasang-pasangan agar kamu mengingat kebesaran Allah.",
+        source: "Q.S. Az-Zariyat: 49",
+        ...themeDecor(FLOATING_EMAS),
       }),
-      s("couple-intro", "stacked", 2, {
-        bride: { name: "Kana", full_name: "Kana Maheswari", child_order: "Putri pertama" },
-        groom: { name: "Arya", full_name: "Arya Danendra", child_order: "Putra kedua" },
+      s("couple-intro", "card", 2, {
+        bride: {
+          name: "Naura",
+          full_name: "Naura Salsabila",
+          child_order: "Putri kedua dari",
+          parents: "Bapak H. Rustam Hamdi & Ibu Hj. Masrukiyah",
+          residence: "Bogor - Jawa Barat",
+          instagram: "naura.slsbl",
+          photo: "/themes/floating-emas/bride.png",
+        },
+        groom: {
+          name: "Fajar",
+          full_name: "Fajar Dirgantara",
+          child_order: "Putra ketiga dari",
+          parents: "Bapak Sudirman & Ibu Yuliana",
+          residence: "Depok - Jawa Barat",
+          instagram: "fajar.dirga",
+          photo: "/themes/floating-emas/groom.png",
+        },
+        section_icon: "/themes/floating-emas/icon-mempelai.svg",
+        ...themeDecor(FLOATING_EMAS),
       }),
-      s("countdown", "elegant", 3, {}),
-      s("event-details", "cards", 4, {}),
-      s("map-location", "embed", 5, {}),
-      s("gallery", "carousel", 6, { images: [] }),
-      s("rsvp", "form-card", 7, {}),
-      s("guestbook", "cards", 8, {}),
-      s("gift", "minimal", 9, {}),
-      s("closing", "simple", 10, { names: "Kana & Arya" }),
-      s("music", "disc", 11, {}),
-      s("navigation", "bar", 12, {}),
-    ],
-  },
-  {
-    id: "elegant-forest",
-    name: "Hijau Klasik",
-    description: "Hijau daun yang tenang — cocok untuk akad & resepsi outdoor.",
-    category: "wedding",
-    tier: "free",
-    thumbnail: "/templates/elegant-forest/card",
-    global_settings: {
-      font_family: "Fraunces",
-      color_primary: "#34503f",
-      color_secondary: "#7a2e3c",
-      color_background: "#fbf8f3",
-      animation: "fade-up",
-    },
-    sections: [
-      s("cover", "classic", 0, { names: "Dinda & Raka" }),
-      s("hero", "centered", 0, {
-        couple_names: "Dinda & Raka",
-        tagline: "The Wedding Of",
-        overlay_opacity: 0.45,
-      }),
-      s("quote", "centered", 1, {
-        text: "Dan di antara tanda-tanda kekuasaan-Nya diciptakan-Nya untukmu pasangan hidup dari jenismu sendiri.",
-        source: "QS. Ar-Rum: 21",
-      }),
-      s("couple-intro", "side-by-side", 2, {
-        bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi", child_order: "Putri kedua dari Bpk. Ahmad & Ibu Sri" },
-        groom: { name: "Raka", full_name: "Raka Wibowo", child_order: "Putra pertama dari Bpk. Joko & Ibu Rina" },
-      }),
-      s("countdown", "minimal", 3, {}),
-      s("event-details", "timeline", 4, {}),
-      s("gallery", "grid", 5, { images: [], columns: 3 }),
-      s("rsvp", "form-card", 6, { max_guests_per_person: 2 }),
-      s("guestbook", "cards", 7, { require_approval: true }),
-      s("gift", "cards", 8, {}),
-    ],
-  },
-  {
-    id: "islamic-classic",
-    name: "Islami Maroon",
-    description: "Nuansa maroon klasik dengan sentuhan islami yang khidmat.",
-    category: "wedding",
-    tier: "free",
-    thumbnail: "/templates/islamic-classic/card",
-    global_settings: {
-      font_family: "Fraunces",
-      color_primary: "#7a2e3c",
-      color_secondary: "#b08a4f",
-      color_background: "#faf6f0",
-      animation: "fade-up",
-    },
-    sections: [
-      s("cover", "classic", 0, { names: "Fatimah & Umar", tagline: "بسم الله" }),
-      s("hero", "split", 0, { couple_names: "Fatimah & Umar", tagline: "بسم الله" }),
-      s("quote", "centered", 1, {
-        text: "Semoga Allah memberkahi kalian, dan menyatukan kalian berdua dalam kebaikan.",
-        source: "HR. Abu Dawud",
-      }),
-      s("couple-intro", "stacked", 2, {
-        bride: { name: "Fatimah", full_name: "Fatimah Az-Zahra" },
-        groom: { name: "Umar", full_name: "Umar Faruq" },
-      }),
-      s("countdown", "minimal", 3, {}),
-      s("event-details", "timeline", 4, {}),
-      s("rsvp", "form-card", 5, { require_phone: true }),
-      s("guestbook", "cards", 6, {}),
-    ],
-  },
-  {
-    id: "khitan-joy",
-    name: "Khitan Ceria",
-    description: "Warna cerah dan riang untuk syukuran khitan anak.",
-    category: "khitan",
-    tier: "free",
-    thumbnail: "/templates/khitan-joy/card",
-    global_settings: {
-      font_family: "Inter",
-      color_primary: "#2b6cb0",
-      color_secondary: "#dd6b20",
-      color_background: "#f7fafc",
-      animation: "fade-left",
-    },
-    sections: [
-      s("cover", "photo", 0, { names: "Khitan Arkan", tagline: "Syukuran Khitan" }),
-      s("hero", "centered", 0, {
-        couple_names: "Khitan Arkan",
-        tagline: "Syukuran Khitan",
-        overlay_opacity: 0.4,
-      }),
-      s("event-details", "timeline", 1, {
+      s("event-details", "formal", 3, {
+        intro:
+          "Merupakan suatu kehormatan dan kebahagiaan bagi kami atas kehadiran Bapak/Ibu/Saudara/i untuk memberikan doa restu kepada putra-putri kami.",
         events: [
           {
-            name: "Syukuran",
-            date: new Date(Date.now() + 30 * 86400000).toISOString(),
-            start_time: "09:00",
-            end_time: "13:00",
-            venue_name: "Kediaman Keluarga",
-            address: "Jl. Kenanga No. 5",
+            name: "Akad Nikah",
+            date: inDays(45),
+            start_time: "10:00",
+            end_time: "11:00",
+            venue_name: "Kediaman Mempelai Wanita",
+            address: "Jl. Pajajaran No. 57, Baranangsiang, Bogor",
+            maps_url: "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
+          },
+          {
+            name: "Resepsi",
+            date: inDays(45),
+            start_time: "11:00",
+            end_time: "14:00",
+            venue_name: "Kediaman Mempelai Wanita",
+            address: "Jl. Pajajaran No. 57, Baranangsiang, Bogor",
+            maps_url: "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
           },
         ],
+        ...themeDecor(FLOATING_EMAS),
       }),
-      s("countdown", "minimal", 2, {}),
-      s("rsvp", "form-card", 3, {}),
-      s("guestbook", "cards", 4, {}),
+      s("map-location", "embed", 4, {
+        venue_name: "Kediaman Mempelai Wanita",
+        address: "Jl. Pajajaran No. 57, Baranangsiang, Kec. Bogor Timur, Kota Bogor",
+      }),
+      s("story", "timeline", 5, {
+        eyebrow: "Cerita kami berawal dari sini",
+        title: "Kisah Kami",
+        items: [
+          { year: "21 Juli 2020", title: "Pertemuan Pertama", description: "Sebuah pertemuan sederhana menjadi awal perjalanan kami.", image: "/themes/floating-emas/story-1.png" },
+          { year: "23 September 2020", title: "Menjalin Hubungan", description: "Kami memutuskan untuk saling mengenal lebih jauh.", image: "/themes/floating-emas/story-2.png" },
+          { year: "19 November 2021", title: "Lamaran", description: "Awal dari perjalanan bersama kedua keluarga.", image: "/themes/floating-emas/story-3.png" },
+        ],
+        section_icon: "/themes/floating-emas/icon-kisah.svg",
+        ...themeDecor(FLOATING_EMAS),
+      }),
+      s("gallery", "spotlight", 6, {
+        images: [
+          { url: "/themes/floating-emas/gallery-1.png", caption: "Prewedding" },
+          { url: "/themes/floating-emas/gallery-2.png", caption: "Momen berdua" },
+          { url: "/themes/floating-emas/gallery-3.png", caption: "Menuju hari bahagia" },
+          { url: "/themes/floating-emas/gallery-4.png", caption: "Bersama keluarga" },
+        ],
+        section_icon: "/themes/floating-emas/icon-galeri.svg",
+        ...themeDecor(FLOATING_EMAS),
+      }),
+      s("countdown", "plain", 7, {
+        target_date: inDays(45),
+        section_icon: "/themes/floating-emas/icon-countdown.svg",
+        save_the_date_image: "/themes/floating-emas/save-the-date.gif",
+        ...themeDecor(FLOATING_EMAS),
+      }),
+      s("gift", "cards", 8, {
+        intro: "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
+        section_icon: "/themes/floating-emas/icon-hadiah.svg",
+        ...themeDecor(FLOATING_EMAS),
+      }),
+      s("rsvp", "form-card", 9, {}),
+      s("guestbook", "chat", 10, {
+        section_icon: "/themes/floating-emas/icon-bukutamu.svg",
+        ...themeDecor(FLOATING_EMAS),
+      }),
+      s("closing", "thankyou", 11, {
+        names: "Naura & Fajar",
+        message: "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
+        ...themeDecor(FLOATING_EMAS),
+      }),
+      s("music", "disc", 12, {}),
+      s("navigation", "bar", 13, {}),
+    ],
+  },
+  {
+    id: "floating-terracotta",
+    name: "Floating Terracotta",
+    description:
+      "Watercolor peach-terracotta lembut, ranting daun bulu berwarna hangat di sudut, kartu putih membulat — hangat dan romantis.",
+    category: "wedding",
+    tier: "premium",
+    thumbnail: "/templates/floating-terracotta/card",
+    global_settings: {
+      font_family: "Parisienne",
+      color_primary: "#c17a48",
+      color_secondary: "#7d4e3b",
+      color_background: "#f0f4ed",
+      animation: "fade-up",
+    },
+    sections: [
+      s("cover", "floating", 0, {
+        names: "Gani & Mikha",
+        tagline: "The Wedding Of",
+        note: "Kepada Yth. Bapak/Ibu/Saudara/i :",
+        button_label: "Buka Undangan",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("quote", "bordered", 1, {
+        text: "Dan segala sesuatu Kami ciptakan berpasang-pasangan agar kamu mengingat kebesaran Allah.",
+        source: "Q.S. Az-Zariyat: 49",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("couple-intro", "card", 2, {
+        bride: {
+          name: "Mikha",
+          full_name: "Mikha Talia",
+          child_order: "Putri pertama dari",
+          parents: "Bapak Robert Talia & Ibu Sherly Wijaya",
+          residence: "Bandung - Jawa Barat",
+          instagram: "mikha.talia",
+          photo: "/themes/floating-terracotta/bride.png",
+        },
+        groom: {
+          name: "Gani",
+          full_name: "Gani Abdul Rahman",
+          child_order: "Putra kedua dari",
+          parents: "Bapak H. Abdul Rahman & Ibu Hj. Nurhayati",
+          residence: "Cimahi - Jawa Barat",
+          instagram: "gani.abdul",
+          photo: "/themes/floating-terracotta/groom.png",
+        },
+        section_icon: "/themes/floating-terracotta/icon-mempelai.svg",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("event-details", "formal", 3, {
+        intro: "Merupakan suatu kehormatan dan kebahagiaan bagi kami atas kehadiran Bapak/Ibu/Saudara/i untuk memberikan doa restu kepada putra-putri kami.",
+        events: [
+          {
+            name: "Akad Nikah",
+            date: inDays(50),
+            start_time: "10:00",
+            end_time: "12:00",
+            venue_name: "Kediaman Mempelai Wanita",
+            address: "Jl. Pajajaran No. 57, Baranangsiang, Bogor",
+            maps_url: "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
+          },
+          {
+            name: "Resepsi",
+            date: inDays(50),
+            start_time: "12:00",
+            end_time: "14:00",
+            venue_name: "Kediaman Mempelai Wanita",
+            address: "Jl. Pajajaran No. 57, Baranangsiang, Bogor",
+            maps_url: "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
+          },
+        ],
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("map-location", "embed", 4, {
+        venue_name: "Kediaman Mempelai Wanita",
+        address: "Jl. Pajajaran No. 57, Baranangsiang, Kec. Bogor Timur, Kota Bogor",
+      }),
+      s("story", "timeline", 5, {
+        eyebrow: "Cerita kami berawal dari sini",
+        title: "Kisah Kami",
+        items: [
+          { year: "21 Juli 2020", title: "Pertemuan Pertama", description: "Kami bertemu dan mulai saling mengenal.", image: "/themes/floating-terracotta/story-1.png" },
+          { year: "23 September 2020", title: "Menjalin Hubungan", description: "Kami menjalani hubungan yang lebih serius.", image: "/themes/floating-terracotta/story-2.png" },
+          { year: "19 November 2021", title: "Lamaran", description: "Lamaran sederhana bersama kedua keluarga.", image: "/themes/floating-terracotta/story-3.png" },
+        ],
+        section_icon: "/themes/floating-terracotta/icon-kisah.svg",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("gallery", "spotlight", 6, {
+        images: [
+          { url: "/themes/floating-terracotta/gallery-1.png", caption: "Prewedding" },
+          { url: "/themes/floating-terracotta/gallery-2.png", caption: "Momen berdua" },
+          { url: "/themes/floating-terracotta/gallery-3.png", caption: "Menuju hari bahagia" },
+          { url: "/themes/floating-terracotta/gallery-4.png", caption: "Bersama keluarga" },
+        ],
+        section_icon: "/themes/floating-terracotta/icon-galeri.svg",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("countdown", "plain", 7, {
+        target_date: inDays(50),
+        section_icon: "/themes/floating-terracotta/icon-countdown.svg",
+        save_the_date_image: "/themes/floating-terracotta/save-the-date.gif",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("gift", "cards", 8, {
+        intro: "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
+        section_icon: "/themes/floating-terracotta/icon-hadiah.svg",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("rsvp", "form-card", 9, {}),
+      s("guestbook", "chat", 10, {
+        section_icon: "/themes/floating-terracotta/icon-bukutamu.svg",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("closing", "thankyou", 11, {
+        names: "Gani & Mikha",
+        message: "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
+        ...themeDecor(FLOATING_TERRACOTTA),
+      }),
+      s("music", "disc", 12, {}),
+      s("navigation", "bar", 13, {}),
     ],
   },
 ];

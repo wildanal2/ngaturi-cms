@@ -8,8 +8,17 @@ import { HeroMinimal } from "./hero-minimal";
 import { HeroBotanical } from "./hero-botanical";
 import { HeroArch } from "./hero-arch";
 import { HeroGarland } from "./hero-garland";
+import { HeroFloating17 } from "./hero-floating17";
 
-export { HeroCentered, HeroSplit, HeroMinimal, HeroBotanical, HeroArch, HeroGarland };
+export {
+  HeroCentered,
+  HeroSplit,
+  HeroMinimal,
+  HeroBotanical,
+  HeroArch,
+  HeroGarland,
+  HeroFloating17,
+};
 
 const baseDefaults = {
   couple_names: "Dinda & Raka",
@@ -120,6 +129,31 @@ export const heroSection: SectionDefinition = {
         },
       ],
       defaultProps: { ...baseDefaults, couple_names: "Kana & Arya" },
+    },
+    floating17: {
+      name: "Sage Melayang",
+      description: "Nama bertumpuk, partikel emas, dan ornamen dua lapis bergerak",
+      component: HeroFloating17,
+      propsSchema: HeroProps,
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Tekstur latar" },
+        { kind: "image", key: "divider_image", label: "Gambar divider" },
+      ],
+      defaultProps: {
+        ...baseDefaults,
+        couple_names: "Hani & Hari",
+        background_image: "/themes/sage-hijau-melayang/bg-floating17.png",
+        divider_image: "/themes/sage-hijau-melayang/divider.png",
+        ornament_tr_images: [
+          "/themes/sage-hijau-melayang/ornament-tr-1.png",
+          "/themes/sage-hijau-melayang/ornament-tr-2.png",
+        ],
+        ornament_bl_images: [
+          "/themes/sage-hijau-melayang/ornament-bl-1.png",
+          "/themes/sage-hijau-melayang/ornament-bl-2.png",
+        ],
+      },
     },
     arch: {
       name: "Foto Melengkung + Ornamen",

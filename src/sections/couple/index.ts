@@ -7,8 +7,16 @@ import { CoupleStacked } from "./couple-stacked";
 import { CouplePolaroid } from "./couple-polaroid";
 import { CoupleCard } from "./couple-card";
 import { CoupleDuoPortrait } from "./couple-duo-portrait";
+import { CoupleFloating17 } from "./couple-floating17";
 
-export { CoupleSideBySide, CoupleStacked, CouplePolaroid, CoupleCard, CoupleDuoPortrait };
+export {
+  CoupleSideBySide,
+  CoupleStacked,
+  CouplePolaroid,
+  CoupleCard,
+  CoupleDuoPortrait,
+  CoupleFloating17,
+};
 
 export const coupleSection: SectionDefinition = {
   type: "couple-intro",
@@ -89,6 +97,27 @@ export const coupleSection: SectionDefinition = {
       defaultProps: {
         bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi" },
         groom: { name: "Raka", full_name: "Raka Wibowo" },
+      },
+    },
+    floating17: {
+      name: "Mempelai Floating17",
+      description: "Dua portrait bulat berdampingan dengan tipografi sage dan Instagram",
+      component: CoupleFloating17,
+      propsSchema: CoupleIntroProps,
+      fields: [
+        { kind: "text", key: "title", label: "Judul" },
+        ...coupleFields,
+        { kind: "image", key: "background_image", label: "Tekstur latar" },
+        { kind: "image", key: "section_icon", label: "Ikon bagian" },
+        { kind: "image", key: "divider_image", label: "Gambar divider" },
+      ],
+      defaultProps: {
+        title: "Mempelai",
+        bride: { name: "Hani", full_name: "Hani Ramadani" },
+        groom: { name: "Hari", full_name: "Hari Septriansyah" },
+        background_image: "/themes/sage-hijau-melayang/bg-floating17.png",
+        section_icon: "/themes/sage-hijau-melayang/icon-couple.svg",
+        divider_image: "/themes/sage-hijau-melayang/divider.png",
       },
     },
     card: {

@@ -1,6 +1,10 @@
 import Image from "next/image";
 import type { SectionRenderProps } from "../types";
-import { SectionShell, SectionTitle } from "../shared";
+import {
+  DecoratedSectionShell,
+  SectionTitle,
+  pickDecor,
+} from "../shared";
 
 export type BankAccount = {
   bank_name: string;
@@ -11,9 +15,17 @@ export type BankAccount = {
 
 /** One card per bank/e-wallet account. */
 export function GiftCards({ props }: SectionRenderProps) {
-  const p = props as { intro?: string; bank_accounts?: BankAccount[] };
+  const p = props as Record<string, unknown> & {
+    intro?: string;
+    bank_accounts?: BankAccount[];
+  };
+  const d = pickDecor(p);
   return (
-    <SectionShell muted>
+    <DecoratedSectionShell d={d} muted>
+      {d.section_icon ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={d.section_icon} alt="" className="mx-auto mb-3 h-10 w-10" />
+      ) : null}
       <SectionTitle>Amplop Digital</SectionTitle>
       {p.intro ? (
         <p className="mb-6 text-center text-[var(--inv-ink)]">{p.intro}</p>
@@ -44,6 +56,6 @@ export function GiftCards({ props }: SectionRenderProps) {
           </div>
         ))}
       </div>
-    </SectionShell>
+    </DecoratedSectionShell>
   );
 }

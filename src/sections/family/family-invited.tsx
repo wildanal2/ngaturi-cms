@@ -1,5 +1,5 @@
 import type { SectionRenderProps } from "../types";
-import { SectionShell, SectionHeader } from "../shared";
+import { DecoratedSectionShell, SectionHeader, pickDecor } from "../shared";
 
 type Group = { title?: string; names?: string[] | string };
 
@@ -13,11 +13,17 @@ const toNames = (v: string[] | string | undefined): string[] =>
 
 /** "Turut Mengundang" — one card per family with a list of names. */
 export function FamilyInvited({ props }: SectionRenderProps) {
-  const p = props as { eyebrow?: string; title?: string; intro?: string; groups?: Group[] };
+  const p = props as Record<string, unknown> & {
+    eyebrow?: string;
+    title?: string;
+    intro?: string;
+    groups?: Group[];
+  };
   const groups = p.groups ?? [];
+  const d = pickDecor(p);
 
   return (
-    <SectionShell>
+    <DecoratedSectionShell d={d}>
       <SectionHeader
         eyebrow={p.eyebrow ?? "With Blessing"}
         title={p.title ?? "Turut Mengundang"}
@@ -47,6 +53,6 @@ export function FamilyInvited({ props }: SectionRenderProps) {
           </div>
         ))}
       </div>
-    </SectionShell>
+    </DecoratedSectionShell>
   );
 }

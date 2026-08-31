@@ -1,20 +1,27 @@
 import Image from "next/image";
 import type { SectionRenderProps } from "../types";
-import { SectionShell, SectionHeader } from "../shared";
+import { DecoratedSectionShell, SectionHeader, pickDecor } from "../shared";
 import { CornerFloral } from "../ornaments";
 
 type Member = { name?: string; role?: string; photo?: string };
 
 /** Bridesmaid / Groomsman — circular avatar grid. */
 export function FamilyParty({ props }: SectionRenderProps) {
-  const p = props as { eyebrow?: string; title?: string; members?: Member[] };
+  const p = props as Record<string, unknown> & {
+    eyebrow?: string;
+    title?: string;
+    members?: Member[];
+  };
   const members = p.members ?? [];
   const cols = members.length <= 2 ? "grid-cols-2" : "grid-cols-3";
+  const d = pickDecor(p);
 
   return (
-    <SectionShell muted>
+    <DecoratedSectionShell d={d} muted>
       <div className="relative">
-        <CornerFloral className="inv-ornament inv-ornament--drift pointer-events-none absolute -left-3 -top-3 h-16 w-16 text-[var(--inv-secondary)] opacity-70" />
+        {d.ornament_variant !== "floating17" ? (
+          <CornerFloral className="inv-ornament inv-ornament--drift pointer-events-none absolute -left-3 -top-3 h-16 w-16 text-[var(--inv-secondary)] opacity-70" />
+        ) : null}
         <SectionHeader
           eyebrow={p.eyebrow ?? "The Party"}
           title={p.title ?? "Bridesmaid & Groomsman"}
@@ -41,6 +48,6 @@ export function FamilyParty({ props }: SectionRenderProps) {
           ))}
         </div>
       </div>
-    </SectionShell>
+    </DecoratedSectionShell>
   );
 }

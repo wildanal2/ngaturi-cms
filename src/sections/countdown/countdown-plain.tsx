@@ -29,6 +29,10 @@ export function CountdownPlain({ props }: SectionRenderProps) {
     >
       <DecorOrnaments d={d} />
       <div className="relative flex flex-col items-center">
+        {d.section_icon ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={d.section_icon} alt="" className="mb-3 h-10 w-10" />
+        ) : null}
         {p.save_the_date_image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

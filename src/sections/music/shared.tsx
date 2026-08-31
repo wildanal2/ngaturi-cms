@@ -13,6 +13,7 @@ export type MusicProps = {
   autoplay?: boolean;
   start_at?: number;
   s_position?: string;
+  spin_seconds?: number;
 };
 
 export const spinSlow = "[animation:spin_4.5s_linear_infinite]";
@@ -114,15 +115,21 @@ export function Sleeve({
   cover,
   playing,
   size,
+  spinSeconds,
 }: {
   cover?: string;
   playing: boolean;
   size: number;
+  spinSeconds?: number;
 }) {
   return (
     <span
       className={`relative grid place-items-center overflow-hidden rounded-full ${playing ? spinSlow : ""}`}
-      style={{ width: size, height: size }}
+      style={{
+        width: size,
+        height: size,
+        ...(playing && spinSeconds ? { animationDuration: `${spinSeconds}s` } : {}),
+      }}
     >
       {cover ? (
         <Image

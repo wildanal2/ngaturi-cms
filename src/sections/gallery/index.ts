@@ -6,8 +6,15 @@ import { GalleryGrid } from "./gallery-grid";
 import { GalleryMasonry } from "./gallery-masonry";
 import { GalleryCarousel } from "./gallery-carousel";
 import { GallerySpotlight } from "./gallery-spotlight";
+import { GalleryFloating17 } from "./gallery-floating17";
 
-export { GalleryGrid, GalleryMasonry, GalleryCarousel, GallerySpotlight };
+export {
+  GalleryGrid,
+  GalleryMasonry,
+  GalleryCarousel,
+  GallerySpotlight,
+  GalleryFloating17,
+};
 
 export const gallerySection: SectionDefinition = {
   type: "gallery",
@@ -63,6 +70,25 @@ export const gallerySection: SectionDefinition = {
       propsSchema: GalleryProps,
       fields: [imagesArray],
       defaultProps: { images: [], columns: 3 },
+    },
+    floating17: {
+      name: "Carousel Floating17",
+      description: "Foto aktif di tengah dengan kedalaman 3D, tombol, swipe, dan lightbox",
+      component: GalleryFloating17,
+      propsSchema: GalleryProps,
+      fields: [
+        imagesArray,
+        { kind: "image", key: "background_image", label: "Tekstur latar" },
+        { kind: "image", key: "section_icon", label: "Ikon bagian" },
+        { kind: "image", key: "divider_image", label: "Gambar divider" },
+      ],
+      defaultProps: {
+        images: [],
+        columns: 3,
+        background_image: "/themes/sage-hijau-melayang/bg-floating17.png",
+        section_icon: "/themes/sage-hijau-melayang/icon-gallery.svg",
+        divider_image: "/themes/sage-hijau-melayang/divider.png",
+      },
     },
     spotlight: {
       name: "Grid + Lightbox",

@@ -1,6 +1,10 @@
 import Image from "next/image";
 import type { SectionRenderProps } from "../types";
-import { SectionShell, SectionHeader } from "../shared";
+import {
+  DecoratedSectionShell,
+  SectionHeader,
+  pickDecor,
+} from "../shared";
 
 type StoryItem = {
   year?: string;
@@ -11,11 +15,20 @@ type StoryItem = {
 
 /** Vertical dotted timeline with a photo card per milestone. */
 export function StoryTimeline({ props }: SectionRenderProps) {
-  const p = props as { eyebrow?: string; title?: string; items?: StoryItem[] };
+  const p = props as Record<string, unknown> & {
+    eyebrow?: string;
+    title?: string;
+    items?: StoryItem[];
+  };
   const items = p.items ?? [];
+  const d = pickDecor(p);
 
   return (
-    <SectionShell muted>
+    <DecoratedSectionShell d={d} muted>
+      {d.section_icon ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={d.section_icon} alt="" className="mx-auto mb-3 h-10 w-10" />
+      ) : null}
       <SectionHeader
         eyebrow={p.eyebrow ?? "Our Journey"}
         title={p.title ?? "Kisah Cinta"}
@@ -60,6 +73,6 @@ export function StoryTimeline({ props }: SectionRenderProps) {
           ))}
         </div>
       </div>
-    </SectionShell>
+    </DecoratedSectionShell>
   );
 }

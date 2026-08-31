@@ -5,6 +5,33 @@
  */
 
 import styles from "./floating-leaves.module.css";
+import floating17 from "./floating17.module.css";
+
+/** Exact two-layer floating17 corners used by demo-floating019. */
+export function Floating17Ornaments({
+  trImages,
+  blImages,
+}: {
+  trImages: string[];
+  blImages: string[];
+}) {
+  return (
+    <>
+      <span className={`${floating17.corner} ${floating17.topRight}`} aria-hidden>
+        {trImages.slice(0, 2).map((src, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={`floating17-tr-${i}`} src={src} alt="" className={i === 0 ? floating17.tr1 : floating17.tr2} />
+        ))}
+      </span>
+      <span className={`${floating17.corner} ${floating17.bottomLeft}`} aria-hidden>
+        {blImages.slice(0, 2).map((src, i) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={`floating17-bl-${i}`} src={src} alt="" className={i === 0 ? floating17.bl1 : floating17.bl2} />
+        ))}
+      </span>
+    </>
+  );
+}
 
 /* ---- Image-based ornament layers (matches undangan_1 DaunAtas/DaunBawah) ---- */
 

@@ -117,7 +117,7 @@ export default async function Home() {
               <div className="m-float absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-forest/10 to-wine/10 blur-2xl" />
               <div className="relative overflow-hidden rounded-[2rem] border-8 border-ink bg-white shadow-2xl">
                 <Image
-                  src="/templates/kana-botanical/card"
+                  src="/templates/floating-emas/card"
                   alt="Contoh undangan Ngaturi"
                   width={600}
                   height={800}
