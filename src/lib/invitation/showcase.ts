@@ -10,6 +10,8 @@ export interface ShowcaseItem {
   image: string;
 }
 
+const SHOWCASE_CARD_VERSION = "2";
+
 /** Undangan yang baru dipublikasikan (untuk showcase di landing). */
 export async function getRecentInvitations(limit = 12): Promise<ShowcaseItem[]> {
   const rows = await db
@@ -33,7 +35,7 @@ export async function getRecentInvitations(limit = 12): Promise<ShowcaseItem[]> 
     slug: r.slug,
     title: r.title ?? "Undangan",
     eventType: r.eventType,
-    // cache-bust so an edited invitation refreshes its card
-    image: `/${r.slug}/opengraph-image?v=${r.updatedAt?.getTime() ?? 0}`,
+    // Cache-bust both invitation edits and card-renderer revisions.
+    image: `/${r.slug}/opengraph-image?v=${r.updatedAt?.getTime() ?? 0}&card=${SHOWCASE_CARD_VERSION}`,
   }));
 }

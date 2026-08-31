@@ -1,8 +1,10 @@
 import { ImageResponse } from "next/og";
+import { headers } from "next/headers";
 import {
   getPublicInvitation,
   invitationSummary,
 } from "@/lib/invitation/query";
+import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
 import { env } from "@/lib/env";
 
 export const alt = "Undangan";
@@ -12,6 +14,8 @@ export const contentType = "image/png";
 // edit their cover photo / names, which is rare. Keeps Satori renders off
 // the hot path for social-media crawlers.
 export const revalidate = 300;
+
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
 
 /** Satori (next/og) only shapes Latin reliably — strip the rest. */
 function safe(text: string, fallback = ""): string {
@@ -52,11 +56,17 @@ export default async function OgImage({
         year: "numeric",
       })
     : "";
-  // Only embed a photo the couple actually uploaded (on our CDN). Satori
-  // fetches this URL synchronously while rendering — a slow/unreachable
-  // third-party placeholder host (picsum, etc.) would hang the response.
   const cdn = env.S3_PUBLIC_URL.replace(/\/$/, "");
-  const photo = summary?.photo?.startsWith(cdn) ? summary.photo : null;
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
+  const origin = host ? `${protocol}://${host}` : SITE_URL;
+  const visual = getCardVisual(inv?.sections ?? []);
+  const photo = cardImageUrl(visual.background ?? summary?.photo ?? undefined, origin, cdn);
+  const foreground = cardImageUrl(visual.foreground, origin, cdn);
+  const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin, cdn);
+  const ornamentRight = cardImageUrl(visual.ornamentRight, origin, cdn);
+  const seal = cardImageUrl(visual.seal, origin, cdn);
 
   try {
     return new ImageResponse(
@@ -71,13 +81,59 @@ export default async function OgImage({
           }}
         >
           {photo ? (
-            <img
-              src={photo}
-              alt=""
-              width={540}
-              height={630}
-              style={{ objectFit: "cover", height: "100%", width: 540 }}
-            />
+            <div
+              style={{
+                width: 540,
+                height: "100%",
+                display: "flex",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              <img
+                src={photo}
+                alt=""
+                width={540}
+                height={630}
+                style={{ objectFit: "cover", height: "100%", width: 540 }}
+              />
+              {ornamentLeft ? (
+                <img
+                  src={ornamentLeft}
+                  alt=""
+                  width={150}
+                  height={280}
+                  style={{ position: "absolute", bottom: 0, left: 0, width: 150, height: 280, objectFit: "contain" }}
+                />
+              ) : null}
+              {ornamentRight ? (
+                <img
+                  src={ornamentRight}
+                  alt=""
+                  width={150}
+                  height={280}
+                  style={{ position: "absolute", bottom: 0, right: 0, width: 150, height: 280, objectFit: "contain" }}
+                />
+              ) : null}
+              {foreground ? (
+                <img
+                  src={foreground}
+                  alt=""
+                  width={300}
+                  height={360}
+                  style={{ position: "absolute", bottom: 30, left: 120, width: 300, height: 360, objectFit: "contain" }}
+                />
+              ) : null}
+              {seal ? (
+                <img
+                  src={seal}
+                  alt=""
+                  width={72}
+                  height={72}
+                  style={{ position: "absolute", top: 28, right: 28, width: 72, height: 72, objectFit: "contain" }}
+                />
+              ) : null}
+            </div>
           ) : null}
           <div
             style={{

@@ -28,7 +28,7 @@ export default function TemplatesPage() {
           >
             <a
               href={`/templates/${t.id}/preview`}
-              className="relative block aspect-[4/3] overflow-hidden bg-cream-200"
+              className="relative block aspect-[3/4] overflow-hidden bg-cream-200"
             >
               <Image
                 src={t.thumbnail}

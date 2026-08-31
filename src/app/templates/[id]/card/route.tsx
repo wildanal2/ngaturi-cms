@@ -1,5 +1,8 @@
+/* eslint-disable @next/next/no-img-element */
+
 import { ImageResponse } from "next/og";
 import { getTemplate } from "@/lib/templates/catalog";
+import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
 
 export const runtime = "nodejs";
 // Templates are defined in code — the card only changes on deploy.
@@ -18,7 +21,7 @@ function safe(text: string, fallback: string): string {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -40,6 +43,13 @@ export async function GET(
       "",
     "The Wedding Of",
   );
+  const origin = new URL(req.url).origin;
+  const visual = getCardVisual(t.sections);
+  const background = cardImageUrl(visual.background, origin);
+  const foreground = cardImageUrl(visual.foreground, origin);
+  const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin);
+  const ornamentRight = cardImageUrl(visual.ornamentRight, origin);
+  const seal = cardImageUrl(visual.seal, origin);
 
   return new ImageResponse(
     (
@@ -56,6 +66,49 @@ export async function GET(
           fontFamily: "Georgia, serif",
         }}
       >
+        {background ? (
+          <img
+            src={background}
+            alt=""
+            width={W}
+            height={H}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              opacity: 0.72,
+            }}
+          />
+        ) : null}
+        {ornamentLeft ? (
+          <img
+            src={ornamentLeft}
+            alt=""
+            width={180}
+            height={320}
+            style={{ position: "absolute", bottom: 0, left: 0, width: 180, height: 320, objectFit: "contain" }}
+          />
+        ) : null}
+        {ornamentRight ? (
+          <img
+            src={ornamentRight}
+            alt=""
+            width={180}
+            height={320}
+            style={{ position: "absolute", bottom: 0, right: 0, width: 180, height: 320, objectFit: "contain" }}
+          />
+        ) : null}
+        {seal ? (
+          <img
+            src={seal}
+            alt=""
+            width={88}
+            height={88}
+            style={{ position: "absolute", top: 56, right: 56, width: 88, height: 88, objectFit: "contain" }}
+          />
+        ) : null}
         {/* ornamental frame */}
         <div
           style={{
@@ -85,24 +138,44 @@ export async function GET(
           {tagline}
         </div>
 
-        {/* photo circle placeholder */}
-        <div
-          style={{
-            width: 190,
-            height: 190,
-            borderRadius: 999,
-            margin: "34px 0",
-            border: `5px solid ${g.color_secondary}`,
-            background: `linear-gradient(135deg, ${g.color_primary}, ${g.color_secondary})`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-            fontSize: 40,
-          }}
-        >
-          ♥
-        </div>
+        {foreground ? (
+          <div
+            style={{
+              width: 270,
+              height: 270,
+              margin: "34px 0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <img
+              src={foreground}
+              alt=""
+              width={270}
+              height={270}
+              style={{ width: 270, height: 270, objectFit: "contain" }}
+            />
+          </div>
+        ) : (
+          <div
+            style={{
+              width: 190,
+              height: 190,
+              borderRadius: 999,
+              margin: "34px 0",
+              border: `5px solid ${g.color_secondary}`,
+              background: `linear-gradient(135deg, ${g.color_primary}, ${g.color_secondary})`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              fontSize: 40,
+            }}
+          >
+            ♥
+          </div>
+        )}
 
         <div
           style={{
