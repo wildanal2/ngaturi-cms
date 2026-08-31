@@ -37,6 +37,7 @@ export function MusicPickerField({
   const [tab, setTab] = useState<"catalog" | "url">("catalog");
   const [tracks, setTracks] = useState<Track[] | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const [query, setQuery] = useState("");
@@ -87,10 +88,25 @@ export function MusicPickerField({
       setPreviewId(null);
       return;
     }
+    if (loadingId === t.id) {
+      // cancel a pending load
+      a.removeAttribute("src");
+      a.load();
+      setLoadingId(null);
+      return;
+    }
+    setPreviewId(null);
+    setLoadingId(t.id);
     a.src = t.audioUrl;
     a.play()
-      .then(() => setPreviewId(t.id))
-      .catch(() => {});
+      .then(() => {
+        setPreviewId(t.id);
+        setLoadingId(null);
+      })
+      .catch(() => {
+        setLoadingId(null);
+        toast.error("Gagal memuat lagu. Coba lagi.");
+      });
   }
 
   function choose(t: Track) {
@@ -150,10 +166,19 @@ export function MusicPickerField({
         <div className="flex items-center gap-2">
           <button
             onClick={() => preview(t)}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink/80 text-white"
-            aria-label="Pratinjau"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink/80 text-white transition-colors disabled:opacity-70"
+            aria-label={
+              loadingId === t.id
+                ? "Memuat lagu"
+                : previewId === t.id
+                  ? "Hentikan pratinjau"
+                  : "Pratinjau lagu"
+            }
+            aria-busy={loadingId === t.id}
           >
-            {previewId === t.id ? (
+            {loadingId === t.id ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : previewId === t.id ? (
               <Pause size={13} />
             ) : (
               <Play size={13} className="translate-x-[1px]" />
@@ -232,7 +257,16 @@ export function MusicPickerField({
         ))}
       </div>
 
-      <audio ref={audioRef} onEnded={() => setPreviewId(null)} hidden />
+      <audio
+        ref={audioRef}
+        onEnded={() => setPreviewId(null)}
+        onError={() => {
+          if (loadingId || previewId) toast.error("Lagu tidak bisa diputar.");
+          setLoadingId(null);
+          setPreviewId(null);
+        }}
+        hidden
+      />
 
       {tab === "catalog" ? (
         <>
