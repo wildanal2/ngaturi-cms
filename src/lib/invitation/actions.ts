@@ -8,7 +8,7 @@ import { invitations, payments, userProfiles } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
 import { getTemplate } from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
-import { makeSlug } from "./slug";
+import { makeSlug, validateCustomSlug } from "./slug";
 import { CompositionSchema } from "@/sections/schema";
 import { editExpiresAtFor, isEditLocked, maxInvitationsFor } from "./entitlement";
 
@@ -155,6 +155,38 @@ export async function publishInvitation(
   updateTag(`invitation:${invitationId}`);
   updateTag(`invitation:slug:${inv.slug}`);
   return { ok: true, slug: inv.slug };
+}
+
+/** Ganti nama tautan (slug) undangan. */
+export async function updateInvitationSlug(
+  invitationId: string,
+  rawSlug: string,
+): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+  const inv = await loadOwned(invitationId);
+
+  const v = validateCustomSlug(rawSlug);
+  if ("error" in v) return { ok: false, error: v.error };
+  if (v.slug === inv.slug) return { ok: true, slug: inv.slug };
+
+  const [taken] = await db
+    .select({ id: invitations.id })
+    .from(invitations)
+    .where(eq(invitations.slug, v.slug))
+    .limit(1);
+  if (taken) {
+    return { ok: false, error: "Nama tautan itu sudah dipakai undangan lain." };
+  }
+
+  const oldSlug = inv.slug;
+  await db
+    .update(invitations)
+    .set({ slug: v.slug, updatedAt: new Date() })
+    .where(eq(invitations.id, inv.id));
+
+  updateTag(`invitation:${inv.id}`);
+  updateTag(`invitation:slug:${oldSlug}`);
+  updateTag(`invitation:slug:${v.slug}`);
+  return { ok: true, slug: v.slug };
 }
 
 export async function unpublishInvitation(invitationId: string): Promise<void> {

@@ -14,6 +14,7 @@ import { moderateMessage } from "@/lib/invitation/moderation";
 import { ShareBox } from "@/components/dashboard/share-box";
 import { ViewsChart } from "@/components/dashboard/views-chart";
 import { DeleteInvitation } from "@/components/dashboard/delete-invitation";
+import { InvitationLink } from "@/components/dashboard/invitation-link";
 
 export default async function InvitationDetailPage({
   params,
@@ -120,6 +121,12 @@ export default async function InvitationDetailPage({
           </a>
         </div>
       ) : null}
+
+      <InvitationLink
+        invitationId={inv.id}
+        slug={inv.slug}
+        appUrl={env.NEXT_PUBLIC_APP_URL}
+      />
 
       {inv.status === "published" ? <ShareBox url={url} /> : null}
 

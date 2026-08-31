@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { invitations, invitationViews } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { InvitationRenderer } from "@/lib/invitation/renderer";
+import { getSession } from "@/lib/auth/helpers";
 import {
   getPublicInvitation,
   getGuestByToken,
@@ -84,8 +85,14 @@ export default async function InvitationPage({
   const { slug } = await params;
   const { to } = await searchParams;
   const inv = await getPublicInvitation(slug);
+  if (!inv) notFound();
 
-  if (!inv || inv.status !== "published") notFound();
+  // owners can preview their own invitation before publishing
+  const isDraft = inv.status !== "published";
+  const isOwner = isDraft
+    ? (await getSession())?.user.id === inv.userId
+    : false;
+  if (isDraft && !isOwner) notFound();
 
   const guest = to ? await getGuestByToken(inv.id, to) : null;
   const guestName = guest?.name ?? null;
@@ -147,6 +154,11 @@ export default async function InvitationPage({
       <h1 className="sr-only">
         Undangan {s.eventLabel} {s.names}
       </h1>
+      {isDraft ? (
+        <div className="fixed inset-x-0 top-0 z-[60] bg-wine py-1.5 text-center text-xs font-medium text-white">
+          PRATINJAU — undangan ini belum dipublikasikan
+        </div>
+      ) : null}
       {!hasCoverSection && inv.global.cover_enabled !== false ? (
         <InvitationCover
           names={

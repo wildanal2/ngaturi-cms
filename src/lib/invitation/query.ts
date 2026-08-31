@@ -7,6 +7,7 @@ import type { GlobalSettings, SectionData } from "@/sections/types";
 export interface PublicInvitation {
   id: string;
   slug: string;
+  userId: string;
   status: string;
   eventTitle: string | null;
   eventType: string;
@@ -32,6 +33,7 @@ export const getPublicInvitation = cache(async function getPublicInvitation(
   return {
     id: row.id,
     slug: row.slug,
+    userId: row.userId,
     status: row.status,
     eventTitle: row.eventTitle,
     eventType: row.eventType,
