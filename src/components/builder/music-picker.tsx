@@ -373,8 +373,10 @@ export function MusicPickerField({
           )}
 
           <p className="pt-1 text-[10px] leading-relaxed text-muted">
-            {searchMode && provider
-              ? `Hasil juga dari ${provider} (Creative Commons). Cek lisensi tiap lagu sebelum dipakai komersial.`
+            {searchMode
+              ? `Lagu komersial (Ed Sheeran, Christina Perri, dll.) tidak tersedia karena hak cipta${
+                  provider ? ` — hasil ${provider} adalah versi cover/instrumental berlisensi bebas` : ""
+                }. Punya file lagu sendiri? Pakai tab “Upload / URL”.`
               : "Katalog: Kevin MacLeod (incompetech.com), lisensi Creative Commons BY 4.0 — bebas dipakai termasuk untuk undangan."}
           </p>
         </>

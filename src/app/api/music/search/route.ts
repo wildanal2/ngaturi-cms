@@ -79,11 +79,15 @@ function providerName(): string | null {
 }
 
 async function searchJamendo(q: string): Promise<Result[]> {
+  // "Perfect – Ed Sheeran" / "A Thousand Years - Christina Perri" → "Perfect"
+  const cleaned =
+    q.split(/\s+[–—-]\s+|\s+\bby\b\s+/i)[0].trim() || q;
+
   const url = new URL("https://api.jamendo.com/v3.0/tracks");
   url.searchParams.set("client_id", env.JAMENDO_CLIENT_ID!);
   url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "25");
-  url.searchParams.set("search", q);
+  url.searchParams.set("limit", "30");
+  url.searchParams.set("search", cleaned);
   url.searchParams.set("audioformat", "mp32");
   url.searchParams.set("include", "musicinfo licenses");
   url.searchParams.set("boost", "popularity_total");
