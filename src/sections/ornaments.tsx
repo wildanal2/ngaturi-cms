@@ -46,6 +46,10 @@ export function CornerFloral({ className }: { className?: string }) {
 /* ---- eucalyptus corner spray (parametric, layered) ---- */
 
 type Pt = [number, number];
+// round every derived number so tiny FP differences between the Node and
+// browser math libs (Math.atan2 precision is implementation-defined) can't
+// cause an SVG hydration mismatch.
+const r2 = (n: number) => Math.round(n * 100) / 100;
 const bez = (p0: Pt, p1: Pt, p2: Pt, t: number): Pt => {
   const u = 1 - t;
   return [
@@ -77,7 +81,13 @@ function LeafBranch({
     const ang = (Math.atan2(ay - y, ax - x) * 180) / Math.PI;
     const side = i % 2 === 0 ? 1 : -1;
     const scale = 1 - Math.abs(t - 0.45) * 0.7;
-    return { x, y, rot: ang + side * 52, rx: leaf * scale, ry: leaf * 0.42 * scale };
+    return {
+      x: r2(x),
+      y: r2(y),
+      rot: r2(ang + side * 52),
+      rx: r2(leaf * scale),
+      ry: r2(leaf * 0.42 * scale),
+    };
   });
   return (
     <g>
@@ -103,8 +113,8 @@ function LeafBranch({
       <ellipse
         cx={p2[0]}
         cy={p2[1]}
-        rx={leaf * 0.5}
-        ry={leaf * 0.24}
+        rx={r2(leaf * 0.5)}
+        ry={r2(leaf * 0.24)}
         fill="currentColor"
         opacity={0.9}
       />
