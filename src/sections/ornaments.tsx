@@ -43,21 +43,127 @@ export function CornerFloral({ className }: { className?: string }) {
   );
 }
 
+/* ---- eucalyptus corner spray (parametric, layered) ---- */
+
+type Pt = [number, number];
+const bez = (p0: Pt, p1: Pt, p2: Pt, t: number): Pt => {
+  const u = 1 - t;
+  return [
+    u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0],
+    u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1],
+  ];
+};
+
+/** A single leafy stem: quadratic bezier with oval leaves alternating sides. */
+function LeafBranch({
+  p0,
+  p1,
+  p2,
+  leaves = 9,
+  leaf = 15,
+  width = 2,
+}: {
+  p0: Pt;
+  p1: Pt;
+  p2: Pt;
+  leaves?: number;
+  leaf?: number;
+  width?: number;
+}) {
+  const nodes = Array.from({ length: leaves }, (_, i) => {
+    const t = (i + 1) / (leaves + 1);
+    const [x, y] = bez(p0, p1, p2, t);
+    const [ax, ay] = bez(p0, p1, p2, t + 0.001);
+    const ang = (Math.atan2(ay - y, ax - x) * 180) / Math.PI;
+    const side = i % 2 === 0 ? 1 : -1;
+    const scale = 1 - Math.abs(t - 0.45) * 0.7;
+    return { x, y, rot: ang + side * 52, rx: leaf * scale, ry: leaf * 0.42 * scale };
+  });
+  return (
+    <g>
+      <path
+        d={`M${p0[0]} ${p0[1]} Q${p1[0]} ${p1[1]} ${p2[0]} ${p2[1]}`}
+        stroke="currentColor"
+        strokeWidth={width}
+        strokeLinecap="round"
+        fill="none"
+      />
+      {nodes.map((n, i) => (
+        <ellipse
+          key={i}
+          cx={n.x}
+          cy={n.y}
+          rx={n.rx}
+          ry={n.ry}
+          fill="currentColor"
+          opacity={0.85}
+          transform={`rotate(${n.rot} ${n.x} ${n.y})`}
+        />
+      ))}
+      <ellipse
+        cx={p2[0]}
+        cy={p2[1]}
+        rx={leaf * 0.5}
+        ry={leaf * 0.24}
+        fill="currentColor"
+        opacity={0.9}
+      />
+    </g>
+  );
+}
+
+/**
+ * Layered eucalyptus corner spray — three overlapping stems fanning out
+ * from the top-left of a 200×200 box, plus a few berries. Anchored at a
+ * corner; rotate/flip via the wrapper. Original art.
+ */
+export function EucalyptusCorner({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 200 200" className={className} aria-hidden fill="none">
+      {/* back layer — long, faint */}
+      <g opacity="0.4">
+        <LeafBranch p0={[4, 4]} p1={[150, 20]} p2={[196, 150]} leaves={11} leaf={16} />
+      </g>
+      {/* mid layer along the left edge */}
+      <g opacity="0.7">
+        <LeafBranch p0={[4, 4]} p1={[24, 150]} p2={[150, 196]} leaves={11} leaf={15} />
+      </g>
+      {/* front layer — short diagonal */}
+      <g opacity="0.95">
+        <LeafBranch p0={[2, 2]} p1={[70, 40]} p2={[120, 118]} leaves={8} leaf={14} width={2.4} />
+      </g>
+      {/* berries near the corner */}
+      <g fill="currentColor">
+        <circle cx="14" cy="16" r="4" />
+        <circle cx="26" cy="12" r="3.2" />
+        <circle cx="12" cy="30" r="3.2" />
+        <circle cx="30" cy="26" r="2.6" opacity="0.7" />
+        <circle cx="6" cy="6" r="4.5" />
+      </g>
+    </svg>
+  );
+}
+
 /**
  * "Floating" botanical corners — an eucalyptus spray top-right and
- * bottom-left, gently swaying. Drop inside a `relative overflow-hidden`
+ * bottom-left that gently sway. Drop inside a `relative overflow-hidden`
  * container. Original SVG art, no third-party assets.
  */
 export function FloatingLeaves({ tone }: { tone?: string }) {
   const c = tone ?? "text-[var(--inv-secondary)]";
+  // wrapper handles the static corner flip; the inner <svg> does the sway
   return (
     <>
-      <CornerFloral
-        className={`inv-ornament inv-ornament--slow pointer-events-none absolute -top-12 -right-12 h-48 w-48 rotate-90 ${c} opacity-70`}
-      />
-      <CornerFloral
-        className={`inv-ornament inv-ornament--flip pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 ${c} opacity-70`}
-      />
+      <span
+        className={`pointer-events-none absolute -top-8 -right-8 block h-52 w-52 -scale-x-100 ${c} opacity-80`}
+      >
+        <EucalyptusCorner className="inv-ornament inv-ornament--slow h-full w-full" />
+      </span>
+      <span
+        className={`pointer-events-none absolute -bottom-8 -left-8 block h-52 w-52 -scale-y-100 ${c} opacity-80`}
+      >
+        <EucalyptusCorner className="inv-ornament inv-ornament--drift h-full w-full" />
+      </span>
     </>
   );
 }
