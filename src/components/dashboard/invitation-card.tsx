@@ -48,22 +48,27 @@ export function InvitationCard({
   const url = `${appUrl.replace(/\/$/, "")}/${inv.slug}`;
   const title = inv.eventTitle ?? "Undangan tanpa judul";
 
-  const thumb =
-    inv.status === "published"
-      ? `/${inv.slug}/opengraph-image?v=${inv.updatedAt.getTime()}`
-      : inv.sourceTemplate
-        ? `/templates/${inv.sourceTemplate}/card`
-        : null;
+  // Lightweight preview: the template card is plain coloured divs (cached
+  // 1 day, no remote image fetch), so a dashboard with many cards stays
+  // fast. The heavy OG image is only for social-share unfurls.
+  const thumb = inv.sourceTemplate
+    ? `/templates/${inv.sourceTemplate}/card`
+    : null;
 
   const cd = countdown(inv.eventDate);
 
   return (
     <li className="flex flex-col overflow-hidden rounded-2xl border border-line bg-paper">
       {/* preview */}
-      <div className="relative aspect-[1200/630] w-full overflow-hidden bg-gradient-to-br from-forest/15 to-wine/15">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-forest/15 to-wine/15">
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumb} alt="" className="h-full w-full object-cover" />
+          <img
+            src={thumb}
+            alt=""
+            loading="lazy"
+            className="h-full w-full object-cover object-top"
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted">
             Belum ada pratinjau

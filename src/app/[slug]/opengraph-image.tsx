@@ -3,6 +3,7 @@ import {
   getPublicInvitation,
   invitationSummary,
 } from "@/lib/invitation/query";
+import { env } from "@/lib/env";
 
 export const alt = "Undangan";
 export const size = { width: 1200, height: 630 };
@@ -51,7 +52,11 @@ export default async function OgImage({
         year: "numeric",
       })
     : "";
-  const photo = summary?.photo ?? null;
+  // Only embed a photo the couple actually uploaded (on our CDN). Satori
+  // fetches this URL synchronously while rendering — a slow/unreachable
+  // third-party placeholder host (picsum, etc.) would hang the response.
+  const cdn = env.S3_PUBLIC_URL.replace(/\/$/, "");
+  const photo = summary?.photo?.startsWith(cdn) ? summary.photo : null;
 
   try {
     return new ImageResponse(
