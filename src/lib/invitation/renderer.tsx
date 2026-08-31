@@ -6,6 +6,8 @@ import type { GlobalSettings, SectionData } from "@/sections/types";
 const FONT_STACK: Record<string, string> = {
   Fraunces: "var(--font-fraunces), Georgia, serif",
   Inter: "var(--font-inter), system-ui, sans-serif",
+  Cormorant: "var(--font-cormorant), 'Cormorant Garamond', Georgia, serif",
+  Parisienne: "var(--font-parisienne), 'Segoe Script', 'Brush Script MT', cursive",
 };
 
 export function invitationRootStyle(global: GlobalSettings): CSSProperties {

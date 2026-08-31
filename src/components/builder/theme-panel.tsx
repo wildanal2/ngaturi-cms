@@ -90,6 +90,8 @@ export function ThemePanel() {
           className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
         >
           <option value="Fraunces">Fraunces — serif elegan</option>
+          <option value="Cormorant">Cormorant — serif klasik</option>
+          <option value="Parisienne">Parisienne — tulisan tangan</option>
           <option value="Inter">Inter — sans modern</option>
         </select>
       </label>

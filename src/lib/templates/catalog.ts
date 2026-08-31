@@ -18,7 +18,85 @@ const s = (
   props: Record<string, unknown> = {},
 ): Omit<SectionData, "id"> => ({ type, variant, order, visible: true, props });
 
+const inDays = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+
 export const TEMPLATES: TemplatePreset[] = [
+  {
+    id: "sage-emas-klasik",
+    name: "Sage Emas Klasik",
+    description:
+      "Nama tulisan tangan emas di atas hijau sage lembut, hiasan dedaunan di sudut, dan kartu putih bersih — hangat dan klasik.",
+    category: "wedding",
+    tier: "free",
+    thumbnail: "/templates/sage-emas-klasik/card",
+    global_settings: {
+      font_family: "Parisienne",
+      color_primary: "#c48b39",
+      color_secondary: "#90a77c",
+      color_background: "#f4f6f2",
+      animation: "zoom",
+    },
+    sections: [
+      s("cover", "botanical", 0, {
+        names: "Firda & Wildan",
+        tagline: "The Wedding Of",
+        note: "Kepada Yth. Bapak/Ibu/Saudara/i",
+        button_label: "Buka Undangan",
+      }),
+      s("hero", "botanical", 1, {
+        couple_names: "Firda & Wildan",
+        tagline: "The Wedding Of",
+        event_date: inDays(45),
+        s_palette: "cream",
+      }),
+      s("couple-intro", "stacked", 2, {
+        bride: {
+          name: "Firda",
+          full_name: "Firdausil Jannah",
+          child_order: "Putri bungsu dari",
+          parents: "Bapak Much Arifin & Ibu Nurul Hidayati",
+          instagram: "firda.u.j",
+        },
+        groom: {
+          name: "Wildan",
+          full_name: "Wildan Almubarok",
+          child_order: "Putra pertama dari",
+          parents: "Bapak Syamsun & Ibu Muhibbatul Azizah",
+          instagram: "wildan._.al",
+        },
+        s_photo_shape: "circle",
+      }),
+      s("quote", "bordered", 3, {
+        text: "Dan di antara tanda-tanda kekuasaan-Nya ialah diciptakan-Nya untukmu pasangan hidup dari jenismu sendiri, supaya kamu merasa tenteram di sampingnya, dan dijadikan-Nya rasa kasih dan sayang di antara kamu.",
+        source: "Q.S. Ar-Rum: 21",
+      }),
+      s("countdown", "rings", 4, {}),
+      s("event-details", "timeline", 5, {
+        events: [
+          {
+            name: "Akad & Resepsi Nikah",
+            date: inDays(45),
+            start_time: "09:00",
+            end_time: "selesai",
+            venue_name: "Kediaman Mempelai Wanita",
+            address: "RT 02 RW 05 Pojkecik, Baujeng, Pasuruan",
+          },
+        ],
+      }),
+      s("map-location", "embed", 6, {}),
+      s("gallery", "carousel", 7, { images: [] }),
+      s("rsvp", "form-card", 8, {}),
+      s("guestbook", "cards", 9, {}),
+      s("gift", "minimal", 10, {}),
+      s("closing", "simple", 11, {
+        names: "Firda & Wildan",
+        message:
+          "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
+      }),
+      s("music", "disc", 12, {}),
+      s("navigation", "bar", 13, {}),
+    ],
+  },
   {
     id: "kana-noir",
     name: "Elegan Hijau Emas",
@@ -58,7 +136,7 @@ export const TEMPLATES: TemplatePreset[] = [
       s("guestbook", "cards", 8, {}),
       s("gift", "minimal", 9, {}),
       s("closing", "photo", 10, { names: "Kana & Arya" }),
-      s("music", "floating", 11, {}),
+      s("music", "disc", 11, {}),
       s("navigation", "bar", 12, {}),
     ],
   },
@@ -99,7 +177,7 @@ export const TEMPLATES: TemplatePreset[] = [
       s("guestbook", "cards", 8, {}),
       s("gift", "minimal", 9, {}),
       s("closing", "simple", 10, { names: "Kana & Arya" }),
-      s("music", "floating", 11, {}),
+      s("music", "disc", 11, {}),
       s("navigation", "bar", 12, {}),
     ],
   },
