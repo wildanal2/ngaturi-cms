@@ -23,10 +23,33 @@ interface Track {
   license: string | null;
   genre: string | null;
   picks?: number;
-  source?: "catalog" | "jamendo" | "itunes";
+  source?: "catalog" | "deezer" | "itunes" | "jamendo";
   previewOnly?: boolean;
   linkUrl?: string | null;
 }
+
+const POPULAR: { group: string; songs: { label: string; term: string }[] }[] = [
+  {
+    group: "Wedding Indonesia",
+    songs: [
+      { label: "Akad — Payung Teduh", term: "Akad Payung Teduh" },
+      { label: "Janji Suci — Yovie & Nuno", term: "Janji Suci Yovie Nuno" },
+      { label: "Teman Hidup — Tulus", term: "Teman Hidup Tulus" },
+      { label: "Menikahimu — Kahitna", term: "Menikahimu Kahitna" },
+      { label: "Kisah Romantis — Glenn Fredly", term: "Kisah Romantis Glenn Fredly" },
+    ],
+  },
+  {
+    group: "Wedding Barat",
+    songs: [
+      { label: "Perfect — Ed Sheeran", term: "Perfect Ed Sheeran" },
+      { label: "A Thousand Years — Christina Perri", term: "A Thousand Years Christina Perri" },
+      { label: "All of Me — John Legend", term: "All of Me John Legend" },
+      { label: "I Think They Call This Love — Elliot James Reay", term: "I Think They Call This Love Elliot James Reay" },
+      { label: "Biblical — Calum Scott", term: "Biblical Calum Scott" },
+    ],
+  },
+];
 
 export function MusicPickerField({
   ctx,
@@ -215,9 +238,9 @@ export function MusicPickerField({
               ) : null}
             </p>
             <p className="flex items-center gap-1 truncate text-xs text-muted">
-              {t.source === "itunes" ? (
+              {t.previewOnly ? (
                 <span className="rounded bg-ink/10 px-1 py-px text-[9px] font-medium text-ink">
-                  iTunes · 30dtk
+                  {t.source === "deezer" ? "Deezer" : "iTunes"} · 30dtk
                 </span>
               ) : t.source === "jamendo" ? (
                 <span className="rounded bg-ink/10 px-1 py-px text-[9px] font-medium text-ink">
@@ -227,7 +250,7 @@ export function MusicPickerField({
               <span className="truncate">
                 {t.artist ?? "—"}
                 {t.genre ? ` · ${t.genre}` : ""}
-                {t.source !== "itunes" && t.license ? ` · ${t.license}` : ""}
+                {!t.previewOnly && t.license ? ` · ${t.license}` : ""}
               </span>
             </p>
             {!searchMode && (t.picks ?? 0) > 0 ? (
@@ -361,6 +384,29 @@ export function MusicPickerField({
               </button>
             ) : null}
           </div>
+
+          {!searchMode ? (
+            <div className="space-y-1.5">
+              {POPULAR.map((g) => (
+                <div key={g.group}>
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
+                    {g.group}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {g.songs.map((s) => (
+                      <button
+                        key={s.term}
+                        onClick={() => setQuery(s.term)}
+                        className="rounded-full border border-line px-2 py-0.5 text-[11px] hover:bg-cream-200"
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           {tracks === null ? (
             <p className="py-4 text-center text-xs text-muted">Memuat…</p>

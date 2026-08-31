@@ -13,7 +13,7 @@ interface Result {
   coverUrl: string | null;
   license: string | null;
   genre: string | null;
-  source: "catalog" | "itunes" | "jamendo";
+  source: "catalog" | "deezer" | "itunes" | "jamendo";
   previewOnly?: boolean;
   linkUrl?: string | null;
 }
@@ -30,24 +30,34 @@ export async function GET(req: Request) {
     return NextResponse.json({ results: [], sources: [] });
   }
 
-  const [local, itunes, jamendo] = await Promise.all([
+  const guard = (name: string) => (e: unknown) => {
+    console.error(`[music/search] ${name}`, e);
+    return [] as Result[];
+  };
+
+  const [local, deezer, itunes, jamendo] = await Promise.all([
     searchCatalog(q),
-    searchItunes(q).catch((e) => {
-      console.error("[music/search] itunes", e);
-      return [] as Result[];
-    }),
+    searchDeezer(q).catch(guard("deezer")),
+    searchItunes(q).catch(guard("itunes")),
     env.JAMENDO_CLIENT_ID
-      ? searchJamendo(q).catch((e) => {
-          console.error("[music/search] jamendo", e);
-          return [] as Result[];
-        })
+      ? searchJamendo(q).catch(guard("jamendo"))
       : Promise.resolve([] as Result[]),
   ]);
 
+  // de-dupe commercial previews (title+artist appears on both deezer & itunes)
+  const seen = new Set<string>();
+  const commercial = [...deezer, ...itunes].filter((t) => {
+    const k = `${t.title}|${t.artist}`.toLowerCase().replace(/\s+/g, " ").trim();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+
   return NextResponse.json({
-    results: [...local, ...itunes, ...jamendo],
+    results: [...local, ...commercial, ...jamendo],
     sources: [
       ...(local.length ? ["Katalog"] : []),
+      ...(deezer.length ? ["Deezer"] : []),
       ...(itunes.length ? ["iTunes"] : []),
       ...(jamendo.length ? ["Jamendo"] : []),
     ],
@@ -72,6 +82,39 @@ async function searchCatalog(q: string): Promise<Result[]> {
       license: t.license,
       genre: t.genre,
       source: "catalog" as const,
+    }));
+}
+
+interface DeezerTrack {
+  id: number;
+  title: string;
+  preview?: string;
+  artist?: { name?: string };
+  album?: { cover_medium?: string; cover_big?: string };
+}
+
+async function searchDeezer(q: string): Promise<Result[]> {
+  const url = `https://api.deezer.com/search?q=${encodeURIComponent(
+    q,
+  )}&limit=15`;
+  const res = await fetch(url, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) throw new Error(`deezer ${res.status}`);
+  const data = (await res.json()) as { data?: DeezerTrack[] };
+  return (data.data ?? [])
+    .filter((t) => t.preview)
+    .map((t) => ({
+      id: `deezer:${t.id}`,
+      title: t.title,
+      artist: t.artist?.name ?? null,
+      audioUrl: t.preview!,
+      coverUrl: t.album?.cover_big ?? t.album?.cover_medium ?? null,
+      license: "Cuplikan 30 dtk",
+      genre: null,
+      source: "deezer" as const,
+      previewOnly: true,
     }));
 }
 
