@@ -6,8 +6,9 @@ import { CoverClassic } from "./cover-classic";
 import { CoverPhoto } from "./cover-photo";
 import { CoverBotanical } from "./cover-botanical";
 import { CoverMinimal } from "./cover-minimal";
+import { CoverFloating } from "./cover-floating";
 
-export { CoverClassic, CoverPhoto, CoverBotanical, CoverMinimal };
+export { CoverClassic, CoverPhoto, CoverBotanical, CoverMinimal, CoverFloating };
 
 export const coverSection: SectionDefinition = {
   type: "cover",
@@ -63,6 +64,14 @@ export const coverSection: SectionDefinition = {
       name: "Minimalis",
       description: "Tipografi besar, tanpa foto",
       component: CoverMinimal,
+      propsSchema: CoverProps,
+      fields: coverFields,
+      defaultProps: { ...coverDefaults },
+    },
+    floating: {
+      name: "Botani Melayang",
+      description: "Dedaunan bergoyang di sudut, nama tulisan tangan bertumpuk",
+      component: CoverFloating,
       propsSchema: CoverProps,
       fields: coverFields,
       defaultProps: { ...coverDefaults },

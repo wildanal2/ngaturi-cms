@@ -5,8 +5,9 @@ import { coupleFields, sPhotoShape } from "../fields";
 import { CoupleSideBySide } from "./couple-side-by-side";
 import { CoupleStacked } from "./couple-stacked";
 import { CouplePolaroid } from "./couple-polaroid";
+import { CoupleCard } from "./couple-card";
 
-export { CoupleSideBySide, CoupleStacked, CouplePolaroid };
+export { CoupleSideBySide, CoupleStacked, CouplePolaroid, CoupleCard };
 
 export const coupleSection: SectionDefinition = {
   type: "couple-intro",
@@ -54,6 +55,29 @@ export const coupleSection: SectionDefinition = {
       defaultProps: {
         bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi" },
         groom: { name: "Raka", full_name: "Raka Wibowo" },
+      },
+    },
+    card: {
+      name: "Kartu Melayang",
+      description: "Kartu putih, foto bulat, IG & daerah asal, hiasan daun",
+      component: CoupleCard,
+      propsSchema: CoupleIntroProps,
+      fields: coupleFields,
+      defaultProps: {
+        bride: {
+          name: "Dinda",
+          full_name: "Dinda Ayu Pratiwi",
+          child_order: "Putri kedua dari",
+          parents: "Bapak Arifin & Ibu Nurul",
+          residence: "Bandung",
+        },
+        groom: {
+          name: "Raka",
+          full_name: "Raka Wibowo",
+          child_order: "Putra pertama dari",
+          parents: "Bapak Syamsun & Ibu Azizah",
+          residence: "Jombang",
+        },
       },
     },
   },

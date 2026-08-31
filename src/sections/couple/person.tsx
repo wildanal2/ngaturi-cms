@@ -8,6 +8,8 @@ export type Person = {
   photo?: string;
   parents?: string;
   child_order?: string;
+  residence?: string;
+  instagram?: string;
 };
 
 const SHAPE_CLASS: Record<string, string> = {

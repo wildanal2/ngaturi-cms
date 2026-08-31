@@ -3,8 +3,15 @@ import { EventDetailsProps } from "../schema";
 import { eventsArray, nowPlus } from "../fields";
 import { EventTimeline } from "./event-timeline";
 import { EventCards } from "./event-cards";
+import { EventFormal } from "./event-formal";
 
-export { EventTimeline, EventCards };
+export { EventTimeline, EventCards, EventFormal };
+
+const introField = {
+  kind: "textarea" as const,
+  key: "intro",
+  label: "Kalimat pembuka (opsional)",
+};
 
 const maps = "https://www.google.com/maps/search/?api=1&query=-6.914744,107.609810";
 
@@ -41,6 +48,18 @@ export const eventsSection: SectionDefinition = {
           delete (copy as Partial<typeof e>).maps_url;
           return copy;
         }),
+      },
+    },
+    formal: {
+      name: "Tanggal Besar",
+      description: "Kartu putih, angka tanggal besar, kalimat pembuka",
+      component: EventFormal,
+      propsSchema: EventDetailsProps,
+      fields: [introField, eventsArray],
+      defaultProps: {
+        intro:
+          "Dengan memohon rahmat dan ridho Allah SWT, kami bermaksud menyelenggarakan acara pernikahan putra-putri kami.",
+        events: [sampleEvents[0], sampleEvents[1]],
       },
     },
   },

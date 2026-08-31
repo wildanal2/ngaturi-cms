@@ -3,8 +3,9 @@ import { ClosingProps } from "../schema";
 import { dummyClosing } from "../dummy";
 import { ClosingSimple } from "./closing-simple";
 import { ClosingPhoto } from "./closing-photo";
+import { ClosingThankYou } from "./closing-thankyou";
 
-export { ClosingSimple, ClosingPhoto };
+export { ClosingSimple, ClosingPhoto, ClosingThankYou };
 
 export const closingSection: SectionDefinition = {
   type: "closing",
@@ -34,6 +35,17 @@ export const closingSection: SectionDefinition = {
         { kind: "textarea", key: "message", label: "Pesan penutup" },
         { kind: "text", key: "names", label: "Nama" },
         { kind: "image", key: "photo", label: "Foto latar" },
+      ],
+      defaultProps: { names: "Dinda & Raka" },
+    },
+    thankyou: {
+      name: "Thank You",
+      description: "Tulisan tangan besar + hiasan daun bergoyang",
+      component: ClosingThankYou,
+      propsSchema: ClosingProps,
+      fields: [
+        { kind: "textarea", key: "message", label: "Pesan penutup" },
+        { kind: "text", key: "names", label: "Nama" },
       ],
       defaultProps: { names: "Dinda & Raka" },
     },

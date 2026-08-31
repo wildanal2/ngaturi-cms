@@ -6,6 +6,7 @@ import { CountdownFlip } from "./countdown-flip";
 import { CountdownRings } from "./countdown-rings";
 import { CountdownPill } from "./countdown-pill";
 import { CountdownElegant } from "./countdown-elegant";
+import { CountdownPlain } from "./countdown-plain";
 
 export {
   CountdownMinimal,
@@ -13,6 +14,13 @@ export {
   CountdownRings,
   CountdownPill,
   CountdownElegant,
+  CountdownPlain,
+};
+
+const calendarField = {
+  kind: "url" as const,
+  key: "calendar_url",
+  label: "Link tambah ke kalender (opsional)",
 };
 
 const d = () => ({ target_date: nowPlus(45) });
@@ -72,6 +80,14 @@ export const countdownSection: SectionDefinition = {
           ],
         },
       ],
+      defaultProps: d(),
+    },
+    plain: {
+      name: "Save The Date",
+      description: "Angka tebal sederet + tombol kalender, hiasan daun",
+      component: CountdownPlain,
+      propsSchema: CountdownProps,
+      fields: [...countdownFields, calendarField],
       defaultProps: d(),
     },
   },

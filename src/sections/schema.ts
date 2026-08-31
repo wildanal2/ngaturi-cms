@@ -17,6 +17,7 @@ export const PersonProps = z.object({
   instagram: z.string().optional(),
   parents: z.string().optional(),
   child_order: z.string().optional(),
+  residence: z.string().optional(),
 });
 
 export const CoupleIntroProps = z.object({
@@ -25,6 +26,7 @@ export const CoupleIntroProps = z.object({
 });
 
 export const EventDetailsProps = z.object({
+  intro: z.string().optional(),
   events: z.array(
     z.object({
       name: z.string(),
@@ -51,6 +53,7 @@ export const GalleryProps = z.object({
 export const CountdownProps = z.object({
   target_date: z.string(),
   message_expired: z.string().default("Acara telah berlangsung"),
+  calendar_url: z.string().optional(),
 });
 
 export const QuoteProps = z.object({

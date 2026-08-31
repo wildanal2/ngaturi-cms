@@ -5,8 +5,9 @@ import { columnsField, imagesArray } from "../fields";
 import { GalleryGrid } from "./gallery-grid";
 import { GalleryMasonry } from "./gallery-masonry";
 import { GalleryCarousel } from "./gallery-carousel";
+import { GallerySpotlight } from "./gallery-spotlight";
 
-export { GalleryGrid, GalleryMasonry, GalleryCarousel };
+export { GalleryGrid, GalleryMasonry, GalleryCarousel, GallerySpotlight };
 
 export const gallerySection: SectionDefinition = {
   type: "gallery",
@@ -59,6 +60,14 @@ export const gallerySection: SectionDefinition = {
       name: "Carousel Geser",
       description: "Geser horizontal dengan snap",
       component: GalleryCarousel,
+      propsSchema: GalleryProps,
+      fields: [imagesArray],
+      defaultProps: { images: [], columns: 3 },
+    },
+    spotlight: {
+      name: "Grid + Lightbox",
+      description: "Grid 3 kolom, ketuk foto untuk layar penuh",
+      component: GallerySpotlight,
       propsSchema: GalleryProps,
       fields: [imagesArray],
       defaultProps: { images: [], columns: 3 },

@@ -23,6 +23,7 @@ const person = (prefix: "bride" | "groom"): Field => ({
     { kind: "text", key: `${prefix}.full_name`, label: "Nama lengkap" },
     { kind: "text", key: `${prefix}.child_order`, label: "Anak ke- / bin·binti" },
     { kind: "text", key: `${prefix}.parents`, label: "Nama orang tua" },
+    { kind: "text", key: `${prefix}.residence`, label: "Kota / daerah asal" },
     { kind: "text", key: `${prefix}.instagram`, label: "Instagram (tanpa @)" },
     { kind: "image", key: `${prefix}.photo`, label: "Foto" },
   ],

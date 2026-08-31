@@ -43,6 +43,25 @@ export function CornerFloral({ className }: { className?: string }) {
   );
 }
 
+/**
+ * "Floating" botanical corners — an eucalyptus spray top-right and
+ * bottom-left, gently swaying. Drop inside a `relative overflow-hidden`
+ * container. Original SVG art, no third-party assets.
+ */
+export function FloatingLeaves({ tone }: { tone?: string }) {
+  const c = tone ?? "text-[var(--inv-secondary)]";
+  return (
+    <>
+      <CornerFloral
+        className={`inv-ornament inv-ornament--slow pointer-events-none absolute -top-12 -right-12 h-48 w-48 rotate-90 ${c} opacity-70`}
+      />
+      <CornerFloral
+        className={`inv-ornament inv-ornament--flip pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 ${c} opacity-70`}
+      />
+    </>
+  );
+}
+
 /** Horizontal leafy sprig — good beside a name or under a title. */
 export function LeafSprig({ className }: { className?: string }) {
   return (

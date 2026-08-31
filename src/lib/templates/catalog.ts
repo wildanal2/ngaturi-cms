@@ -37,10 +37,10 @@ export const TEMPLATES: TemplatePreset[] = [
       animation: "zoom",
     },
     sections: [
-      s("cover", "botanical", 0, {
+      s("cover", "floating", 0, {
         names: "Firda & Wildan",
         tagline: "The Wedding Of",
-        note: "Kepada Yth. Bapak/Ibu/Saudara/i",
+        note: "Kepada Yth. Bapak/Ibu/Saudara/i :",
         button_label: "Buka Undangan",
       }),
       s("hero", "botanical", 1, {
@@ -49,12 +49,13 @@ export const TEMPLATES: TemplatePreset[] = [
         event_date: inDays(45),
         s_palette: "cream",
       }),
-      s("couple-intro", "stacked", 2, {
+      s("couple-intro", "card", 2, {
         bride: {
           name: "Firda",
           full_name: "Firdausil Jannah",
           child_order: "Putri bungsu dari",
           parents: "Bapak Much Arifin & Ibu Nurul Hidayati",
+          residence: "Baujeng - Pasuruan",
           instagram: "firda.u.j",
         },
         groom: {
@@ -62,16 +63,14 @@ export const TEMPLATES: TemplatePreset[] = [
           full_name: "Wildan Almubarok",
           child_order: "Putra pertama dari",
           parents: "Bapak Syamsun & Ibu Muhibbatul Azizah",
+          residence: "Jogoroto - Jombang",
           instagram: "wildan._.al",
         },
-        s_photo_shape: "circle",
       }),
-      s("quote", "bordered", 3, {
-        text: "Dan di antara tanda-tanda kekuasaan-Nya ialah diciptakan-Nya untukmu pasangan hidup dari jenismu sendiri, supaya kamu merasa tenteram di sampingnya, dan dijadikan-Nya rasa kasih dan sayang di antara kamu.",
-        source: "Q.S. Ar-Rum: 21",
-      }),
-      s("countdown", "rings", 4, {}),
-      s("event-details", "timeline", 5, {
+      s("countdown", "plain", 3, {}),
+      s("event-details", "formal", 4, {
+        intro:
+          "Bukan karena bertemu lalu berjodoh, tapi karena berjodohlah maka kami dipertemukan. Kami memutuskan untuk menggapai ridho Allah dalam ibadah pernikahan.",
         events: [
           {
             name: "Akad & Resepsi Nikah",
@@ -80,15 +79,21 @@ export const TEMPLATES: TemplatePreset[] = [
             end_time: "selesai",
             venue_name: "Kediaman Mempelai Wanita",
             address: "RT 02 RW 05 Pojkecik, Baujeng, Pasuruan",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=-7.626779,112.729736",
           },
         ],
       }),
-      s("map-location", "embed", 6, {}),
-      s("gallery", "carousel", 7, { images: [] }),
+      s("map-location", "embed", 5, {}),
+      s("quote", "bordered", 6, {
+        text: "Dan di antara tanda-tanda kekuasaan-Nya ialah diciptakan-Nya untukmu pasangan hidup dari jenismu sendiri, supaya kamu merasa tenteram di sampingnya, dan dijadikan-Nya rasa kasih dan sayang di antara kamu.",
+        source: "Q.S. Ar-Rum: 21",
+      }),
+      s("gallery", "spotlight", 7, { images: [] }),
       s("rsvp", "form-card", 8, {}),
-      s("guestbook", "cards", 9, {}),
+      s("guestbook", "chat", 9, {}),
       s("gift", "minimal", 10, {}),
-      s("closing", "simple", 11, {
+      s("closing", "thankyou", 11, {
         names: "Firda & Wildan",
         message:
           "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
