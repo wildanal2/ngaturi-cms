@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
     root: import.meta.dirname,
   },
   serverExternalPackages: ["sharp"],
+  // keep recently-visited dynamic pages (dashboard) in the client router
+  // cache briefly so back-and-forth navigation is instant
+  experimental: {
+    staleTimes: { dynamic: 30, static: 180 },
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: s3Host },

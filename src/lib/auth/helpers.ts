@@ -1,11 +1,15 @@
+import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth, type Session } from "./config";
 
-/** Ambil sesi saat ini (atau null) di Server Component / Route Handler. */
-export async function getSession(): Promise<Session | null> {
+/**
+ * Ambil sesi saat ini (atau null). `cache()` men-dedup panggilan dalam satu
+ * request — layout + page + komponen lain hanya memverifikasi cookie sekali.
+ */
+export const getSession = cache(async function getSession(): Promise<Session | null> {
   return auth.api.getSession({ headers: await headers() });
-}
+});
 
 /** Wajib login — redirect ke /login kalau belum. */
 export async function requireUser(): Promise<Session> {
