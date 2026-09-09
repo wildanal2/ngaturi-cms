@@ -6,7 +6,7 @@ export interface TemplatePreset {
   id: string;
   name: string;
   description: string;
-  category: "wedding" | "khitan" | "tahlil" | "aqiqah" | "engagement" | "generic";
+  category: "wedding" | "khitan" | "tahlil" | "aqiqah" | "engagement" | "birthday" | "generic";
   tier: "free" | "basic" | "premium";
   composition?: TemplateComposition;
   thumbnail: string;

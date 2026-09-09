@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth/helpers";
 import { isEditLocked } from "@/lib/invitation/entitlement";
 import { getCompositionPolicy } from "@/lib/templates/composition-policy";
 import { getTemplate, TEMPLATES } from "@/lib/templates/catalog";
+import { filterTemplatesByCategory } from "@/lib/templates/compatibility";
 import { BuilderShell } from "@/components/builder/builder-shell";
 import { TemplatePicker } from "@/components/builder/template-picker";
 import type { GlobalSettings, SectionData } from "@/sections/types";
@@ -35,18 +36,18 @@ export default async function BuilderPage({
   const sourceTemplate = inv.sourceTemplate
     ? getTemplate(inv.sourceTemplate)
     : undefined;
+  const templateOptions = TEMPLATES.map(
+    ({ id, name, description, category, tier, thumbnail }) => ({
+      id,
+      name,
+      description,
+      category,
+      tier,
+      thumbnail,
+    }),
+  );
 
   if (!sourceTemplate) {
-    const templateOptions = TEMPLATES.map(
-      ({ id, name, description, category, tier, thumbnail }) => ({
-        id,
-        name,
-        description,
-        category,
-        tier,
-        thumbnail,
-      }),
-    );
     return (
       <TemplatePicker
         invitationId={inv.id}
@@ -58,12 +59,13 @@ export default async function BuilderPage({
 
   const sections = inv.sections as SectionData[];
   const compositionPolicy = getCompositionPolicy({
-    templateComposition: sourceTemplate.composition,
+    templateComposition: sourceTemplate.composition ?? "standard",
     sections,
   });
 
   return (
     <BuilderShell
+      key={sourceTemplate.id}
       invitationId={inv.id}
       slug={inv.slug}
       status={inv.status}
@@ -73,6 +75,11 @@ export default async function BuilderPage({
       initialSections={sections}
       initialGlobal={inv.globalSettings as GlobalSettings}
       compositionPolicy={compositionPolicy}
+      activeTemplate={{ id: sourceTemplate.id, name: sourceTemplate.name }}
+      templates={filterTemplatesByCategory(
+        templateOptions,
+        sourceTemplate.category,
+      )}
     />
   );
 }

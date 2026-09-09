@@ -2,9 +2,12 @@
 
 import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { Toaster, toast } from "sonner";
-import { applyInitialTemplate } from "@/lib/invitation/actions";
+import {
+  applyInitialTemplate,
+  changeInvitationTemplate,
+} from "@/lib/invitation/actions";
 import type { TemplatePreset } from "@/lib/templates/catalog";
 
 export type BuilderTemplateOption = Pick<
@@ -17,6 +20,80 @@ const tierLabel: Record<TemplatePreset["tier"], string> = {
   basic: "Basic",
   premium: "Premium",
 };
+
+function TemplateCatalog({
+  templates,
+  locked,
+  activeTemplateId,
+  pendingId,
+  pending,
+  onSelect,
+}: {
+  templates: BuilderTemplateOption[];
+  locked: boolean;
+  activeTemplateId?: string;
+  pendingId: string | null;
+  pending: boolean;
+  onSelect: (template: BuilderTemplateOption) => void;
+}) {
+  return (
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {templates.map((template) => {
+        const isActive = template.id === activeTemplateId;
+        const isApplying = pendingId === template.id;
+        return (
+          <article
+            key={template.id}
+            className="overflow-hidden rounded-2xl border border-line bg-paper"
+          >
+            <Image
+              src={template.thumbnail}
+              alt={template.name}
+              width={400}
+              height={300}
+              className="aspect-[4/3] w-full object-cover"
+              unoptimized
+            />
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg text-ink">{template.name}</h2>
+                <span className="shrink-0 rounded-full bg-cream-200 px-2.5 py-1 text-[0.65rem] font-medium tracking-wide text-ink-soft uppercase">
+                  {tierLabel[template.tier]}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-ink-soft">
+                {template.description}
+              </p>
+              <p className="mt-2 text-xs tracking-wide text-muted uppercase">
+                {template.category}
+              </p>
+              <button
+                type="button"
+                onClick={() => onSelect(template)}
+                disabled={locked || isActive || pending || pendingId !== null}
+                aria-busy={isApplying}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest py-2.5 text-sm font-medium text-cream hover:bg-forest-600 disabled:pointer-events-none disabled:opacity-60"
+              >
+                {isApplying ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Menerapkan template…
+                  </>
+                ) : isActive ? (
+                  "Template aktif"
+                ) : activeTemplateId ? (
+                  "Pilih template"
+                ) : (
+                  "Pakai template ini"
+                )}
+              </button>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
 
 export function TemplatePicker({
   invitationId,
@@ -31,14 +108,14 @@ export function TemplatePicker({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function selectTemplate(templateId: string) {
+  function selectTemplate(template: BuilderTemplateOption) {
     if (locked || submitting.current) return;
     submitting.current = true;
-    setPendingId(templateId);
+    setPendingId(template.id);
 
     startTransition(async () => {
       try {
-        const result = await applyInitialTemplate(invitationId, templateId);
+        const result = await applyInitialTemplate(invitationId, template.id);
         if (!result.ok) {
           toast.error(result.error);
           submitting.current = false;
@@ -65,61 +142,161 @@ export function TemplatePicker({
 
         {locked ? (
           <div className="mb-5 rounded-xl border border-wine/30 bg-wine/5 p-4 text-sm text-wine">
-            Masa edit gratis sudah berakhir. Upgrade akun untuk memilih template.
+            Masa edit gratis sudah berakhir. Upgrade akun untuk memilih
+            template.
           </div>
         ) : null}
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((template) => {
-            const isApplying = pendingId === template.id;
-            return (
-              <article
-                key={template.id}
-                className="overflow-hidden rounded-2xl border border-line bg-paper"
-              >
-                <Image
-                  src={template.thumbnail}
-                  alt={template.name}
-                  width={400}
-                  height={300}
-                  className="aspect-[4/3] w-full object-cover"
-                  unoptimized
-                />
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <h2 className="text-lg text-ink">{template.name}</h2>
-                    <span className="shrink-0 rounded-full bg-cream-200 px-2.5 py-1 text-[0.65rem] font-medium tracking-wide text-ink-soft uppercase">
-                      {tierLabel[template.tier]}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-ink-soft">
-                    {template.description}
-                  </p>
-                  <p className="mt-2 text-xs tracking-wide text-muted uppercase">
-                    {template.category}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => selectTemplate(template.id)}
-                    disabled={locked || pending || pendingId !== null}
-                    aria-busy={isApplying}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest py-2.5 text-sm font-medium text-cream hover:bg-forest-600 disabled:pointer-events-none disabled:opacity-60"
-                  >
-                    {isApplying ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        Menerapkan template…
-                      </>
-                    ) : (
-                      "Pakai template ini"
-                    )}
-                  </button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        <TemplateCatalog
+          templates={templates}
+          locked={locked}
+          pendingId={pendingId}
+          pending={pending}
+          onSelect={selectTemplate}
+        />
       </div>
     </main>
+  );
+}
+
+export function ChangeTemplateDialog({
+  invitationId,
+  templates,
+  activeTemplateId,
+  open,
+  onClose,
+  beforeApply,
+}: {
+  invitationId: string;
+  templates: BuilderTemplateOption[];
+  activeTemplateId: string;
+  open: boolean;
+  onClose: () => void;
+  beforeApply: () => Promise<boolean>;
+}) {
+  const submitting = useRef(false);
+  const [selected, setSelected] = useState<BuilderTemplateOption | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  if (!open) return null;
+
+  function close() {
+    if (pending || submitting.current) return;
+    setSelected(null);
+    setPendingId(null);
+    onClose();
+  }
+
+  function apply() {
+    if (!selected || pending || submitting.current) return;
+    submitting.current = true;
+    setPendingId(selected.id);
+
+    startTransition(async () => {
+      try {
+        const ready = await beforeApply();
+        if (!ready) {
+          submitting.current = false;
+          setPendingId(null);
+          return;
+        }
+        const result = await changeInvitationTemplate(
+          invitationId,
+          selected.id,
+        );
+        if (!result.ok) {
+          toast.error(result.error);
+          submitting.current = false;
+          setPendingId(null);
+          return;
+        }
+        toast.success("Template berhasil diubah.");
+      } catch {
+        toast.error("Template gagal diterapkan. Silakan coba lagi.");
+        submitting.current = false;
+        setPendingId(null);
+      }
+    });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="change-template-title"
+    >
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-cream-100 shadow-2xl">
+        {selected ? (
+          <div className="w-full max-w-lg self-center p-6 sm:p-8">
+            <h2 id="change-template-title" className="text-2xl text-ink">
+              Gunakan {selected.name}?
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-ink-soft">
+              Konten undangan akan dipertahankan. Tampilan, layout, dan
+              pengaturan visual akan mengikuti template baru.
+            </p>
+            <div className="mt-7 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                disabled={pending}
+                className="rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink hover:bg-cream-200 disabled:opacity-60"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={apply}
+                disabled={pending}
+                aria-busy={pending}
+                className="inline-flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-medium text-cream hover:bg-forest-600 disabled:pointer-events-none disabled:opacity-60"
+              >
+                {pending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Menerapkan…
+                  </>
+                ) : (
+                  "Gunakan Template"
+                )}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between border-b border-line px-5 py-4">
+              <div>
+                <h2 id="change-template-title" className="text-2xl text-ink">
+                  Ubah Template
+                </h2>
+                <p className="mt-1 text-sm text-ink-soft">
+                  Pilih tampilan baru untuk undanganmu.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={close}
+                aria-label="Tutup pemilih template"
+                className="rounded-full p-2 text-muted hover:bg-cream-200 hover:text-ink"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-5">
+              <TemplateCatalog
+                templates={templates}
+                locked={false}
+                activeTemplateId={activeTemplateId}
+                pendingId={pendingId}
+                pending={pending}
+                onSelect={setSelected}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }

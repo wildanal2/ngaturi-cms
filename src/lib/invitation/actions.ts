@@ -4,13 +4,28 @@ import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { invitations, payments, templates, userProfiles } from "@/lib/db/schema";
+import {
+  invitations,
+  payments,
+  templates,
+  userProfiles,
+} from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
 import { getTemplate } from "@/lib/templates/catalog";
-import { hydrateTemplateSections } from "@/lib/templates/hydrate";
+import {
+  hydrateTemplateSections,
+  mergeInvitationGlobalSettings,
+  mergeInvitationIntoTemplate,
+} from "@/lib/templates/hydrate";
+import { isTemplateChangeCategoryCompatible } from "@/lib/templates/compatibility";
 import { makeSlug, validateCustomSlug } from "./slug";
 import { CompositionSchema } from "@/sections/schema";
-import { editExpiresAtFor, isEditLocked, maxInvitationsFor } from "./entitlement";
+import type { SectionData } from "@/sections/types";
+import {
+  editExpiresAtFor,
+  isEditLocked,
+  maxInvitationsFor,
+} from "./entitlement";
 
 /**
  * Buat undangan baru dari template. Kuota: 1 undangan untuk akun gratis,
@@ -174,6 +189,129 @@ export async function applyInitialTemplate(
   }
 }
 
+export async function changeInvitationTemplate(
+  invitationId: string,
+  templateId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await requireUser();
+  const targetTemplate = getTemplate(templateId);
+  if (!targetTemplate) {
+    return { ok: false, error: "Template tidak ditemukan." };
+  }
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [inv] = await tx
+        .select()
+        .from(invitations)
+        .where(
+          and(
+            eq(invitations.id, invitationId),
+            eq(invitations.userId, session.user.id),
+          ),
+        )
+        .for("update")
+        .limit(1);
+
+      if (!inv) {
+        return { ok: false as const, error: "Undangan tidak ditemukan." };
+      }
+      if (isEditLocked(inv) || inv.isEditLocked) {
+        return {
+          ok: false as const,
+          error: "Masa edit gratis sudah berakhir.",
+        };
+      }
+      if (inv.sourceTemplate === targetTemplate.id) {
+        return { ok: true as const, slug: inv.slug };
+      }
+
+      const sourceTemplate = inv.sourceTemplate
+        ? getTemplate(inv.sourceTemplate)
+        : undefined;
+      if (!sourceTemplate) {
+        return {
+          ok: false as const,
+          error: "Template aktif tidak dikenali. Muat ulang Builder.",
+        };
+      }
+      if (
+        !isTemplateChangeCategoryCompatible({
+          invitationCategory: inv.eventType,
+          sourceCategory: sourceTemplate.category,
+          targetCategory: targetTemplate.category,
+        })
+      ) {
+        return {
+          ok: false as const,
+          error: "Template harus memiliki kategori yang sama dengan undangan.",
+        };
+      }
+
+      const currentSections = inv.sections as SectionData[];
+      const sections = mergeInvitationIntoTemplate(
+        currentSections,
+        sourceTemplate,
+        targetTemplate,
+      );
+      const globalSettings = mergeInvitationGlobalSettings(
+        inv.globalSettings as Record<string, unknown>,
+        targetTemplate.global_settings as unknown as Record<string, unknown>,
+        sourceTemplate.composition === "cinematic",
+        targetTemplate.composition === "cinematic",
+      );
+
+      // source_template is an FK; catalog entries are lazily registered using
+      // the same contract as initial template selection.
+      await tx
+        .insert(templates)
+        .values({
+          id: targetTemplate.id,
+          name: targetTemplate.name,
+          description: targetTemplate.description,
+          category: targetTemplate.category,
+          tier: targetTemplate.tier,
+          thumbnail: targetTemplate.thumbnail,
+          composition: {
+            global_settings: targetTemplate.global_settings,
+            sections: targetTemplate.sections,
+          },
+          isActive: true,
+        })
+        .onConflictDoNothing();
+
+      await tx
+        .update(invitations)
+        .set({
+          sourceTemplate: targetTemplate.id,
+          sections,
+          globalSettings,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(invitations.id, invitationId),
+            eq(invitations.userId, session.user.id),
+          ),
+        );
+
+      return { ok: true as const, slug: inv.slug };
+    });
+
+    if (result.ok) {
+      updateTag(`invitation:${invitationId}`);
+      updateTag(`invitation:slug:${result.slug}`);
+      refresh();
+    }
+    return result.ok ? { ok: true } : result;
+  } catch {
+    return {
+      ok: false,
+      error: "Template gagal diterapkan. Silakan coba lagi.",
+    };
+  }
+}
+
 async function loadOwned(invitationId: string) {
   const session = await requireUser();
   const [inv] = await db
@@ -192,10 +330,14 @@ async function loadOwned(invitationId: string) {
 
 export async function saveComposition(
   invitationId: string,
-  payload: { sections: unknown; global_settings: unknown },
+  payload: {
+    sections: unknown;
+    global_settings: unknown;
+    source_template: string;
+  },
 ): Promise<{ ok: true; savedAt: string } | { ok: false; error: string }> {
   const inv = await loadOwned(invitationId);
-  if (isEditLocked(inv)) {
+  if (isEditLocked(inv) || inv.isEditLocked) {
     return { ok: false, error: "Masa edit gratis sudah berakhir." };
   }
   const parsed = CompositionSchema.safeParse({
@@ -209,7 +351,7 @@ export async function saveComposition(
 
   const hero = parsed.data.sections.find((s) => s.type === "hero");
   const now = new Date();
-  await db
+  const [updated] = await db
     .update(invitations)
     .set({
       sections: parsed.data.sections,
@@ -221,7 +363,21 @@ export async function saveComposition(
         : inv.eventDate,
       updatedAt: now,
     })
-    .where(eq(invitations.id, invitationId));
+    .where(
+      and(
+        eq(invitations.id, invitationId),
+        eq(invitations.userId, inv.userId),
+        eq(invitations.sourceTemplate, payload.source_template),
+      ),
+    )
+    .returning({ id: invitations.id });
+
+  if (!updated) {
+    return {
+      ok: false,
+      error: "Template undangan telah berubah. Muat ulang Builder.",
+    };
+  }
 
   updateTag(`invitation:${invitationId}`);
   updateTag(`invitation:slug:${inv.slug}`);

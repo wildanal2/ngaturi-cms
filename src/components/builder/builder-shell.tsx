@@ -10,6 +10,10 @@ import { SectionList } from "./section-list";
 import { AddSectionButton } from "./add-section-menu";
 import { Canvas } from "./canvas";
 import { Inspector } from "./inspector";
+import {
+  ChangeTemplateDialog,
+  type BuilderTemplateOption,
+} from "./template-picker";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 import type { CompositionPolicy } from "@/lib/templates/composition-policy";
 
@@ -24,6 +28,8 @@ export function BuilderShell({
   initialSections,
   initialGlobal,
   compositionPolicy,
+  activeTemplate,
+  templates,
 }: {
   invitationId: string;
   slug: string;
@@ -34,13 +40,19 @@ export function BuilderShell({
   initialSections: SectionData[];
   initialGlobal: GlobalSettings;
   compositionPolicy: CompositionPolicy;
+  activeTemplate: { id: string; name: string };
+  templates: BuilderTemplateOption[];
 }) {
   const load = useBuilder((s) => s.load);
   const dirty = useBuilder((s) => s.dirty);
   const markClean = useBuilder((s) => s.markClean);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [publishing, setPublishing] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [preparingTemplate, setPreparingTemplate] = useState(false);
   const loadedRef = useRef(false);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveInFlightRef = useRef<Promise<boolean> | null>(null);
 
   useEffect(() => {
     if (loadedRef.current) return;
@@ -62,33 +74,90 @@ export function BuilderShell({
     load,
   ]);
 
-  const save = useCallback(async () => {
-    const { sections, global, dirty: isDirty } = useBuilder.getState();
-    if (!isDirty || locked) return;
-    setSaveState("saving");
-    const res = await saveComposition(invitationId, {
-      sections,
-      global_settings: global,
-    });
-    if (res.ok) {
-      markClean();
-      setSaveState("saved");
-    } else {
-      setSaveState("error");
-      toast.error(res.error);
+  const clearScheduledAutosave = useCallback(() => {
+    if (autosaveTimerRef.current !== null) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
     }
-  }, [invitationId, locked, markClean]);
+  }, []);
+
+  const save = useCallback(async (): Promise<boolean> => {
+    if (locked) return false;
+
+    // Serialize callers and keep draining if the user changed state while a
+    // previous snapshot was in flight. Only the exact saved snapshot is ever
+    // allowed to clear the dirty flag.
+    for (;;) {
+      const activeSave = saveInFlightRef.current;
+      if (activeSave) {
+        const activeSaved = await activeSave;
+        if (saveInFlightRef.current === activeSave) {
+          saveInFlightRef.current = null;
+        }
+        if (!activeSaved) return false;
+        continue;
+      }
+
+      const snapshot = useBuilder.getState();
+      if (!snapshot.dirty) return true;
+      const { sections, global } = snapshot;
+      setSaveState("saving");
+
+      const request = (async () => {
+        try {
+          const res = await saveComposition(invitationId, {
+            sections,
+            global_settings: global,
+            source_template: activeTemplate.id,
+          });
+          if (!res.ok) {
+            setSaveState("error");
+            toast.error(res.error);
+            return false;
+          }
+
+          const current = useBuilder.getState();
+          if (current.sections === sections && current.global === global) {
+            markClean();
+          }
+          setSaveState("saved");
+          return true;
+        } catch {
+          setSaveState("error");
+          toast.error("Perubahan gagal disimpan. Silakan coba lagi.");
+          return false;
+        }
+      })();
+
+      saveInFlightRef.current = request;
+      const saved = await request;
+      if (saveInFlightRef.current === request) {
+        saveInFlightRef.current = null;
+      }
+      if (!saved) return false;
+    }
+  }, [activeTemplate.id, invitationId, locked, markClean]);
+
+  const flushAutosave = useCallback(async () => {
+    clearScheduledAutosave();
+    return save();
+  }, [clearScheduledAutosave, save]);
 
   // autosave
   useEffect(() => {
     if (!dirty) return;
-    const t = setTimeout(save, 1200);
-    return () => clearTimeout(t);
-  }, [dirty, save]);
+    clearScheduledAutosave();
+    autosaveTimerRef.current = setTimeout(() => {
+      autosaveTimerRef.current = null;
+      void save();
+    }, 1200);
+    return clearScheduledAutosave;
+  }, [clearScheduledAutosave, dirty, save]);
 
   // keyboard shortcuts
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      if (templatePickerOpen || preparingTemplate) return;
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
       if (e.key === "s") {
@@ -104,7 +173,7 @@ export function BuilderShell({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [save]);
+  }, [preparingTemplate, save, templatePickerOpen]);
 
   // unsaved-changes guard
   useEffect(() => {
@@ -127,6 +196,22 @@ export function BuilderShell({
       toast.success("Undangan terbit!");
       window.open(`/${res.slug}`, "_blank");
     }
+  }
+
+  async function openTemplatePicker() {
+    if (locked || preparingTemplate) return;
+    setPreparingTemplate(true);
+    const saved = await flushAutosave();
+    setPreparingTemplate(false);
+    if (saved) setTemplatePickerOpen(true);
+  }
+
+  async function prepareTemplateApply() {
+    if (locked || preparingTemplate) return false;
+    setPreparingTemplate(true);
+    const saved = await flushAutosave();
+    setPreparingTemplate(false);
+    return saved;
   }
 
   return (
@@ -179,9 +264,31 @@ export function BuilderShell({
         </main>
 
         <aside className="w-80 shrink-0 overflow-y-auto border-l border-line bg-paper p-4">
-          <Inspector invitationId={invitationId} />
+          <Inspector
+            invitationId={invitationId}
+            activeTemplateName={activeTemplate.name}
+            onChangeTemplate={openTemplatePicker}
+            changeTemplatePending={preparingTemplate}
+          />
         </aside>
       </div>
+
+      <ChangeTemplateDialog
+        invitationId={invitationId}
+        templates={templates}
+        activeTemplateId={activeTemplate.id}
+        open={templatePickerOpen}
+        onClose={() => setTemplatePickerOpen(false)}
+        beforeApply={prepareTemplateApply}
+      />
+
+      {preparingTemplate ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="rounded-xl bg-paper px-5 py-4 text-sm font-medium text-ink shadow-xl">
+            Menyimpan perubahan sebelum memilih template…
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

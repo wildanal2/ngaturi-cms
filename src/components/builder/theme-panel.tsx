@@ -12,7 +12,15 @@ const PRESETS = [
   { name: "Sage", primary: "#5c6f52", secondary: "#8a5a44", bg: "#f7f8f4" },
 ];
 
-export function ThemePanel() {
+export function ThemePanel({
+  activeTemplateName,
+  onChangeTemplate,
+  changeTemplatePending,
+}: {
+  activeTemplateName: string;
+  onChangeTemplate: () => void;
+  changeTemplatePending: boolean;
+}) {
   const global = useBuilder((s) => s.global);
   const setGlobal = useBuilder((s) => s.setGlobal);
   const locked = useBuilder((s) => s.locked);
@@ -27,6 +35,23 @@ export function ThemePanel() {
           Berlaku untuk semua bagian. Pilih salah satu bagian di kiri untuk
           mengedit isinya.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-line bg-cream-200/50 p-3">
+        <span className="block text-xs font-medium tracking-wide text-muted uppercase">
+          Template
+        </span>
+        <span className="mt-1 block text-sm font-medium text-ink">
+          {activeTemplateName}
+        </span>
+        <button
+          type="button"
+          onClick={onChangeTemplate}
+          disabled={locked || changeTemplatePending}
+          className="mt-3 w-full rounded-full border border-forest px-3 py-2 text-sm font-medium text-forest hover:bg-forest hover:text-cream disabled:pointer-events-none disabled:opacity-60"
+        >
+          {changeTemplatePending ? "Menyimpan…" : "Ubah Template"}
+        </button>
       </div>
 
       <div>

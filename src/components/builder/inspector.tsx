@@ -8,7 +8,17 @@ import { VariantThumb } from "./variant-thumb";
 import { Lock } from "lucide-react";
 import { canEditSectionVariant } from "@/lib/templates/composition-policy";
 
-export function Inspector({ invitationId }: { invitationId: string }) {
+export function Inspector({
+  invitationId,
+  activeTemplateName,
+  onChangeTemplate,
+  changeTemplatePending,
+}: {
+  invitationId: string;
+  activeTemplateName: string;
+  onChangeTemplate: () => void;
+  changeTemplatePending: boolean;
+}) {
   const sections = useBuilder((s) => s.sections);
   const selectedId = useBuilder((s) => s.selectedId);
   const locked = useBuilder((s) => s.locked);
@@ -18,7 +28,15 @@ export function Inspector({ invitationId }: { invitationId: string }) {
   const setVariant = useBuilder((s) => s.setVariant);
 
   const section = sections.find((s) => s.id === selectedId) ?? null;
-  if (!section) return <ThemePanel />;
+  if (!section) {
+    return (
+      <ThemePanel
+        activeTemplateName={activeTemplateName}
+        onChangeTemplate={onChangeTemplate}
+        changeTemplatePending={changeTemplatePending}
+      />
+    );
+  }
 
   const def = SectionRegistry[section.type];
   if (!def) return null;

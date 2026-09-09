@@ -36,7 +36,10 @@ export function getCompositionPolicy({
   templateComposition?: TemplateComposition;
   sections: readonly Pick<SectionData, "type" | "variant" | "visible">[];
 }): CompositionPolicy {
-  return templateComposition === "cinematic" || isCinematicComposition(sections)
+  const composition =
+    templateComposition ??
+    (isCinematicComposition(sections) ? "cinematic" : "standard");
+  return composition === "cinematic"
     ? CINEMATIC_COMPOSITION_POLICY
     : STANDARD_COMPOSITION_POLICY;
 }
