@@ -10,7 +10,17 @@ const s3Host = (() => {
   }
 })();
 
+const allowedDevOrigins =
+  process.env.NODE_ENV === "development"
+    ? (process.env.ALLOWED_DEV_ORIGINS ?? "")
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+    : [];
+
 const nextConfig: NextConfig = {
+  ...(allowedDevOrigins.length > 0 && { allowedDevOrigins }),
+
   turbopack: {
     root: import.meta.dirname,
   },
