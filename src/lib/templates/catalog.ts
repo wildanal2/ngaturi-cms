@@ -1,11 +1,14 @@
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
+export type TemplateComposition = "standard" | "cinematic";
+
 export interface TemplatePreset {
   id: string;
   name: string;
   description: string;
   category: "wedding" | "khitan" | "tahlil" | "aqiqah" | "engagement" | "generic";
   tier: "free" | "basic" | "premium";
+  composition?: TemplateComposition;
   thumbnail: string;
   global_settings: GlobalSettings;
   sections: Omit<SectionData, "id">[];
@@ -47,6 +50,38 @@ const themeDecor = (theme: ThemeAssets) => ({
 });
 
 export const TEMPLATES: TemplatePreset[] = [
+  {
+    id: "cinematic-vintage",
+    name: "Cinematic Vintage",
+    description: "Perjalanan sinematik melewati bingkai kenangan, janji akad, dan perayaan. Burgundy, emas lembut, serta kedalaman yang mengikuti setiap guliran Anda.",
+    category: "wedding",
+    tier: "premium",
+    composition: "cinematic",
+    thumbnail: "/templates/cinematic-vintage/card",
+    global_settings: {
+      font_family: "Cormorant",
+      color_primary: "#521c2b",
+      color_secondary: "#c4a56c",
+      color_background: "#faf3e7",
+      animation: "none",
+    },
+    sections: [
+      s("cover", "cinematic-vintage", 0),
+      s("hero", "cinematic-vintage", 1),
+      s("couple-intro", "cinematic-vintage", 2),
+      s("quote", "cinematic-vintage", 3),
+      s("gallery", "cinematic-vintage", 4),
+      s("event-details", "cinematic-vintage", 5),
+      s("map-location", "cinematic-vintage", 6),
+      s("closing", "cinematic-vintage", 7),
+      s("countdown", "plain", 8),
+      s("rsvp", "form-card", 9),
+      s("gift", "minimal", 10),
+      s("guestbook", "chat", 11),
+      s("music", "disc", 12),
+      s("navigation", "bar", 13),
+    ],
+  },
   {
     id: "sage-emas-klasik",
     name: "Sage Emas Klasik",

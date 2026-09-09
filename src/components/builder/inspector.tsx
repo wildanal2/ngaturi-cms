@@ -5,11 +5,14 @@ import { SectionRegistry } from "@/sections/registry";
 import { FieldRenderer, type FieldContext } from "./field-editors";
 import { ThemePanel } from "./theme-panel";
 import { VariantThumb } from "./variant-thumb";
+import { Lock } from "lucide-react";
+import { canEditSectionVariant } from "@/lib/templates/composition-policy";
 
 export function Inspector({ invitationId }: { invitationId: string }) {
   const sections = useBuilder((s) => s.sections);
   const selectedId = useBuilder((s) => s.selectedId);
   const locked = useBuilder((s) => s.locked);
+  const compositionPolicy = useBuilder((s) => s.compositionPolicy);
   const setProp = useBuilder((s) => s.setProp);
   const setProps = useBuilder((s) => s.setProps);
   const setVariant = useBuilder((s) => s.setVariant);
@@ -22,6 +25,7 @@ export function Inspector({ invitationId }: { invitationId: string }) {
 
   const variants = Object.entries(def.variants);
   const currentVariant = def.variants[section.variant];
+  const variantEditable = canEditSectionVariant(compositionPolicy, section.type);
 
   const ctx: FieldContext = {
     invitationId,
@@ -41,7 +45,22 @@ export function Inspector({ invitationId }: { invitationId: string }) {
       </div>
 
       {/* LEVEL 1 — pilih komponen/tampilan */}
-      {variants.length > 1 ? (
+      {!variantEditable ? (
+        <div>
+          <span className="mb-2 block text-xs font-medium tracking-wide text-muted uppercase">
+            Tampilan
+          </span>
+          <div className="rounded-xl border border-line bg-cream-200/60 p-3">
+            <span className="flex items-center gap-2 text-sm font-medium text-ink">
+              <Lock size={14} aria-hidden />
+              {currentVariant?.name ?? "Sinematik Vintage"}
+            </span>
+            <p className="mt-1 text-xs text-muted">
+              Tampilan dikendalikan oleh template.
+            </p>
+          </div>
+        </div>
+      ) : variants.length > 1 ? (
         <div>
           <span className="mb-2 block text-xs font-medium tracking-wide text-muted uppercase">
             Tampilan
@@ -100,7 +119,7 @@ export function Inspector({ invitationId }: { invitationId: string }) {
                   return (
                     <button
                       key={o.value}
-                      disabled={locked}
+                      disabled={locked || !variantEditable}
                       onClick={() => ctx.write(`s_${so.key}`, o.value)}
                       className={`rounded-full border px-3 py-1 text-xs ${
                         active

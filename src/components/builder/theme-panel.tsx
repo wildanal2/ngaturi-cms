@@ -1,5 +1,6 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import { useBuilder } from "@/stores/builder-store";
 
 const PRESETS = [
@@ -15,6 +16,8 @@ export function ThemePanel() {
   const global = useBuilder((s) => s.global);
   const setGlobal = useBuilder((s) => s.setGlobal);
   const locked = useBuilder((s) => s.locked);
+  const canEditMotion = useBuilder((s) => s.compositionPolicy.canEditMotion);
+  const isCinematic = useBuilder((s) => s.compositionPolicy.isCinematic);
 
   return (
     <div className="space-y-5">
@@ -96,30 +99,72 @@ export function ThemePanel() {
         </select>
       </label>
 
-      <label className="block text-sm">
-        <span className="mb-1 block text-ink-soft">Animasi saat scroll</span>
-        <select
-          value={global.animation ?? "fade-up"}
-          disabled={locked}
-          onChange={(e) =>
-            setGlobal({
-              animation: e.target.value as NonNullable<
-                typeof global.animation
-              >,
-            })
-          }
-          className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
-        >
-          <option value="fade-up">Muncul dari bawah</option>
-          <option value="fade-down">Muncul dari atas</option>
-          <option value="fade-left">Geser dari kanan</option>
-          <option value="fade-right">Geser dari kiri</option>
-          <option value="zoom">Zoom in</option>
-          <option value="flip">Flip</option>
-          <option value="fade">Fade halus</option>
-          <option value="none">Tanpa animasi</option>
-        </select>
-      </label>
+      {isCinematic ? (
+        <div className="text-sm">
+          <span className="mb-1.5 block text-ink-soft">Mode Tampilan</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(["cinematic", "simple"] as const).map((mode) => {
+              const active = (global.presentationMode ?? "cinematic") === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  disabled={locked}
+                  aria-pressed={active}
+                  onClick={() => setGlobal({ presentationMode: mode })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    active
+                      ? "border-forest bg-forest text-cream"
+                      : "border-line hover:bg-cream-200"
+                  } disabled:opacity-60`}
+                >
+                  {mode === "cinematic" ? "Sinematik" : "Sederhana"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {canEditMotion ? (
+        <label className="block text-sm">
+          <span className="mb-1 block text-ink-soft">Animasi saat scroll</span>
+          <select
+            value={global.animation ?? "fade-up"}
+            disabled={locked}
+            onChange={(e) =>
+              setGlobal({
+                animation: e.target.value as NonNullable<
+                  typeof global.animation
+                >,
+              })
+            }
+            className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
+          >
+            <option value="fade-up">Muncul dari bawah</option>
+            <option value="fade-down">Muncul dari atas</option>
+            <option value="fade-left">Geser dari kanan</option>
+            <option value="fade-right">Geser dari kiri</option>
+            <option value="zoom">Zoom in</option>
+            <option value="flip">Flip</option>
+            <option value="fade">Fade halus</option>
+            <option value="none">Tanpa animasi</option>
+          </select>
+        </label>
+      ) : (
+        <div className="text-sm">
+          <span className="mb-1 block text-ink-soft">Animasi saat scroll</span>
+          <div className="rounded-lg border border-line bg-cream-200/60 px-3 py-2.5">
+            <span className="flex items-center gap-2 font-medium text-ink">
+              <Lock size={14} aria-hidden />
+              Cinematic Timeline
+            </span>
+            <p className="mt-1 text-xs text-muted">
+              Animasi dikendalikan oleh template.
+            </p>
+          </div>
+        </div>
+      )}
 
       <p className="text-xs text-muted">
         Sampul (Buka Undangan), musik latar &amp; navigasi kini jadi bagian

@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="currentColor">
+  <g opacity=".8"><circle cx="11" cy="28" r=".7"/><circle cx="67" cy="6" r="1"/><circle cx="104" cy="61" r=".5"/><circle cx="33" cy="107" r="1"/><circle cx="130" cy="141" r=".8"/><circle cx="79" cy="129" r=".4"/><circle cx="152" cy="27" r=".6"/><circle cx="166" cy="103" r=".9"/><circle cx="18" cy="160" r=".5"/><circle cx="112" cy="176" r=".7"/><circle cx="52" cy="67" r=".45"/><circle cx="142" cy="76" r=".5"/></g>
+  <path opacity=".22" d="M0 44h180M0 122h180M43 0v180m91-180v180"/>
+</svg>

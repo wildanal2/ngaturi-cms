@@ -7,6 +7,8 @@ import { invitationRootStyle } from "@/lib/invitation/renderer";
 import { AddSectionButton } from "./add-section-menu";
 import { DeviceFrame } from "./device-frame";
 import { getDevice } from "./devices";
+import { CinematicComposition } from "@/sections/cinematic/composition";
+import { cinematicContent } from "@/sections/cinematic/content";
 
 export function Canvas({ invitationId }: { invitationId: string }) {
   const sections = useBuilder((s) => s.sections);
@@ -14,11 +16,17 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   const preset = getDevice(useBuilder((s) => s.deviceId));
   const selectedId = useBuilder((s) => s.selectedId);
   const select = useBuilder((s) => s.select);
+  const cinematic = useBuilder((s) => s.compositionPolicy.isCinematic);
   const scrollRef = useRef<HTMLDivElement>(null);
   const clickInCanvas = useRef(false);
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
+  const flow = cinematic
+    ? cinematicContent(ordered, true).remaining.filter(
+        (s) => s.type !== "cover",
+      )
+    : ordered;
   // music + navigation float over the device viewport (pinned, non-scrolling)
   // exactly like the live page. In the section flow they get a slim
   // placeholder block so they stay visible & selectable.
@@ -39,6 +47,11 @@ export function Canvas({ invitationId }: { invitationId: string }) {
       return;
     }
     const root = scrollRef.current;
+    const stage = root?.querySelector('[data-cinematic-stage]');
+    if (stage) {
+      const seek = new CustomEvent('cinematic:seek', { detail: selectedId, cancelable: true });
+      if (!stage.dispatchEvent(seek)) return;
+    }
     const el = root?.querySelector<HTMLElement>(
       `[data-section-id="${selectedId}"]`,
     );
@@ -91,14 +104,19 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   return (
     <div className="min-h-full px-6 py-8">
       <DeviceFrame preset={preset} overlay={floatingOverlay}>
-        <div ref={scrollRef} style={invitationRootStyle(global)}>
+        <div ref={scrollRef} className={cinematic ? "mx-auto max-w-lg" : undefined} style={invitationRootStyle(global)}>
           {ordered.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted">
               Belum ada bagian. Tambahkan dari panel kiri atau tombol di bawah.
             </div>
           ) : null}
 
-          {ordered.map((section) => {
+          {cinematic ? ordered.filter((s) => s.type === "cover" && s.visible !== false).map((section) => {
+            const Component = getVariant(section.type, section.variant)?.component;
+            return Component ? <div key={section.id} data-section-id={section.id} onClickCapture={selectHandler(section.id)}><Component props={section.props} global={global} invitationId={invitationId} isPreview inCanvas siblingTypes={siblingTypes} /></div> : null;
+          }) : null}
+          {cinematic ? <CinematicComposition sections={ordered} global={global} invitationId={invitationId} isPreview inCanvas siblingTypes={siblingTypes} selectedId={selectedId} onSelect={(id) => { clickInCanvas.current = true; select(id); }} compositionActive /> : null}
+          {flow.map((section) => {
             const variant = getVariant(section.type, section.variant);
             const def = SectionRegistry[section.type];
             const selected = selectedId === section.id;

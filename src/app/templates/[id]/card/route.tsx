@@ -2,6 +2,8 @@
 
 import { ImageResponse } from "next/og";
 import { getTemplate } from "@/lib/templates/catalog";
+import { hydrateTemplateSections } from "@/lib/templates/hydrate";
+import { isCinematicComposition } from "@/sections/cinematic/content";
 import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
 
 export const runtime = "nodejs";
@@ -29,8 +31,10 @@ export async function GET(
   if (!t) return new Response("not found", { status: 404 });
 
   const g = t.global_settings;
-  const cover = t.sections.find((s) => s.type === "cover");
-  const hero = t.sections.find((s) => s.type === "hero");
+  // This preset intentionally keeps its content in registered variant defaults.
+  const sections = isCinematicComposition(t.sections) ? hydrateTemplateSections(t) : t.sections;
+  const cover = sections.find((s) => s.type === "cover");
+  const hero = sections.find((s) => s.type === "hero");
   const names = safe(
     (cover?.props?.names as string) ??
       (hero?.props?.couple_names as string) ??
@@ -44,7 +48,7 @@ export async function GET(
     "The Wedding Of",
   );
   const origin = new URL(req.url).origin;
-  const visual = getCardVisual(t.sections);
+  const visual = getCardVisual(sections);
   const background = cardImageUrl(visual.background, origin);
   const foreground = cardImageUrl(visual.foreground, origin);
   const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin);

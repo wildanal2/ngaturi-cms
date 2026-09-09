@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { HeroCinematicVintage } from "./hero-cinematic-vintage";
+export { HeroCinematicVintage };
 import { HeroProps } from "../schema";
 import { dummyHero } from "../dummy";
 import { heroBase, nowPlus, sOverlay, sTextPos } from "../fields";
@@ -36,6 +38,15 @@ export const heroSection: SectionDefinition = {
     if (!base.background_image) base.background_image = dummyHero(variantKey);
   },
   variants: {
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: HeroCinematicVintage,
+      propsSchema: HeroProps,
+      fields: [...heroBase, { kind: "image", key: "background_image", label: "Foto pasangan" }],
+      defaultProps: { ...baseDefaults },
+      isPremium: true,
+    },
     centered: {
       name: "Foto Fullscreen",
       description: "Foto memenuhi layar, teks di atasnya",

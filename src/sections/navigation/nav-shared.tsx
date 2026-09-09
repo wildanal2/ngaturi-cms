@@ -32,7 +32,11 @@ export function useNavItems(siblingTypes: string[] = [], max = 6): NavTarget[] {
 /** Smooth-scroll to a section on the live page (no-op in the builder). */
 export function scrollToSection(type: string, inCanvas?: boolean) {
   if (inCanvas) return;
-  document
-    .querySelector(`[data-section="${type}"]`)
-    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const section = document.querySelector<HTMLElement>(`[data-section="${type}"]`);
+  const stage = section?.closest('[data-cinematic-stage]');
+  if (stage && section?.dataset.sectionId) {
+    const seek = new CustomEvent('cinematic:seek', { detail: section.dataset.sectionId, cancelable: true });
+    if (!stage.dispatchEvent(seek)) return;
+  }
+  section?.scrollIntoView({ behavior: "smooth", block: "start" });
 }

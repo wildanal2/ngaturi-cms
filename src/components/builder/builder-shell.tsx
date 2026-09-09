@@ -11,6 +11,7 @@ import { AddSectionButton } from "./add-section-menu";
 import { Canvas } from "./canvas";
 import { Inspector } from "./inspector";
 import type { GlobalSettings, SectionData } from "@/sections/types";
+import type { CompositionPolicy } from "@/lib/templates/composition-policy";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -22,6 +23,7 @@ export function BuilderShell({
   editExpiresAt,
   initialSections,
   initialGlobal,
+  compositionPolicy,
 }: {
   invitationId: string;
   slug: string;
@@ -31,6 +33,7 @@ export function BuilderShell({
   hasWatermark: boolean;
   initialSections: SectionData[];
   initialGlobal: GlobalSettings;
+  compositionPolicy: CompositionPolicy;
 }) {
   const load = useBuilder((s) => s.load);
   const dirty = useBuilder((s) => s.dirty);
@@ -42,9 +45,22 @@ export function BuilderShell({
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
-    load({ invitationId, sections: initialSections, global: initialGlobal, locked });
+    load({
+      invitationId,
+      sections: initialSections,
+      global: initialGlobal,
+      locked,
+      compositionPolicy,
+    });
     useBuilder.temporal.getState().clear();
-  }, [invitationId, initialSections, initialGlobal, locked, load]);
+  }, [
+    invitationId,
+    initialSections,
+    initialGlobal,
+    locked,
+    compositionPolicy,
+    load,
+  ]);
 
   const save = useCallback(async () => {
     const { sections, global, dirty: isDirty } = useBuilder.getState();

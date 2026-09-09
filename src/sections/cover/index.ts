@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { CoverCinematicVintage } from "./cover-cinematic-vintage";
+export { CoverCinematicVintage };
 import { CoverProps } from "../schema";
 import { dummyHero } from "../dummy";
 import { coverDefaults, coverFields, coverPhotoField, sCoverOverlay } from "../fields";
@@ -32,6 +34,15 @@ export const coverSection: SectionDefinition = {
     }
   },
   variants: {
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: CoverCinematicVintage,
+      propsSchema: CoverProps,
+      fields: coverFields,
+      defaultProps: { ...coverDefaults },
+      isPremium: true,
+    },
     classic: {
       name: "Klasik",
       description: "Warna solid / foto, teks di tengah",

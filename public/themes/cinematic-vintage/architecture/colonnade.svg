@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" fill="none" stroke="currentColor">
+  <path stroke-width="5" d="M35 800V276C35 126 148 22 300 22s265 104 265 254v524"/>
+  <path stroke-width="1.5" d="M58 800V280C58 143 158 45 300 45s242 98 242 235v520M82 800V286C82 162 170 70 300 70s218 92 218 216v514"/>
+  <path stroke-width="3" d="M0 708h600M0 731h600M0 760h600M0 795h600M0 800l82-92m518 92-82-92"/>
+  <path stroke-width="2" d="M82 310H8m74 19H8m510-19h74m-74 19h74M82 658H8m510 0h74"/>
+  <path d="M105 800V365h42v435m306 0V365h42v435M111 390h30m-30 26h30m318-26h30m-30 26h30M106 690h40m308 0h40"/>
+  <path stroke-width="2" d="M300 22v105m-82 0h164m-82 0v68m-68-39q68 58 136 0m-158 5v42m180-42v42m-90-8v54"/>
+  <path d="M148 261c35-72 84-111 152-111s117 39 152 111M163 274c33-62 77-94 137-94s104 32 137 94"/>
+  <g fill="currentColor" stroke="none"><ellipse cx="210" cy="207" rx="6" ry="17"/><ellipse cx="390" cy="207" rx="6" ry="17"/><ellipse cx="300" cy="255" rx="7" ry="21"/><circle cx="82" cy="286" r="5"/><circle cx="518" cy="286" r="5"/></g>
+</svg>

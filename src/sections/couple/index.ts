@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { CoupleCinematicVintage } from "./couple-cinematic-vintage";
+export { CoupleCinematicVintage };
 import { CoupleIntroProps } from "../schema";
 import { dummyBride, dummyGroom } from "../dummy";
 import { coupleFields, sPhotoShape } from "../fields";
@@ -31,6 +33,15 @@ export const coupleSection: SectionDefinition = {
     if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
   },
   variants: {
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: CoupleCinematicVintage,
+      propsSchema: CoupleIntroProps,
+      fields: [{ kind: "text", key: "title", label: "Judul" }, ...coupleFields],
+      defaultProps: { title: "Mempelai", bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi", parents: "Bapak Arif & Ibu Ratna" }, groom: { name: "Raka", full_name: "Raka Wibowo", parents: "Bapak Budi & Ibu Dewi" } },
+      isPremium: true,
+    },
     "duo-portrait": {
       name: "Dua Portrait Arch",
       description: "Dua foto arch berdampingan dengan watercolor dan bunga sudut khas kana1",
