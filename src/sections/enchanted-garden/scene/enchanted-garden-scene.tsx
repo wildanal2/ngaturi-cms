@@ -5,6 +5,7 @@ import { Canvas, type RootState } from "@react-three/fiber";
 import * as THREE from "three";
 import { ENCHANTED_GARDEN_MANIFEST } from "../manifest";
 import type { ProgressRef } from "../progress";
+import { getEnchantedGardenDpr } from "../quality";
 import type { SceneQuality } from "../types";
 import styles from "../enchanted-garden.module.css";
 import { CameraRig } from "./camera-rig";
@@ -12,12 +13,6 @@ import { Environment } from "./environment";
 import { Lights } from "./lights";
 import { Particles } from "./particles";
 import { SceneController } from "./scene-controller";
-
-const DPR_BY_QUALITY: Record<SceneQuality, number | [number, number]> = {
-  high: [1, 1.75],
-  medium: [1, 1.35],
-  low: 1,
-};
 
 function configureRenderer({ gl }: RootState) {
   gl.outputColorSpace = THREE.SRGBColorSpace;
@@ -44,7 +39,7 @@ export const EnchantedGardenScene = memo(function EnchantedGardenScene({
     >
       <Canvas
         camera={{ position: [0, 3.2, 28], fov: 48, near: 0.1, far: 120 }}
-        dpr={DPR_BY_QUALITY[quality]}
+        dpr={getEnchantedGardenDpr(quality)}
         gl={{
           alpha: false,
           antialias: quality !== "low",
@@ -61,8 +56,14 @@ export const EnchantedGardenScene = memo(function EnchantedGardenScene({
         <color attach="background" args={["#120d0a"]} />
         <fog attach="fog" args={[fog.color, fog.near, fog.far]} />
         <Suspense fallback={null}>
-          <Lights prefersReducedMotion={prefersReducedMotion} />
-          <Environment prefersReducedMotion={prefersReducedMotion} />
+          <Lights
+            quality={quality}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+          <Environment
+            quality={quality}
+            prefersReducedMotion={prefersReducedMotion}
+          />
           <SceneController />
           <Particles
             quality={quality}

@@ -3,6 +3,16 @@
 import { useEffect, useState, type RefObject } from "react";
 import type { SceneQuality } from "./types";
 
+const DPR_BY_QUALITY: Record<SceneQuality, number | [number, number]> = {
+  high: [1, 1.5],
+  medium: [1, 1.25],
+  low: 1,
+};
+
+export function getEnchantedGardenDpr(quality: SceneQuality) {
+  return DPR_BY_QUALITY[quality];
+}
+
 export function getEnchantedGardenQuality(
   width: number,
   height: number,
@@ -19,9 +29,7 @@ export function useEnchantedGardenQuality(
   viewportRef: RefObject<HTMLElement | null>,
   inCanvas: boolean,
 ) {
-  const [quality, setQuality] = useState<SceneQuality>(
-    inCanvas ? "low" : "medium",
-  );
+  const [quality, setQuality] = useState<SceneQuality>("low");
 
   useEffect(() => {
     const viewport = viewportRef.current;

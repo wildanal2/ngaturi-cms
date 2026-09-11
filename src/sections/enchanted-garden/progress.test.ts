@@ -7,6 +7,7 @@ import {
   seekJourneyProgress,
   seekJourneyTarget,
 } from "./progress";
+import { getJourneyTargetProgress } from "./journey";
 
 function elementOwner(overrides: Partial<HTMLElement> = {}) {
   return {
@@ -128,7 +129,7 @@ describe("Enchanted Garden scroll ownership", () => {
     seekJourneyTarget(browserWindow, "gallery", browserWindow, documentOwner());
     const { top, behavior } = vi.mocked(browserWindow.scrollTo).mock
       .calls[0][0] as unknown as ScrollToOptions;
-    expect(top).toBeCloseTo(850);
+    expect(top).toBeCloseTo(getJourneyTargetProgress("gallery")! * 1000);
     expect(behavior).toBe("auto");
   });
 
@@ -140,7 +141,7 @@ describe("Enchanted Garden scroll ownership", () => {
     ).toBe(true);
     const { top, behavior } = vi.mocked(scroller.scrollTo).mock
       .calls[0][0] as unknown as ScrollToOptions;
-    expect(top).toBeCloseTo(510);
+    expect(top).toBeCloseTo(getJourneyTargetProgress("gallery")! * 600);
     expect(behavior).toBe("auto");
     expect(browserWindow.scrollTo).not.toHaveBeenCalled();
   });

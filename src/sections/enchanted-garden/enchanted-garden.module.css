@@ -4,7 +4,7 @@
 
 .stage {
   position: relative;
-  min-height: 1000svh;
+  min-height: 1500svh;
   isolation: isolate;
   background: #120d0a;
 }
@@ -36,13 +36,13 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 50% 45%, transparent 35%, rgb(7 5 4 / 38%) 100%),
+    radial-gradient(circle at 50% 44%, transparent 42%, rgb(7 5 4 / 32%) 100%),
     linear-gradient(
       180deg,
-      rgb(4 3 2 / 22%),
+      rgb(4 3 2 / 14%),
       transparent 24%,
       transparent 76%,
-      rgb(4 3 2 / 38%)
+      rgb(4 3 2 / 30%)
     );
 }
 
@@ -62,23 +62,42 @@
   height: var(--journey-span);
   align-items: center;
   justify-content: center;
-  padding: 8svh 1rem;
+  padding: 7svh 1rem 10svh;
 }
 
 .contentCard {
-  width: min(100%, 30rem);
-  max-height: 82svh;
+  width: min(calc(100% - 1rem), 29rem);
+  max-height: 78svh;
   overflow-y: auto;
   border: 1px solid color-mix(in srgb, var(--inv-secondary) 38%, transparent);
   border-radius: 1.75rem;
-  background: color-mix(in srgb, var(--inv-bg) 88%, transparent);
-  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 35%);
+  background: color-mix(in srgb, var(--inv-bg) 82%, transparent);
+  box-shadow:
+    0 1.5rem 4rem rgb(0 0 0 / 30%),
+    inset 0 1px rgb(255 248 229 / 35%);
   pointer-events: auto;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(10px);
 }
 
 .contentCard > section {
   min-height: 0;
+}
+
+.contentCard[data-section="quote"],
+.contentCard[data-section="countdown"],
+.contentCard[data-section="closing"] {
+  width: min(calc(100% - 2rem), 27rem);
+}
+
+.contentCard[data-section="rsvp"] > section,
+.contentCard[data-section="guestbook"] > section,
+.contentCard[data-section="gift"] > section {
+  padding-block: clamp(1.75rem, 5svh, 2.75rem);
+}
+
+.contentCard[data-section="rsvp"] form,
+.contentCard[data-section="guestbook"] form {
+  padding: 1rem;
 }
 
 .coverContent {
@@ -150,7 +169,10 @@
 }
 
 .stage[data-in-canvas="true"] {
-  min-height: var(--device-frame-journey-height, 6000px);
+  min-height: max(
+    var(--device-frame-journey-height, 6000px),
+    calc(var(--device-frame-viewport-height, 600px) * 15)
+  );
 }
 
 .stage[data-in-canvas="true"] .viewport {
@@ -178,5 +200,27 @@
       transparent 40%,
       rgb(7 5 4 / 32%) 100%
     );
+  }
+}
+
+@media (max-width: 480px) {
+  .contentStop {
+    padding-inline: 0.5rem;
+    padding-bottom: 12svh;
+  }
+
+  .contentCard {
+    width: min(calc(100% - 0.75rem), 27rem);
+    max-height: 76svh;
+    border-radius: 1.4rem;
+    background: color-mix(in srgb, var(--inv-bg) 88%, transparent);
+    backdrop-filter: blur(5px);
+  }
+
+  .contentCard[data-section="hero"],
+  .contentCard[data-section="quote"],
+  .contentCard[data-section="countdown"],
+  .contentCard[data-section="closing"] {
+    width: min(calc(100% - 1.5rem), 25rem);
   }
 }

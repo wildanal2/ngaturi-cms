@@ -7,7 +7,7 @@ import type { JourneyStop, Vector3Tuple } from "./types";
 export const ENCHANTED_GARDEN_JOURNEY = [
   {
     id: "cover",
-    range: [0, 0.08],
+    range: [0, 0.07],
     camera: { position: [0, 3.2, 28], target: [0, 2.5, 12], fov: 48 },
     section: "cover",
     atmosphere: {
@@ -19,7 +19,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "entrance-approach",
-    range: [0.08, 0.18],
+    range: [0.07, 0.13],
     camera: { position: [0, 2.7, 21], target: [0, 2.2, 8], fov: 46 },
     atmosphere: {
       fogColor: "#120d0a",
@@ -30,7 +30,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "hero",
-    range: [0.18, 0.3],
+    range: [0.13, 0.21],
     camera: { position: [0, 2.3, 14.5], target: [0, 2, 2], fov: 45 },
     section: "hero",
     atmosphere: {
@@ -42,7 +42,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "quote",
-    range: [0.3, 0.4],
+    range: [0.21, 0.28],
     camera: { position: [-1.6, 2.3, 9.5], target: [0.3, 2, -1], fov: 44 },
     section: "quote",
     atmosphere: {
@@ -54,7 +54,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "couple-intro",
-    range: [0.4, 0.5],
+    range: [0.28, 0.36],
     camera: { position: [1.5, 2.2, 5], target: [-0.3, 2, -4], fov: 42 },
     section: "couple-intro",
     atmosphere: {
@@ -66,7 +66,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "story",
-    range: [0.5, 0.59],
+    range: [0.36, 0.45],
     camera: { position: [0, 3.2, 1.5], target: [0, 3.6, -6], fov: 48 },
     section: "story",
     atmosphere: {
@@ -78,7 +78,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "event-details",
-    range: [0.59, 0.68],
+    range: [0.45, 0.54],
     camera: { position: [-1.2, 2, -2], target: [0, 1.9, -10], fov: 42 },
     section: "event-details",
     atmosphere: {
@@ -90,7 +90,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "map-location",
-    range: [0.68, 0.74],
+    range: [0.54, 0.62],
     camera: { position: [0.4, 2.05, -4], target: [-0.1, 1.9, -12], fov: 43 },
     section: "map-location",
     atmosphere: {
@@ -102,7 +102,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "countdown",
-    range: [0.74, 0.81],
+    range: [0.62, 0.69],
     camera: { position: [1.3, 2.1, -6], target: [-0.2, 1.9, -14], fov: 43 },
     section: "countdown",
     atmosphere: {
@@ -114,7 +114,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "gallery",
-    range: [0.81, 0.89],
+    range: [0.69, 0.77],
     camera: { position: [0, 2.1, -10], target: [0, 2, -18], fov: 44 },
     section: "gallery",
     atmosphere: {
@@ -126,7 +126,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "rsvp",
-    range: [0.89, 0.93],
+    range: [0.77, 0.84],
     camera: { position: [-1, 1.9, -13.5], target: [0.2, 1.8, -21], fov: 42 },
     section: "rsvp",
     atmosphere: {
@@ -138,7 +138,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "guestbook",
-    range: [0.93, 0.95],
+    range: [0.84, 0.886],
     camera: { position: [0, 1.9, -14.3], target: [0, 1.8, -21.5], fov: 42 },
     section: "guestbook",
     atmosphere: {
@@ -150,7 +150,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "gift",
-    range: [0.95, 0.97],
+    range: [0.886, 0.95],
     camera: { position: [1, 1.9, -15], target: [-0.2, 1.8, -22], fov: 42 },
     section: "gift",
     atmosphere: {
@@ -162,7 +162,7 @@ export const ENCHANTED_GARDEN_JOURNEY = [
   },
   {
     id: "closing",
-    range: [0.97, 1],
+    range: [0.95, 1],
     camera: { position: [0, 1.85, -17], target: [0, 1.9, -23.5], fov: 40 },
     section: "closing",
     atmosphere: {

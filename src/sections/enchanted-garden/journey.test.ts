@@ -40,7 +40,7 @@ describe("Enchanted Garden journey", () => {
     const output = createJourneyCameraTransform();
     const position = output.position;
     const target = output.target;
-    const result = writeJourneyCameraTransform(0.13, output);
+    const result = writeJourneyCameraTransform(0.1, output);
 
     expect(result).toBe(output);
     expect(result.position).toBe(position);
