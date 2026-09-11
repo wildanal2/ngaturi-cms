@@ -16,6 +16,7 @@ export function DeviceFrame({
 }) {
   const screen = (
     <div
+      data-device-frame-viewport
       className="relative bg-white"
       style={
         {

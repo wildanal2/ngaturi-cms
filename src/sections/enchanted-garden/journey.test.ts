@@ -3,6 +3,7 @@ import {
   clampJourneyProgress,
   createJourneyCameraTransform,
   ENCHANTED_GARDEN_JOURNEY,
+  getJourneyTargetProgress,
   writeJourneyCameraTransform,
 } from "./journey";
 
@@ -58,5 +59,15 @@ describe("Enchanted Garden journey", () => {
     expect(output.position).toEqual(last.camera.position);
     expect(output.target).toEqual(last.camera.target);
     expect(output.fov).toBe(last.camera.fov);
+  });
+
+  it("derives navigation targets from the authoritative journey stops", () => {
+    const gallery = ENCHANTED_GARDEN_JOURNEY.find(
+      (stop) => "section" in stop && stop.section === "gallery",
+    )!;
+    expect(getJourneyTargetProgress("gallery")).toBe(
+      (gallery.range[0] + gallery.range[1]) / 2,
+    );
+    expect(getJourneyTargetProgress("not-a-section")).toBeUndefined();
   });
 });

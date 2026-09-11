@@ -17,10 +17,9 @@ export const NAV_TARGETS: NavTarget[] = [
 ];
 
 export function NavIcon({ name, size = 16 }: { name: string; size?: number }) {
-  const C = (Icons as unknown as Record<
-    string,
-    React.ComponentType<{ size?: number }>
-  >)[name];
+  const C = (
+    Icons as unknown as Record<string, React.ComponentType<{ size?: number }>>
+  )[name];
   return C ? <C size={size} /> : null;
 }
 
@@ -29,14 +28,64 @@ export function useNavItems(siblingTypes: string[] = [], max = 6): NavTarget[] {
   return NAV_TARGETS.filter((t) => siblingTypes.includes(t.type)).slice(0, max);
 }
 
-/** Smooth-scroll to a section on the live page (no-op in the builder). */
-export function scrollToSection(type: string, inCanvas?: boolean) {
-  if (inCanvas) return;
-  const section = document.querySelector<HTMLElement>(`[data-section="${type}"]`);
-  const stage = section?.closest('[data-cinematic-stage]');
-  if (stage && section?.dataset.sectionId) {
-    const seek = new CustomEvent('cinematic:seek', { detail: section.dataset.sectionId, cancelable: true });
-    if (!stage.dispatchEvent(seek)) return;
+export function dispatchCompositionSeek(section: HTMLElement, type: string) {
+  const cinematicStage = section.closest("[data-cinematic-stage]");
+  if (cinematicStage && section.dataset.sectionId) {
+    const seek = new CustomEvent("cinematic:seek", {
+      detail: section.dataset.sectionId,
+      cancelable: true,
+    });
+    if (!cinematicStage.dispatchEvent(seek)) return true;
   }
-  section?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  const enchantedStage = section.closest("[data-enchanted-garden-stage]");
+  if (enchantedStage) {
+    const navigate = new CustomEvent("enchanted-garden:navigate", {
+      detail: type,
+      cancelable: true,
+    });
+    if (!enchantedStage.dispatchEvent(navigate)) return true;
+  }
+  return false;
+}
+
+/** Uses each composition's existing scroll runtime publicly. In Builder only
+ * Enchanted Garden opts into local navigation; the other preview paths retain
+ * their existing behavior. */
+export function scrollToSection(
+  type: string,
+  inCanvas?: boolean,
+  source?: HTMLElement,
+) {
+  if (inCanvas) {
+    const viewport = source?.closest<HTMLElement>(
+      "[data-device-frame-viewport]",
+    );
+    const scroller = viewport?.querySelector<HTMLElement>(
+      "[data-device-scroller]",
+    );
+    const section = scroller?.querySelector<HTMLElement>(
+      `[data-section="${type}"]`,
+    );
+    if (!scroller || !section) return;
+    if (
+      section.closest("[data-enchanted-garden-stage]") &&
+      dispatchCompositionSeek(section, type)
+    )
+      return;
+    if (!section.closest("[data-enchanted-garden-simple]")) return;
+
+    const top =
+      section.getBoundingClientRect().top -
+      scroller.getBoundingClientRect().top +
+      scroller.scrollTop;
+    scroller.scrollTo({ top, behavior: "smooth" });
+    return;
+  }
+
+  const section = document.querySelector<HTMLElement>(
+    `[data-section="${type}"]`,
+  );
+  if (!section || dispatchCompositionSeek(section, type)) return;
+  section.scrollIntoView({ behavior: "smooth", block: "start" });
 }

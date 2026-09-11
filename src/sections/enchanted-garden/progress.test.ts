@@ -5,6 +5,7 @@ import {
   measureJourneyProgress,
   resolveJourneyScrollOwner,
   seekJourneyProgress,
+  seekJourneyTarget,
 } from "./progress";
 
 function elementOwner(overrides: Partial<HTMLElement> = {}) {
@@ -120,6 +121,28 @@ describe("Enchanted Garden scroll ownership", () => {
     expect(gateJourneyProgressUntilOpen(0.97, true, false)).toBe(0);
     expect(gateJourneyProgressUntilOpen(0.97, true, true)).toBe(0.97);
     expect(gateJourneyProgressUntilOpen(0.65, false, false)).toBe(0.65);
+  });
+
+  it("seeks an authoritative navigation target on the public owner", () => {
+    const browserWindow = windowOwner();
+    seekJourneyTarget(browserWindow, "gallery", browserWindow, documentOwner());
+    const { top, behavior } = vi.mocked(browserWindow.scrollTo).mock
+      .calls[0][0] as unknown as ScrollToOptions;
+    expect(top).toBeCloseTo(850);
+    expect(behavior).toBe("auto");
+  });
+
+  it("seeks the same navigation target on DeviceFrame without using window", () => {
+    const browserWindow = windowOwner();
+    const scroller = elementOwner();
+    expect(
+      seekJourneyTarget(scroller, "gallery", browserWindow, documentOwner()),
+    ).toBe(true);
+    const { top, behavior } = vi.mocked(scroller.scrollTo).mock
+      .calls[0][0] as unknown as ScrollToOptions;
+    expect(top).toBeCloseTo(510);
+    expect(behavior).toBe("auto");
+    expect(browserWindow.scrollTo).not.toHaveBeenCalled();
   });
 
   it("coalesces updates and cleans up scroll, resize, observer, and RAF", () => {

@@ -193,6 +193,13 @@ export function clampJourneyProgress(progress: number) {
   return Math.max(0, Math.min(1, Number.isFinite(progress) ? progress : 0));
 }
 
+export function getJourneyTargetProgress(sectionType: string) {
+  const stop = ENCHANTED_GARDEN_JOURNEY.find(
+    (candidate) => "section" in candidate && candidate.section === sectionType,
+  );
+  return stop ? (stop.range[0] + stop.range[1]) / 2 : undefined;
+}
+
 function smoothstep(value: number) {
   const t = clampJourneyProgress(value);
   return t * t * (3 - 2 * t);
@@ -228,7 +235,8 @@ export function writeJourneyCameraTransform(
   const from = ENCHANTED_GARDEN_JOURNEY[fromIndex];
   const to = ENCHANTED_GARDEN_JOURNEY[Math.min(fromIndex + 1, lastIndex)];
   const span = to.range[0] - from.range[0];
-  const alpha = from === to || span <= 0 ? 0 : smoothstep((p - from.range[0]) / span);
+  const alpha =
+    from === to || span <= 0 ? 0 : smoothstep((p - from.range[0]) / span);
 
   writeVector(output.position, from.camera.position, to.camera.position, alpha);
   writeVector(output.target, from.camera.target, to.camera.target, alpha);

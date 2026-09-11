@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, type RefObject } from "react";
-import { clampJourneyProgress } from "./journey";
+import { clampJourneyProgress, getJourneyTargetProgress } from "./journey";
 
 export interface ProgressRef {
   current: number;
@@ -101,6 +101,18 @@ export function seekJourneyProgress(
   owner.scrollTo({ top, behavior: "auto" });
 }
 
+export function seekJourneyTarget(
+  owner: JourneyScrollOwner,
+  sectionType: string,
+  browserWindow: JourneyWindow = window,
+  browserDocument: JourneyDocument = document,
+) {
+  const progress = getJourneyTargetProgress(sectionType);
+  if (progress === undefined) return false;
+  seekJourneyProgress(owner, progress, browserWindow, browserDocument);
+  return true;
+}
+
 export function bindJourneyProgress(
   owner: JourneyScrollOwner,
   observedStage: HTMLElement,
@@ -181,9 +193,9 @@ export function useJourneyProgress(
     };
   }, [inCanvas, stageRef, waitForOpen]);
 
-  const seekToProgress = useCallback((progress: number) => {
+  const seekToTarget = useCallback((sectionType: string) => {
     const owner = ownerRef.current;
-    if (owner) seekJourneyProgress(owner, progress);
+    return owner ? seekJourneyTarget(owner, sectionType) : false;
   }, []);
 
   const openAtEntrance = useCallback(() => {
@@ -193,5 +205,5 @@ export function useJourneyProgress(
     if (owner) seekJourneyProgress(owner, 0);
   }, []);
 
-  return { progressRef, seekToProgress, openAtEntrance };
+  return { progressRef, seekToTarget, openAtEntrance };
 }

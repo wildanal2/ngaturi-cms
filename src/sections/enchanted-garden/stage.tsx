@@ -19,7 +19,7 @@ export function EnchantedGardenStage({
 }) {
   const stageRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const { progressRef, seekToProgress, openAtEntrance } = useJourneyProgress(
+  const { progressRef, seekToTarget, openAtEntrance } = useJourneyProgress(
     stageRef,
     inCanvas,
     waitForOpen,
@@ -36,19 +36,24 @@ export function EnchantedGardenStage({
       const section = [
         ...stage.querySelectorAll<HTMLElement>("[data-section-id]"),
       ].find((node) => node.dataset.sectionId === id);
-      const stop = section?.closest<HTMLElement>("[data-journey-progress]");
-      if (!stop) return;
+      const sectionType = section?.dataset.section;
+      if (!sectionType || !seekToTarget(sectionType)) return;
       event.preventDefault();
-      seekToProgress(Number(stop.dataset.journeyProgress));
+    };
+    const onNavigate = (event: Event) => {
+      const sectionType = (event as CustomEvent<string>).detail;
+      if (seekToTarget(sectionType)) event.preventDefault();
     };
 
     window.addEventListener("ngaturi:open", onOpen);
     stage.addEventListener("enchanted-garden:seek", onSeek);
+    stage.addEventListener("enchanted-garden:navigate", onNavigate);
     return () => {
       window.removeEventListener("ngaturi:open", onOpen);
       stage.removeEventListener("enchanted-garden:seek", onSeek);
+      stage.removeEventListener("enchanted-garden:navigate", onNavigate);
     };
-  }, [openAtEntrance, seekToProgress]);
+  }, [openAtEntrance, seekToTarget]);
 
   return (
     <section

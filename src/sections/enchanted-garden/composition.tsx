@@ -1,7 +1,7 @@
 import type { CSSProperties, MouseEvent } from "react";
 import { getVariant } from "../registry";
 import type { GlobalSettings, SectionData } from "../types";
-import { enchantedGardenContent } from "./content";
+import { enchantedGardenContent, enchantedGardenSectionProps } from "./content";
 import styles from "./enchanted-garden.module.css";
 import { ENCHANTED_GARDEN_JOURNEY } from "./journey";
 import { EnchantedGardenStage } from "./stage";
@@ -27,7 +27,7 @@ export function EnchantedGardenComposition({
   selectedId?: string | null;
   onSelect?: (id: string) => void;
 }) {
-  const { journey, eventDate } = enchantedGardenContent(sections);
+  const { journey, events, eventDate } = enchantedGardenContent(sections);
   const simple = global.presentationMode === "simple";
   const renderStop = (
     section: SectionData,
@@ -37,12 +37,11 @@ export function EnchantedGardenComposition({
     const variant = getVariant(section.type, section.variant);
     if (!variant) return null;
     const Component = variant.component;
-    const derivedProps =
-      eventDate && section.type === "hero"
-        ? { ...section.props, event_date: eventDate }
-        : eventDate && section.type === "countdown"
-          ? { ...section.props, target_date: eventDate }
-          : section.props;
+    const derivedProps = enchantedGardenSectionProps(
+      section,
+      events,
+      eventDate,
+    );
     const rangeStyle = immersive
       ? ({
           "--journey-start": `${stop.range[0] * 100}%`,
