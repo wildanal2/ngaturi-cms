@@ -16,13 +16,14 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   const preset = getDevice(useBuilder((s) => s.deviceId));
   const selectedId = useBuilder((s) => s.selectedId);
   const select = useBuilder((s) => s.select);
-  const cinematic = useBuilder((s) => s.compositionPolicy.isCinematic);
+  const composition = useBuilder((s) => s.compositionPolicy.composition);
+  const cinematicVintage = composition === "cinematic-vintage";
   const scrollRef = useRef<HTMLDivElement>(null);
   const clickInCanvas = useRef(false);
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
-  const flow = cinematic
+  const flow = cinematicVintage
     ? cinematicContent(ordered, true).remaining.filter(
         (s) => s.type !== "cover",
       )
@@ -104,18 +105,18 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   return (
     <div className="min-h-full px-6 py-8">
       <DeviceFrame preset={preset} overlay={floatingOverlay}>
-        <div ref={scrollRef} className={cinematic ? "mx-auto max-w-lg" : undefined} style={invitationRootStyle(global)}>
+        <div ref={scrollRef} className={cinematicVintage ? "mx-auto max-w-lg" : undefined} style={invitationRootStyle(global)}>
           {ordered.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted">
               Belum ada bagian. Tambahkan dari panel kiri atau tombol di bawah.
             </div>
           ) : null}
 
-          {cinematic ? ordered.filter((s) => s.type === "cover" && s.visible !== false).map((section) => {
+          {cinematicVintage ? ordered.filter((s) => s.type === "cover" && s.visible !== false).map((section) => {
             const Component = getVariant(section.type, section.variant)?.component;
             return Component ? <div key={section.id} data-section-id={section.id} onClickCapture={selectHandler(section.id)}><Component props={section.props} global={global} invitationId={invitationId} isPreview inCanvas siblingTypes={siblingTypes} /></div> : null;
           }) : null}
-          {cinematic ? <CinematicComposition sections={ordered} global={global} invitationId={invitationId} isPreview inCanvas siblingTypes={siblingTypes} selectedId={selectedId} onSelect={(id) => { clickInCanvas.current = true; select(id); }} compositionActive /> : null}
+          {cinematicVintage ? <CinematicComposition sections={ordered} global={global} invitationId={invitationId} isPreview inCanvas siblingTypes={siblingTypes} selectedId={selectedId} onSelect={(id) => { clickInCanvas.current = true; select(id); }} compositionActive /> : null}
           {flow.map((section) => {
             const variant = getVariant(section.type, section.variant);
             const def = SectionRegistry[section.type];

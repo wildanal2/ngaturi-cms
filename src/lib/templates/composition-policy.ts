@@ -1,13 +1,8 @@
-import type { SectionData } from "@/sections/types";
-import {
-  isCinematicComposition,
-  isCinematicCoreSectionType,
-} from "@/sections/cinematic/content";
+import { isCinematicCoreSectionType } from "@/sections/cinematic/content";
 import type { TemplateComposition } from "./catalog";
 
 export interface CompositionPolicy {
   composition: TemplateComposition;
-  isCinematic: boolean;
   canEditMotion: boolean;
   canEditCoreVariant: boolean;
   canReorderCoreSection: boolean;
@@ -15,33 +10,38 @@ export interface CompositionPolicy {
 
 export const STANDARD_COMPOSITION_POLICY: CompositionPolicy = {
   composition: "standard",
-  isCinematic: false,
   canEditMotion: true,
   canEditCoreVariant: true,
   canReorderCoreSection: true,
 };
 
-const CINEMATIC_COMPOSITION_POLICY: CompositionPolicy = {
-  composition: "cinematic",
-  isCinematic: true,
+const CINEMATIC_VINTAGE_COMPOSITION_POLICY: CompositionPolicy = {
+  composition: "cinematic-vintage",
   canEditMotion: false,
   canEditCoreVariant: false,
   canReorderCoreSection: false,
 };
 
+const ENCHANTED_GARDEN_COMPOSITION_POLICY: CompositionPolicy = {
+  composition: "enchanted-garden",
+  canEditMotion: true,
+  canEditCoreVariant: true,
+  canReorderCoreSection: true,
+};
+
 export function getCompositionPolicy({
-  templateComposition,
-  sections,
+  composition,
 }: {
-  templateComposition?: TemplateComposition;
-  sections: readonly Pick<SectionData, "type" | "variant" | "visible">[];
+  composition: TemplateComposition;
 }): CompositionPolicy {
-  const composition =
-    templateComposition ??
-    (isCinematicComposition(sections) ? "cinematic" : "standard");
-  return composition === "cinematic"
-    ? CINEMATIC_COMPOSITION_POLICY
-    : STANDARD_COMPOSITION_POLICY;
+  switch (composition) {
+    case "standard":
+      return STANDARD_COMPOSITION_POLICY;
+    case "cinematic-vintage":
+      return CINEMATIC_VINTAGE_COMPOSITION_POLICY;
+    case "enchanted-garden":
+      return ENCHANTED_GARDEN_COMPOSITION_POLICY;
+  }
 }
 
 export function canEditSectionVariant(
@@ -49,7 +49,9 @@ export function canEditSectionVariant(
   sectionType: string,
 ) {
   return (
-    policy.canEditCoreVariant || !isCinematicCoreSectionType(sectionType)
+    policy.composition !== "cinematic-vintage" ||
+    policy.canEditCoreVariant ||
+    !isCinematicCoreSectionType(sectionType)
   );
 }
 
@@ -58,6 +60,8 @@ export function canReorderSection(
   sectionType: string,
 ) {
   return (
-    policy.canReorderCoreSection || !isCinematicCoreSectionType(sectionType)
+    policy.composition !== "cinematic-vintage" ||
+    policy.canReorderCoreSection ||
+    !isCinematicCoreSectionType(sectionType)
   );
 }

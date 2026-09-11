@@ -1,9 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { ImageResponse } from "next/og";
-import { getTemplate } from "@/lib/templates/catalog";
+import {
+  getTemplate,
+  resolveTemplateComposition,
+} from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
-import { isCinematicComposition } from "@/sections/cinematic/content";
 import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
 
 export const runtime = "nodejs";
@@ -32,7 +34,10 @@ export async function GET(
 
   const g = t.global_settings;
   // This preset intentionally keeps its content in registered variant defaults.
-  const sections = isCinematicComposition(t.sections) ? hydrateTemplateSections(t) : t.sections;
+  const sections =
+    resolveTemplateComposition(t.id) === "cinematic-vintage"
+      ? hydrateTemplateSections(t)
+      : t.sections;
   const cover = sections.find((s) => s.type === "cover");
   const hero = sections.find((s) => s.type === "hero");
   const names = safe(

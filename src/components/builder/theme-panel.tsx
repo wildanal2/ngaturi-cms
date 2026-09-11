@@ -25,7 +25,9 @@ export function ThemePanel({
   const setGlobal = useBuilder((s) => s.setGlobal);
   const locked = useBuilder((s) => s.locked);
   const canEditMotion = useBuilder((s) => s.compositionPolicy.canEditMotion);
-  const isCinematic = useBuilder((s) => s.compositionPolicy.isCinematic);
+  const cinematicVintage = useBuilder(
+    (s) => s.compositionPolicy.composition === "cinematic-vintage",
+  );
 
   return (
     <div className="space-y-5">
@@ -124,7 +126,7 @@ export function ThemePanel({
         </select>
       </label>
 
-      {isCinematic ? (
+      {cinematicVintage ? (
         <div className="text-sm">
           <span className="mb-1.5 block text-ink-soft">Mode Tampilan</span>
           <div className="grid grid-cols-2 gap-2">

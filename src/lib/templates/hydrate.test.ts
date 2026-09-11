@@ -188,8 +188,7 @@ describe("mergeInvitationIntoTemplate", () => {
     );
     expect(
       getCompositionPolicy({
-        templateComposition: target.composition ?? "standard",
-        sections: merged,
+        composition: target.composition ?? "standard",
       }).composition,
     ).toBe("standard");
   });
@@ -224,8 +223,7 @@ describe("mergeInvitationIntoTemplate", () => {
 
     const merged = mergeInvitationIntoTemplate(existing, source, target);
     const policy = getCompositionPolicy({
-      templateComposition: target.composition,
-      sections: merged,
+      composition: target.composition ?? "standard",
     });
 
     expect(byType(merged, "couple-intro").id).toBe(couple.id);
@@ -250,8 +248,7 @@ describe("mergeInvitationIntoTemplate", () => {
       expect(byType(merged, type).variant).toBe("cinematic-vintage");
     }
     expect(policy).toMatchObject({
-      composition: "cinematic",
-      isCinematic: true,
+      composition: "cinematic-vintage",
       canEditMotion: false,
       canEditCoreVariant: false,
       canReorderCoreSection: false,
@@ -282,8 +279,7 @@ describe("mergeInvitationIntoTemplate", () => {
 
     const merged = mergeInvitationIntoTemplate(existing, source, target);
     const policy = getCompositionPolicy({
-      templateComposition: target.composition ?? "standard",
-      sections: merged,
+      composition: target.composition ?? "standard",
     });
 
     expect(byType(merged, "hero").id).toBe(hero.id);
@@ -298,7 +294,6 @@ describe("mergeInvitationIntoTemplate", () => {
     ).toBe(true);
     expect(policy).toMatchObject({
       composition: "standard",
-      isCinematic: false,
       canEditMotion: true,
       canEditCoreVariant: true,
       canReorderCoreSection: true,

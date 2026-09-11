@@ -1,0 +1,51 @@
+.stage {
+  position: relative;
+  min-height: 1000svh;
+  isolation: isolate;
+  background: #120d0a;
+}
+
+.viewport {
+  position: sticky;
+  top: 0;
+  width: 100vw;
+  height: 100svh;
+  margin-left: calc(50% - 50vw);
+  overflow: hidden;
+  background: #120d0a;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 45%, transparent 35%, rgb(7 5 4 / 38%) 100%),
+    linear-gradient(180deg, rgb(4 3 2 / 22%), transparent 24%, transparent 76%, rgb(4 3 2 / 38%));
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 40%, rgb(83 55 31 / 45%), transparent 38%),
+    linear-gradient(180deg, #17100c, #090705);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vignette {
+    background: radial-gradient(circle at 50% 45%, transparent 40%, rgb(7 5 4 / 32%) 100%);
+  }
+}

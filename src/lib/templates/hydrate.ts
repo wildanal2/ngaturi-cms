@@ -238,7 +238,7 @@ export function mergeInvitationIntoTemplate(
     const typeIndex = existingTypeIndexes.get(section) ?? 0;
     const sourceDefaults = sourceByType.get(section.type)?.[typeIndex]?.props;
     const standardVariant =
-      targetTemplate.composition !== "cinematic" &&
+      targetTemplate.composition !== "cinematic-vintage" &&
       section.variant === CINEMATIC_VARIANT
         ? Object.keys(SectionRegistry[section.type]?.variants ?? {}).find(
             (variant) => variant !== CINEMATIC_VARIANT,

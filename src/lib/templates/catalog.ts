@@ -1,6 +1,9 @@
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
-export type TemplateComposition = "standard" | "cinematic";
+export type TemplateComposition =
+  | "standard"
+  | "cinematic-vintage"
+  | "enchanted-garden";
 
 export interface TemplatePreset {
   id: string;
@@ -56,7 +59,7 @@ export const TEMPLATES: TemplatePreset[] = [
     description: "Perjalanan sinematik melewati bingkai kenangan, janji akad, dan perayaan. Burgundy, emas lembut, serta kedalaman yang mengikuti setiap guliran Anda.",
     category: "wedding",
     tier: "premium",
-    composition: "cinematic",
+    composition: "cinematic-vintage",
     thumbnail: "/templates/cinematic-vintage/card",
     global_settings: {
       font_family: "Cormorant",
@@ -695,4 +698,13 @@ export const TEMPLATES: TemplatePreset[] = [
 
 export function getTemplate(id: string): TemplatePreset | undefined {
   return TEMPLATES.find((t) => t.id === id);
+}
+
+/** Resolve persisted template identity through the official catalog only. */
+export function resolveTemplateComposition(
+  sourceTemplate: string | null | undefined,
+): TemplateComposition {
+  return sourceTemplate
+    ? (getTemplate(sourceTemplate)?.composition ?? "standard")
+    : "standard";
 }

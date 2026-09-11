@@ -257,8 +257,8 @@ export async function changeInvitationTemplate(
       const globalSettings = mergeInvitationGlobalSettings(
         inv.globalSettings as Record<string, unknown>,
         targetTemplate.global_settings as unknown as Record<string, unknown>,
-        sourceTemplate.composition === "cinematic",
-        targetTemplate.composition === "cinematic",
+        sourceTemplate.composition === "cinematic-vintage",
+        targetTemplate.composition === "cinematic-vintage",
       );
 
       // source_template is an FK; catalog entries are lazily registered using

@@ -14,6 +14,7 @@ import {
   invitationSummary,
 } from "@/lib/invitation/query";
 import { InvitationCover } from "@/components/invitation/cover";
+import { resolveTemplateComposition } from "@/lib/templates/catalog";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
 
@@ -172,6 +173,7 @@ export default async function InvitationPage({
       <InvitationRenderer
         sections={inv.sections}
         global={inv.global}
+        composition={resolveTemplateComposition(inv.sourceTemplate)}
         invitationId={inv.id}
         guestName={guestName}
       />

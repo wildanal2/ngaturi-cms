@@ -4,7 +4,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type ElementType,
   type ReactNode,
 } from "react";
 
@@ -17,19 +16,22 @@ type Dir = "up" | "down" | "left" | "right" | "zoom";
 export function Reveal({
   children,
   dir = "up",
-  as: Tag = "div",
+  as = "div",
   stagger = false,
   className = "",
   delay,
 }: {
   children: ReactNode;
   dir?: Dir;
-  as?: ElementType;
+  as?: keyof HTMLElementTagNameMap;
   stagger?: boolean;
   className?: string;
   delay?: number;
 }) {
-  const ref = useRef<HTMLElement>(null);
+  // R3F extends JSX.IntrinsicElements with scene objects. Narrow the dynamic
+  // element back to HTML so those incompatible ref/style props do not merge.
+  const Tag = as as "div";
+  const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
