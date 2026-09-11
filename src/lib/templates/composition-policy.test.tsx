@@ -31,14 +31,15 @@ describe("template composition identity", () => {
     expect(resolveTemplateComposition("cinematic")).toBe("standard");
   });
 
-  it("reserves Enchanted Garden without exposing an unfinished template", () => {
+  it("resolves the registered Enchanted Garden identity exactly", () => {
     const composition: TemplateComposition = "enchanted-garden";
 
+    expect(resolveTemplateComposition("enchanted-garden")).toBe(composition);
     expect(getCompositionPolicy({ composition }).composition).toBe(
       "enchanted-garden",
     );
     expect(TEMPLATES.some((template) => template.id === composition)).toBe(
-      false,
+      true,
     );
   });
 
@@ -82,10 +83,16 @@ describe("template composition identity", () => {
     expect(canEditSectionVariant(cinematicPolicy, "rsvp")).toBe(true);
     expect(canReorderSection(cinematicPolicy, "rsvp")).toBe(true);
 
-    for (const policy of [standardPolicy, enchantedPolicy]) {
-      expect(policy.canEditMotion).toBe(true);
-      expect(canEditSectionVariant(policy, "hero")).toBe(true);
-      expect(canReorderSection(policy, "hero")).toBe(true);
-    }
+    expect(standardPolicy.canEditMotion).toBe(true);
+    expect(canEditSectionVariant(standardPolicy, "hero")).toBe(true);
+    expect(canReorderSection(standardPolicy, "hero")).toBe(true);
+
+    expect(enchantedPolicy.canEditMotion).toBe(false);
+    expect(canEditSectionVariant(enchantedPolicy, "hero")).toBe(false);
+    expect(canReorderSection(enchantedPolicy, "hero")).toBe(false);
+    expect(canEditSectionVariant(enchantedPolicy, "story")).toBe(false);
+    expect(canReorderSection(enchantedPolicy, "closing")).toBe(false);
+    expect(canEditSectionVariant(enchantedPolicy, "rsvp")).toBe(true);
+    expect(canReorderSection(enchantedPolicy, "gift")).toBe(true);
   });
 });

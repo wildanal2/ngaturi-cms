@@ -11,6 +11,7 @@ import { CoverMinimal } from "./cover-minimal";
 import { CoverFloating } from "./cover-floating";
 import { CoverFloating17 } from "./cover-floating17";
 import { CoverWaxSeal } from "./cover-wax-seal";
+import { CoverEnchantedGarden } from "./cover-enchanted-garden";
 
 export {
   CoverClassic,
@@ -20,6 +21,7 @@ export {
   CoverFloating,
   CoverFloating17,
   CoverWaxSeal,
+  CoverEnchantedGarden,
 };
 
 export const coverSection: SectionDefinition = {
@@ -29,11 +31,24 @@ export const coverSection: SectionDefinition = {
   icon: "BookOpen",
   category: "hero",
   dummyProps: (variantKey, base) => {
-    if (variantKey !== "minimal" && !base.background_image) {
+    if (
+      variantKey !== "minimal" &&
+      variantKey !== "enchanted-garden" &&
+      !base.background_image
+    ) {
       base.background_image = dummyHero(`cover-${variantKey}`);
     }
   },
   variants: {
+    "enchanted-garden": {
+      name: "Gerbang Taman Jawa",
+      description: "Sampul transparan di depan Candi Bentar tiga dimensi",
+      component: CoverEnchantedGarden,
+      propsSchema: CoverProps,
+      fields: coverFields,
+      defaultProps: { ...coverDefaults },
+      isPremium: true,
+    },
     "cinematic-vintage": {
       name: "Sinematik Vintage",
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",

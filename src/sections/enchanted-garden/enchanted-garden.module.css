@@ -36,6 +36,45 @@
     linear-gradient(180deg, rgb(4 3 2 / 22%), transparent 24%, transparent 76%, rgb(4 3 2 / 38%));
 }
 
+.contentRail {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.contentStop {
+  position: absolute;
+  top: var(--journey-start);
+  left: 0;
+  display: flex;
+  width: 100%;
+  height: var(--journey-span);
+  align-items: center;
+  justify-content: center;
+  padding: 8svh 1rem;
+}
+
+.contentCard {
+  width: min(100%, 30rem);
+  max-height: 82svh;
+  overflow-y: auto;
+  border: 1px solid color-mix(in srgb, var(--inv-secondary) 38%, transparent);
+  border-radius: 1.75rem;
+  background: color-mix(in srgb, var(--inv-bg) 88%, transparent);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 35%);
+  pointer-events: auto;
+  backdrop-filter: blur(12px);
+}
+
+.contentCard > section {
+  min-height: 0;
+}
+
+.coverContent {
+  pointer-events: auto;
+}
+
 .fallback {
   position: absolute;
   inset: 0;

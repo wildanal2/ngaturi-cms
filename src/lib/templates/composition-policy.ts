@@ -1,4 +1,5 @@
 import { isCinematicCoreSectionType } from "@/sections/cinematic/content";
+import { isEnchantedGardenCoreSectionType } from "@/sections/enchanted-garden/content";
 import type { TemplateComposition } from "./catalog";
 
 export interface CompositionPolicy {
@@ -24,10 +25,24 @@ const CINEMATIC_VINTAGE_COMPOSITION_POLICY: CompositionPolicy = {
 
 const ENCHANTED_GARDEN_COMPOSITION_POLICY: CompositionPolicy = {
   composition: "enchanted-garden",
-  canEditMotion: true,
-  canEditCoreVariant: true,
-  canReorderCoreSection: true,
+  canEditMotion: false,
+  canEditCoreVariant: false,
+  canReorderCoreSection: false,
 };
+
+function isCompositionCoreSection(
+  composition: TemplateComposition,
+  sectionType: string,
+) {
+  switch (composition) {
+    case "standard":
+      return false;
+    case "cinematic-vintage":
+      return isCinematicCoreSectionType(sectionType);
+    case "enchanted-garden":
+      return isEnchantedGardenCoreSectionType(sectionType);
+  }
+}
 
 export function getCompositionPolicy({
   composition,
@@ -49,9 +64,8 @@ export function canEditSectionVariant(
   sectionType: string,
 ) {
   return (
-    policy.composition !== "cinematic-vintage" ||
     policy.canEditCoreVariant ||
-    !isCinematicCoreSectionType(sectionType)
+    !isCompositionCoreSection(policy.composition, sectionType)
   );
 }
 
@@ -60,8 +74,7 @@ export function canReorderSection(
   sectionType: string,
 ) {
   return (
-    policy.composition !== "cinematic-vintage" ||
     policy.canReorderCoreSection ||
-    !isCinematicCoreSectionType(sectionType)
+    !isCompositionCoreSection(policy.composition, sectionType)
   );
 }

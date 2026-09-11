@@ -58,16 +58,16 @@ const VISUAL_GLOBAL_KEYS = new Set([
 export function mergeInvitationGlobalSettings(
   existing: object,
   target: object,
-  sourceCinematic: boolean,
-  targetCinematic: boolean,
+  sourceImmersive: boolean,
+  targetImmersive: boolean,
 ) {
   const merged: Record<string, unknown> = { ...target };
   for (const [key, value] of Object.entries(existing)) {
     if (!VISUAL_GLOBAL_KEYS.has(key)) merged[key] = value;
   }
 
-  if (targetCinematic) {
-    const currentMode = sourceCinematic
+  if (targetImmersive) {
+    const currentMode = sourceImmersive
       ? (existing as Record<string, unknown>).presentationMode
       : undefined;
     merged.presentationMode =

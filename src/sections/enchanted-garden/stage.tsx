@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { EnchantedGardenErrorBoundary } from "./error-boundary";
 import styles from "./enchanted-garden.module.css";
 import { useJourneyProgress } from "./progress";
@@ -9,8 +9,10 @@ import type { SceneQuality } from "./types";
 import { useReducedMotion } from "./use-reduced-motion";
 
 export function EnchantedGardenStage({
+  children,
   quality = "medium",
 }: {
+  children?: ReactNode;
   quality?: SceneQuality;
 }) {
   const stageRef = useRef<HTMLElement>(null);
@@ -33,6 +35,7 @@ export function EnchantedGardenStage({
         </EnchantedGardenErrorBoundary>
         <div className={styles.vignette} aria-hidden="true" />
       </div>
+      <div className={styles.contentRail}>{children}</div>
     </section>
   );
 }

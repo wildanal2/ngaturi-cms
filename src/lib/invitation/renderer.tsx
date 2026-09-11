@@ -4,6 +4,7 @@ import { Reveal } from "@/sections/reveal";
 import { CinematicComposition } from "@/sections/cinematic/composition";
 import { cinematicContent } from "@/sections/cinematic/content";
 import { EnchantedGardenComposition } from "@/sections/enchanted-garden/composition";
+import { enchantedGardenContent } from "@/sections/enchanted-garden/content";
 import type { TemplateComposition } from "@/lib/templates/catalog";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
@@ -64,7 +65,17 @@ export function InvitationRenderer({
       );
       break;
     case "enchanted-garden":
-      ownedComposition = <EnchantedGardenComposition />;
+      flow = enchantedGardenContent(ordered).remaining;
+      ownedComposition = (
+        <EnchantedGardenComposition
+          sections={ordered}
+          global={global}
+          invitationId={invitationId}
+          guestName={guestName}
+          isPreview={isPreview}
+          siblingTypes={siblingTypes}
+        />
+      );
       break;
   }
 

@@ -10,6 +10,7 @@ import { CouplePolaroid } from "./couple-polaroid";
 import { CoupleCard } from "./couple-card";
 import { CoupleDuoPortrait } from "./couple-duo-portrait";
 import { CoupleFloating17 } from "./couple-floating17";
+import { CoupleEnchantedGarden } from "./couple-enchanted-garden";
 
 export {
   CoupleSideBySide,
@@ -18,6 +19,7 @@ export {
   CoupleCard,
   CoupleDuoPortrait,
   CoupleFloating17,
+  CoupleEnchantedGarden,
 };
 
 export const coupleSection: SectionDefinition = {
@@ -33,6 +35,19 @@ export const coupleSection: SectionDefinition = {
     if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
   },
   variants: {
+    "enchanted-garden": {
+      name: "Potret Keraton",
+      description: "Dua potret lengkung dalam panel Pendopo",
+      component: CoupleEnchantedGarden,
+      propsSchema: CoupleIntroProps,
+      fields: [{ kind: "text", key: "title", label: "Judul" }, ...coupleFields],
+      defaultProps: {
+        title: "Mempelai",
+        bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi" },
+        groom: { name: "Raka", full_name: "Raka Wibowo" },
+      },
+      isPremium: true,
+    },
     "cinematic-vintage": {
       name: "Sinematik Vintage",
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
