@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { clampJourneyProgress } from "./journey";
 
 export interface ProgressRef {
@@ -9,67 +9,189 @@ export interface ProgressRef {
 
 export type JourneyScrollOwner = Window | HTMLElement;
 
-function isWindowOwner(owner: JourneyScrollOwner): owner is Window {
-  return owner === window;
+type JourneyDocument = Pick<Document, "documentElement" | "body">;
+type JourneyWindow = Pick<
+  Window,
+  | "scrollY"
+  | "innerHeight"
+  | "addEventListener"
+  | "removeEventListener"
+  | "requestAnimationFrame"
+  | "cancelAnimationFrame"
+  | "scrollTo"
+>;
+
+export interface JourneyScrollMetrics {
+  scrollTop: number;
+  scrollableDistance: number;
+}
+
+/** Builder resolution is intentionally strict: a missing preview owner is not
+ * allowed to fall through to the host window. */
+export function resolveJourneyScrollOwner(
+  stage: HTMLElement,
+  inCanvas: boolean,
+  browserWindow: Window = window,
+): JourneyScrollOwner | null {
+  return inCanvas
+    ? stage.closest<HTMLElement>("[data-device-scroller]")
+    : browserWindow;
+}
+
+export function readJourneyScrollMetrics(
+  owner: JourneyScrollOwner,
+  browserWindow: JourneyWindow = window,
+  browserDocument: JourneyDocument = document,
+): JourneyScrollMetrics {
+  if (owner === browserWindow) {
+    const scrollHeight = Math.max(
+      browserDocument.documentElement.scrollHeight,
+      browserDocument.body?.scrollHeight ?? 0,
+    );
+    return {
+      scrollTop: browserWindow.scrollY,
+      scrollableDistance: Math.max(0, scrollHeight - browserWindow.innerHeight),
+    };
+  }
+
+  const element = owner as HTMLElement;
+  return {
+    scrollTop: element.scrollTop,
+    scrollableDistance: Math.max(
+      0,
+      element.scrollHeight - element.clientHeight,
+    ),
+  };
 }
 
 export function measureJourneyProgress(
   owner: JourneyScrollOwner,
-  stage: HTMLElement,
+  browserWindow: JourneyWindow = window,
+  browserDocument: JourneyDocument = document,
 ) {
-  const windowOwner = isWindowOwner(owner);
-  const scrollTop = windowOwner ? window.scrollY : owner.scrollTop;
-  const viewportHeight = windowOwner ? window.innerHeight : owner.clientHeight;
-  const stageTop = windowOwner
-    ? stage.getBoundingClientRect().top + window.scrollY
-    : stage.getBoundingClientRect().top -
-      owner.getBoundingClientRect().top +
-      owner.scrollTop;
-  const distance = Math.max(1, stage.offsetHeight - viewportHeight);
-  return clampJourneyProgress((scrollTop - stageTop) / distance);
+  const { scrollTop, scrollableDistance } = readJourneyScrollMetrics(
+    owner,
+    browserWindow,
+    browserDocument,
+  );
+  if (scrollableDistance <= 0) return 0;
+  return clampJourneyProgress(scrollTop / scrollableDistance);
+}
+
+export function gateJourneyProgressUntilOpen(
+  measuredProgress: number,
+  waitForOpen: boolean,
+  opened: boolean,
+) {
+  return waitForOpen && !opened ? 0 : measuredProgress;
+}
+
+export function seekJourneyProgress(
+  owner: JourneyScrollOwner,
+  progress: number,
+  browserWindow: JourneyWindow = window,
+  browserDocument: JourneyDocument = document,
+) {
+  const { scrollableDistance } = readJourneyScrollMetrics(
+    owner,
+    browserWindow,
+    browserDocument,
+  );
+  const top = clampJourneyProgress(progress) * scrollableDistance;
+  owner.scrollTo({ top, behavior: "auto" });
 }
 
 export function bindJourneyProgress(
   owner: JourneyScrollOwner,
-  stage: HTMLElement,
+  observedStage: HTMLElement,
   progressRef: ProgressRef,
+  browserWindow: Window = window,
+  browserDocument: Document = document,
+  readProgress?: () => number,
 ) {
   let frame = 0;
   const update = () => {
     frame = 0;
-    progressRef.current = measureJourneyProgress(owner, stage);
+    progressRef.current = readProgress
+      ? readProgress()
+      : measureJourneyProgress(owner, browserWindow, browserDocument);
   };
   const requestUpdate = () => {
-    if (!frame) frame = window.requestAnimationFrame(update);
+    if (!frame) frame = browserWindow.requestAnimationFrame(update);
   };
 
   owner.addEventListener("scroll", requestUpdate, { passive: true });
-  window.addEventListener("resize", requestUpdate, { passive: true });
+  browserWindow.addEventListener("resize", requestUpdate, { passive: true });
   const resizeObserver = new ResizeObserver(requestUpdate);
-  resizeObserver.observe(stage);
-  if (!isWindowOwner(owner)) resizeObserver.observe(owner);
+  resizeObserver.observe(observedStage);
+  const resizeTarget: Element =
+    owner === browserWindow
+      ? browserDocument.documentElement
+      : (owner as HTMLElement);
+  resizeObserver.observe(resizeTarget);
   update();
 
   return () => {
     owner.removeEventListener("scroll", requestUpdate);
-    window.removeEventListener("resize", requestUpdate);
+    browserWindow.removeEventListener("resize", requestUpdate);
     resizeObserver.disconnect();
-    if (frame) window.cancelAnimationFrame(frame);
+    if (frame) browserWindow.cancelAnimationFrame(frame);
   };
 }
 
-/** Public defaults to window; Phase 5 can supply the DeviceFrame scroll owner. */
 export function useJourneyProgress(
   stageRef: RefObject<HTMLElement | null>,
-  owner?: HTMLElement | null,
+  inCanvas: boolean,
+  waitForOpen: boolean,
 ) {
   const progressRef = useRef(0);
+  const ownerRef = useRef<JourneyScrollOwner | null>(null);
+  const openedRef = useRef(!waitForOpen);
 
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    return bindJourneyProgress(owner ?? window, stage, progressRef);
-  }, [owner, stageRef]);
+    const owner = resolveJourneyScrollOwner(stage, inCanvas);
+    ownerRef.current = owner;
+    stage.dataset.scrollOwner = owner
+      ? inCanvas
+        ? "device-frame"
+        : "window"
+      : "missing";
+    if (!owner) return;
 
-  return progressRef;
+    openedRef.current = !waitForOpen;
+    const cleanup = bindJourneyProgress(
+      owner,
+      stage,
+      progressRef,
+      window,
+      document,
+      () =>
+        gateJourneyProgressUntilOpen(
+          measureJourneyProgress(owner),
+          waitForOpen,
+          openedRef.current,
+        ),
+    );
+    return () => {
+      cleanup();
+      ownerRef.current = null;
+      delete stage.dataset.scrollOwner;
+    };
+  }, [inCanvas, stageRef, waitForOpen]);
+
+  const seekToProgress = useCallback((progress: number) => {
+    const owner = ownerRef.current;
+    if (owner) seekJourneyProgress(owner, progress);
+  }, []);
+
+  const openAtEntrance = useCallback(() => {
+    openedRef.current = true;
+    progressRef.current = 0;
+    const owner = ownerRef.current;
+    if (owner) seekJourneyProgress(owner, 0);
+  }, []);
+
+  return { progressRef, seekToProgress, openAtEntrance };
 }

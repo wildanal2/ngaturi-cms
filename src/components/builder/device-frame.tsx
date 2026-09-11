@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { DevicePreset } from "./devices";
 
 /** Realistic device mockup at the device's true CSS width. */
@@ -17,9 +17,18 @@ export function DeviceFrame({
   const screen = (
     <div
       className="relative bg-white"
-      style={{ width: preset.width, height: `min(${preset.height}px, 74vh)` }}
+      style={
+        {
+          width: preset.width,
+          height: `min(${preset.height}px, 74vh)`,
+          "--device-frame-viewport-height": `min(${preset.height}px, 74vh)`,
+          "--device-frame-journey-height": `min(${preset.height * 10}px, 740vh)`,
+        } as CSSProperties
+      }
     >
-      <div data-device-scroller className="h-full w-full overflow-y-auto">{children}</div>
+      <div data-device-scroller className="h-full w-full overflow-y-auto">
+        {children}
+      </div>
       {overlay ? (
         <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
           {overlay}
@@ -72,7 +81,9 @@ export function DeviceFrame({
         ) : null}
         <div className="absolute top-20 -left-[16px] h-12 w-[3px] rounded-l bg-ink/70" />
         <div className="absolute top-36 -right-[16px] h-16 w-[3px] rounded-r bg-ink/70" />
-        <div className="relative overflow-hidden rounded-[1.9rem]">{screen}</div>
+        <div className="relative overflow-hidden rounded-[1.9rem]">
+          {screen}
+        </div>
       </div>
       <p className="mt-2 text-center text-xs text-muted">
         {preset.label} · {preset.width}×{preset.height}

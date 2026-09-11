@@ -3,12 +3,34 @@
 import { useEffect, useRef } from "react";
 import { useBuilder } from "@/stores/builder-store";
 import { getVariant, SectionRegistry } from "@/sections/registry";
+import type { SectionData } from "@/sections/types";
 import { invitationRootStyle } from "@/lib/invitation/renderer";
+import type { TemplateComposition } from "@/lib/templates/catalog";
 import { AddSectionButton } from "./add-section-menu";
 import { DeviceFrame } from "./device-frame";
 import { getDevice } from "./devices";
 import { CinematicComposition } from "@/sections/cinematic/composition";
 import { cinematicContent } from "@/sections/cinematic/content";
+import { EnchantedGardenComposition } from "@/sections/enchanted-garden/composition";
+import { enchantedGardenContent } from "@/sections/enchanted-garden/content";
+
+const OVERLAY_TYPES = new Set(["music", "navigation"]);
+
+export function getBuilderFlow(
+  ordered: SectionData[],
+  composition: TemplateComposition,
+) {
+  switch (composition) {
+    case "standard":
+      return ordered;
+    case "cinematic-vintage":
+      return cinematicContent(ordered, true).remaining.filter(
+        (section) => section.type !== "cover",
+      );
+    case "enchanted-garden":
+      return enchantedGardenContent(ordered).remaining;
+  }
+}
 
 export function Canvas({ invitationId }: { invitationId: string }) {
   const sections = useBuilder((s) => s.sections);
@@ -18,20 +40,16 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   const select = useBuilder((s) => s.select);
   const composition = useBuilder((s) => s.compositionPolicy.composition);
   const cinematicVintage = composition === "cinematic-vintage";
+  const enchantedGarden = composition === "enchanted-garden";
   const scrollRef = useRef<HTMLDivElement>(null);
   const clickInCanvas = useRef(false);
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
-  const flow = cinematicVintage
-    ? cinematicContent(ordered, true).remaining.filter(
-        (s) => s.type !== "cover",
-      )
-    : ordered;
+  const flow = getBuilderFlow(ordered, composition);
   // music + navigation float over the device viewport (pinned, non-scrolling)
   // exactly like the live page. In the section flow they get a slim
   // placeholder block so they stay visible & selectable.
-  const OVERLAY_TYPES = new Set(["music", "navigation"]);
   const overlaySections = ordered.filter((s) => OVERLAY_TYPES.has(s.type));
 
   const selectHandler = (id: string) => (e: React.MouseEvent) => {
@@ -48,10 +66,21 @@ export function Canvas({ invitationId }: { invitationId: string }) {
       return;
     }
     const root = scrollRef.current;
-    const stage = root?.querySelector('[data-cinematic-stage]');
+    const stage = root?.querySelector("[data-cinematic-stage]");
     if (stage) {
-      const seek = new CustomEvent('cinematic:seek', { detail: selectedId, cancelable: true });
+      const seek = new CustomEvent("cinematic:seek", {
+        detail: selectedId,
+        cancelable: true,
+      });
       if (!stage.dispatchEvent(seek)) return;
+    }
+    const enchantedStage = root?.querySelector("[data-enchanted-garden-stage]");
+    if (enchantedStage) {
+      const seek = new CustomEvent("enchanted-garden:seek", {
+        detail: selectedId,
+        cancelable: true,
+      });
+      if (!enchantedStage.dispatchEvent(seek)) return;
     }
     const el = root?.querySelector<HTMLElement>(
       `[data-section-id="${selectedId}"]`,
@@ -105,18 +134,74 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   return (
     <div className="min-h-full px-6 py-8">
       <DeviceFrame preset={preset} overlay={floatingOverlay}>
-        <div ref={scrollRef} className={cinematicVintage ? "mx-auto max-w-lg" : undefined} style={invitationRootStyle(global)}>
+        <div
+          ref={scrollRef}
+          className={cinematicVintage ? "mx-auto max-w-lg" : undefined}
+          style={invitationRootStyle(global)}
+        >
           {ordered.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted">
               Belum ada bagian. Tambahkan dari panel kiri atau tombol di bawah.
             </div>
           ) : null}
 
-          {cinematicVintage ? ordered.filter((s) => s.type === "cover" && s.visible !== false).map((section) => {
-            const Component = getVariant(section.type, section.variant)?.component;
-            return Component ? <div key={section.id} data-section-id={section.id} onClickCapture={selectHandler(section.id)}><Component props={section.props} global={global} invitationId={invitationId} isPreview inCanvas siblingTypes={siblingTypes} /></div> : null;
-          }) : null}
-          {cinematicVintage ? <CinematicComposition sections={ordered} global={global} invitationId={invitationId} isPreview inCanvas siblingTypes={siblingTypes} selectedId={selectedId} onSelect={(id) => { clickInCanvas.current = true; select(id); }} compositionActive /> : null}
+          {cinematicVintage
+            ? ordered
+                .filter((s) => s.type === "cover" && s.visible !== false)
+                .map((section) => {
+                  const Component = getVariant(
+                    section.type,
+                    section.variant,
+                  )?.component;
+                  return Component ? (
+                    <div
+                      key={section.id}
+                      data-section-id={section.id}
+                      onClickCapture={selectHandler(section.id)}
+                    >
+                      <Component
+                        props={section.props}
+                        global={global}
+                        invitationId={invitationId}
+                        isPreview
+                        inCanvas
+                        siblingTypes={siblingTypes}
+                      />
+                    </div>
+                  ) : null;
+                })
+            : null}
+          {cinematicVintage ? (
+            <CinematicComposition
+              sections={ordered}
+              global={global}
+              invitationId={invitationId}
+              isPreview
+              inCanvas
+              siblingTypes={siblingTypes}
+              selectedId={selectedId}
+              onSelect={(id) => {
+                clickInCanvas.current = true;
+                select(id);
+              }}
+              compositionActive
+            />
+          ) : null}
+          {enchantedGarden ? (
+            <EnchantedGardenComposition
+              sections={ordered}
+              global={global}
+              invitationId={invitationId}
+              isPreview
+              inCanvas
+              siblingTypes={siblingTypes}
+              selectedId={selectedId}
+              onSelect={(id) => {
+                clickInCanvas.current = true;
+                select(id);
+              }}
+            />
+          ) : null}
           {flow.map((section) => {
             const variant = getVariant(section.type, section.variant);
             const def = SectionRegistry[section.type];

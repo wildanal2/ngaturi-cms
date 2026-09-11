@@ -1,16 +1,35 @@
 "use client";
 
 import { Lock } from "lucide-react";
+import type { TemplateComposition } from "@/lib/templates/catalog";
 import { useBuilder } from "@/stores/builder-store";
 
 const PRESETS = [
   { name: "Forest", primary: "#34503f", secondary: "#7a2e3c", bg: "#fbf8f3" },
   { name: "Maroon", primary: "#7a2e3c", secondary: "#b08a4f", bg: "#faf6f0" },
-  { name: "Dusty Blue", primary: "#3b5b7a", secondary: "#c99a5b", bg: "#f6f8fa" },
-  { name: "Terracotta", primary: "#a4522d", secondary: "#5c6f52", bg: "#fbf6f1" },
+  {
+    name: "Dusty Blue",
+    primary: "#3b5b7a",
+    secondary: "#c99a5b",
+    bg: "#f6f8fa",
+  },
+  {
+    name: "Terracotta",
+    primary: "#a4522d",
+    secondary: "#5c6f52",
+    bg: "#fbf6f1",
+  },
   { name: "Charcoal", primary: "#2f2f33", secondary: "#9a7b4f", bg: "#f5f4f2" },
   { name: "Sage", primary: "#5c6f52", secondary: "#8a5a44", bg: "#f7f8f4" },
 ];
+
+export function presentationModeLabel(
+  composition: TemplateComposition,
+  mode: "cinematic" | "simple",
+) {
+  if (mode === "simple") return "Sederhana";
+  return composition === "enchanted-garden" ? "Imersif" : "Sinematik";
+}
 
 export function ThemePanel({
   activeTemplateName,
@@ -25,9 +44,9 @@ export function ThemePanel({
   const setGlobal = useBuilder((s) => s.setGlobal);
   const locked = useBuilder((s) => s.locked);
   const canEditMotion = useBuilder((s) => s.compositionPolicy.canEditMotion);
-  const cinematicVintage = useBuilder(
-    (s) => s.compositionPolicy.composition === "cinematic-vintage",
-  );
+  const composition = useBuilder((s) => s.compositionPolicy.composition);
+  const cinematicVintage = composition === "cinematic-vintage";
+  const enchantedGarden = composition === "enchanted-garden";
 
   return (
     <div className="space-y-5">
@@ -126,7 +145,7 @@ export function ThemePanel({
         </select>
       </label>
 
-      {cinematicVintage ? (
+      {cinematicVintage || enchantedGarden ? (
         <div className="text-sm">
           <span className="mb-1.5 block text-ink-soft">Mode Tampilan</span>
           <div className="grid grid-cols-2 gap-2">
@@ -145,7 +164,7 @@ export function ThemePanel({
                       : "border-line hover:bg-cream-200"
                   } disabled:opacity-60`}
                 >
-                  {mode === "cinematic" ? "Sinematik" : "Sederhana"}
+                  {presentationModeLabel(composition, mode)}
                 </button>
               );
             })}

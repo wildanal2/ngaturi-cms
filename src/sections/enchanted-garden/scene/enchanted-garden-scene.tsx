@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { memo, Suspense } from "react";
 import { Canvas, type RootState } from "@react-three/fiber";
 import * as THREE from "three";
 import { ENCHANTED_GARDEN_MANIFEST } from "../manifest";
@@ -25,7 +25,7 @@ function configureRenderer({ gl }: RootState) {
   gl.toneMappingExposure = 1.05;
 }
 
-export function EnchantedGardenScene({
+export const EnchantedGardenScene = memo(function EnchantedGardenScene({
   progressRef,
   quality,
   prefersReducedMotion,
@@ -45,10 +45,17 @@ export function EnchantedGardenScene({
       <Canvas
         camera={{ position: [0, 3.2, 28], fov: 48, near: 0.1, far: 120 }}
         dpr={DPR_BY_QUALITY[quality]}
-        gl={{ alpha: false, antialias: quality !== "low", powerPreference: "high-performance" }}
+        gl={{
+          alpha: false,
+          antialias: quality !== "low",
+          powerPreference: "high-performance",
+        }}
         onCreated={configureRenderer}
         fallback={
-          <div className={styles.fallback} data-enchanted-garden-webgl-fallback />
+          <div
+            className={styles.fallback}
+            data-enchanted-garden-webgl-fallback
+          />
         }
       >
         <color attach="background" args={["#120d0a"]} />
@@ -69,4 +76,4 @@ export function EnchantedGardenScene({
       </Canvas>
     </div>
   );
-}
+});
