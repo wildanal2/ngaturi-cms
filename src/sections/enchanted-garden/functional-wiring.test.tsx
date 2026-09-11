@@ -37,6 +37,24 @@ describe("Enchanted Garden functional wiring", () => {
     expect(getVariant("navigation", "dock")?.component).toBe(NavigationDock);
   });
 
+  it("exposes the required Enchanted Garden journey destinations without changing the shared dock default", () => {
+    const navigation = sections().find(
+      (section) => section.type === "navigation",
+    )!;
+    expect(navigation.props.max_items).toBe(7);
+
+    const markup = renderToStaticMarkup(
+      <NavigationDock
+        props={navigation.props}
+        global={template.global_settings}
+        siblingTypes={sections().map((section) => section.type)}
+      />,
+    );
+    expect(markup).toContain('aria-label="Lokasi"');
+    expect(markup).toContain('aria-label="RSVP"');
+    expect(markup.match(/<button/g)).toHaveLength(7);
+  });
+
   it("normalizes all configured events and derives hero/countdown from the first event", () => {
     const input = sections();
     const eventSection = input.find(

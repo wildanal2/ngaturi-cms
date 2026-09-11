@@ -106,11 +106,16 @@ export function Canvas({ invitationId }: { invitationId: string }) {
                 wide ? "inset-x-0" : musicLeft ? "left-0" : "right-0"
               }`
             : "pointer-events-none absolute inset-0 [&_nav]:pointer-events-auto";
+          // Enchanted Garden's overlay buttons own their clicks (seek/audio).
+          // Its flow placeholder remains the selection target for the inspector.
+          const overlaySelectHandler = enchantedGarden
+            ? undefined
+            : selectHandler(section.id);
           return (
             <div
               key={section.id}
               data-section-id={section.id}
-              onClickCapture={selectHandler(section.id)}
+              onClickCapture={overlaySelectHandler}
               className={`${wrapCls} ${
                 selectedId === section.id && isMusic
                   ? "rounded-2xl outline outline-2 outline-forest"

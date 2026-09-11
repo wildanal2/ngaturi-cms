@@ -209,7 +209,7 @@ export const TEMPLATES: TemplatePreset[] = [
           "Merupakan kehormatan bagi kami apabila Anda berkenan hadir dan mengiringi langkah ini dengan doa.",
       }),
       s("music", "disc", 13, {}),
-      s("navigation", "dock", 14, {}),
+      s("navigation", "dock", 14, { max_items: 7 }),
     ],
   },
   {
