@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import {
@@ -15,6 +15,7 @@ export function CameraRig({
   prefersReducedMotion: boolean;
 }) {
   const { camera, pointer, size } = useThree();
+  const cameraRef = useRef(camera);
   const transformRef = useRef(createJourneyCameraTransform());
   const currentLookAtRef = useRef<THREE.Vector3 | null>(null);
   const destinationRef = useRef<THREE.Vector3 | null>(null);
@@ -29,7 +30,12 @@ export function CameraRig({
   currentLookAtRef.current ??= new THREE.Vector3(0, 2.5, 12);
   destinationRef.current ??= new THREE.Vector3(0, 2.5, 12);
 
+  useEffect(() => {
+    cameraRef.current = camera;
+  }, [camera]);
+
   useFrame((_, delta) => {
+    const activeCamera = cameraRef.current;
     const mobileFraming = size.width <= 480;
     const pointerX = prefersReducedMotion ? 0 : pointer.x;
     const pointerY = prefersReducedMotion ? 0 : pointer.y;
@@ -67,41 +73,46 @@ export function CameraRig({
     );
 
     if (prefersReducedMotion) {
-      camera.position.set(destinationX, destinationY, destinationZ);
+      activeCamera.position.set(destinationX, destinationY, destinationZ);
       currentLookAt.copy(destination);
-      camera.lookAt(currentLookAt);
+      activeCamera.lookAt(currentLookAt);
       if (
-        camera instanceof THREE.PerspectiveCamera &&
-        Math.abs(camera.fov - (transform.fov + (mobileFraming ? 6 : 0))) > 0.01
+        activeCamera instanceof THREE.PerspectiveCamera &&
+        Math.abs(
+          activeCamera.fov - (transform.fov + (mobileFraming ? 6 : 0)),
+        ) > 0.01
       ) {
-        camera.fov = transform.fov + (mobileFraming ? 6 : 0);
-        camera.updateProjectionMatrix();
+        activeCamera.fov = transform.fov + (mobileFraming ? 6 : 0);
+        activeCamera.updateProjectionMatrix();
       }
       settledRef.current = true;
       return;
     }
 
     const alpha = 1 - Math.exp(-4.6 * Math.min(delta, 0.1));
-    camera.position.x += (destinationX - camera.position.x) * alpha;
-    camera.position.y += (destinationY - camera.position.y) * alpha;
-    camera.position.z += (destinationZ - camera.position.z) * alpha;
+    activeCamera.position.x +=
+      (destinationX - activeCamera.position.x) * alpha;
+    activeCamera.position.y +=
+      (destinationY - activeCamera.position.y) * alpha;
+    activeCamera.position.z +=
+      (destinationZ - activeCamera.position.z) * alpha;
     currentLookAt.lerp(destination, alpha);
-    camera.lookAt(currentLookAt);
+    activeCamera.lookAt(currentLookAt);
 
-    if (camera instanceof THREE.PerspectiveCamera) {
+    if (activeCamera instanceof THREE.PerspectiveCamera) {
       const destinationFov = transform.fov + (mobileFraming ? 6 : 0);
-      const previousFov = camera.fov;
-      camera.fov += (destinationFov - camera.fov) * alpha;
-      if (Math.abs(camera.fov - previousFov) > 0.0001) {
-        camera.updateProjectionMatrix();
+      const previousFov = activeCamera.fov;
+      activeCamera.fov += (destinationFov - activeCamera.fov) * alpha;
+      if (Math.abs(activeCamera.fov - previousFov) > 0.0001) {
+        activeCamera.updateProjectionMatrix();
       }
-      const dx = destinationX - camera.position.x;
-      const dy = destinationY - camera.position.y;
-      const dz = destinationZ - camera.position.z;
+      const dx = destinationX - activeCamera.position.x;
+      const dy = destinationY - activeCamera.position.y;
+      const dz = destinationZ - activeCamera.position.z;
       settledRef.current =
         dx * dx + dy * dy + dz * dz < 0.0001 &&
         currentLookAt.distanceToSquared(destination) < 0.0001 &&
-        Math.abs(destinationFov - camera.fov) <= 0.01;
+        Math.abs(destinationFov - activeCamera.fov) <= 0.01;
     }
   });
 

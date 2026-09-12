@@ -65,6 +65,26 @@ export async function createInvitation(templateId: string): Promise<never> {
       return { full: true as const };
     }
 
+    // Catalog presets are code-backed. Materialize the selected row before
+    // writing source_template so newly added presets satisfy the database FK
+    // even when an older environment has not rerun the seed command yet.
+    await tx
+      .insert(templates)
+      .values({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        category: template.category,
+        tier: template.tier,
+        thumbnail: template.thumbnail,
+        composition: {
+          global_settings: template.global_settings,
+          sections: template.sections,
+        },
+        isActive: true,
+      })
+      .onConflictDoNothing();
+
     const [row] = await tx
       .insert(invitations)
       .values({
