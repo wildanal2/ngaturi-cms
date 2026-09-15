@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { invitations, templates } from "@/lib/db/schema";
 import type { SectionData } from "@/sections/types";
 import type { TemplatePreset } from "@/lib/templates/catalog";
 
@@ -30,7 +31,11 @@ vi.mock("next/cache", () => ({
 }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
-import { changeInvitationTemplate, saveComposition } from "./actions";
+import {
+  changeInvitationTemplate,
+  createInvitation,
+  saveComposition,
+} from "./actions";
 
 const preset = (
   id: string,
@@ -131,6 +136,66 @@ beforeEach(() => {
       (template) => template.id === id,
     ),
   );
+});
+
+describe("createInvitation catalog materialization", () => {
+  it("materializes a code-backed template before inserting its FK", async () => {
+    const profileLimit = vi.fn(async () => [{ bonus: 0 }]);
+    const countWhere = vi.fn(async () => [{ count: 0 }]);
+    const templateValues = vi.fn(() => ({
+      onConflictDoNothing: vi.fn(async () => undefined),
+    }));
+    const invitationValues = vi.fn(() => ({
+      returning: vi.fn(async () => [{ id: "created-invitation" }]),
+    }));
+    const insert = vi
+      .fn()
+      .mockReturnValueOnce({
+        values: vi.fn(() => ({
+          onConflictDoNothing: vi.fn(async () => undefined),
+        })),
+      })
+      .mockReturnValueOnce({ values: templateValues })
+      .mockReturnValueOnce({ values: invitationValues });
+    const tx = {
+      insert,
+      select: vi
+        .fn()
+        .mockReturnValueOnce({
+          from: vi.fn(() => ({
+            where: vi.fn(() => ({
+              for: vi.fn(() => ({ limit: profileLimit })),
+            })),
+          })),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn(() => ({ where: countWhere })),
+        }),
+      update: vi.fn(() => ({
+        set: vi.fn(() => ({ where: vi.fn(async () => undefined) })),
+      })),
+    };
+    mocks.transaction.mockImplementationOnce(async (callback) => callback(tx));
+    mocks.getTemplate.mockReturnValueOnce(targetTemplate);
+
+    await createInvitation(targetTemplate.id);
+
+    expect(insert.mock.calls[1][0]).toBe(templates);
+    expect(templateValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: targetTemplate.id,
+        category: targetTemplate.category,
+        isActive: true,
+      }),
+    );
+    expect(insert.mock.calls[2][0]).toBe(invitations);
+    expect(invitationValues).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceTemplate: targetTemplate.id }),
+    );
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/builder/created-invitation",
+    );
+  });
 });
 
 describe("changeInvitationTemplate server invariants", () => {

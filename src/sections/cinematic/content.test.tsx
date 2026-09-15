@@ -147,8 +147,7 @@ describe("Cinematic Vintage contract", () => {
       global: template.global_settings,
       locked: false,
       compositionPolicy: getCompositionPolicy({
-        templateComposition: template.composition,
-        sections: sections(),
+        composition: template.composition ?? "standard",
       }),
     });
     const byType = (type: string) =>
@@ -203,8 +202,7 @@ describe("Cinematic Vintage contract", () => {
       global: template.global_settings,
       locked: false,
       compositionPolicy: getCompositionPolicy({
-        templateComposition: template.composition,
-        sections: hydrated,
+        composition: template.composition ?? "standard",
       }),
     });
     const byType = (type: string) =>
@@ -241,6 +239,7 @@ describe("Cinematic Vintage contract", () => {
       <InvitationRenderer
         sections={standard}
         global={template.global_settings}
+        composition="standard"
         isPreview
       />,
     );

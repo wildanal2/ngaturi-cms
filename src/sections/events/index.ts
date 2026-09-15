@@ -6,8 +6,9 @@ import { eventsArray, nowPlus } from "../fields";
 import { EventTimeline } from "./event-timeline";
 import { EventCards } from "./event-cards";
 import { EventFormal } from "./event-formal";
+import { EventEnchantedGarden } from "./event-enchanted-garden";
 
-export { EventTimeline, EventCards, EventFormal };
+export { EventTimeline, EventCards, EventFormal, EventEnchantedGarden };
 
 const introField = {
   kind: "textarea" as const,
@@ -30,6 +31,18 @@ export const eventsSection: SectionDefinition = {
   icon: "CalendarClock",
   category: "content",
   variants: {
+    "enchanted-garden": {
+      name: "Kartu Pendopo",
+      description: "Kartu acara ringkas dengan aksen kayu dan emas",
+      component: EventEnchantedGarden,
+      propsSchema: EventDetailsProps,
+      fields: [introField, eventsArray],
+      defaultProps: {
+        intro: "Dengan penuh syukur, kami mengundang Anda merayakan hari bahagia kami.",
+        events: [sampleEvents[0], sampleEvents[1]],
+      },
+      isPremium: true,
+    },
     "cinematic-vintage": {
       name: "Sinematik Vintage",
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",

@@ -58,16 +58,16 @@ const VISUAL_GLOBAL_KEYS = new Set([
 export function mergeInvitationGlobalSettings(
   existing: object,
   target: object,
-  sourceCinematic: boolean,
-  targetCinematic: boolean,
+  sourceImmersive: boolean,
+  targetImmersive: boolean,
 ) {
   const merged: Record<string, unknown> = { ...target };
   for (const [key, value] of Object.entries(existing)) {
     if (!VISUAL_GLOBAL_KEYS.has(key)) merged[key] = value;
   }
 
-  if (targetCinematic) {
-    const currentMode = sourceCinematic
+  if (targetImmersive) {
+    const currentMode = sourceImmersive
       ? (existing as Record<string, unknown>).presentationMode
       : undefined;
     merged.presentationMode =
@@ -238,7 +238,7 @@ export function mergeInvitationIntoTemplate(
     const typeIndex = existingTypeIndexes.get(section) ?? 0;
     const sourceDefaults = sourceByType.get(section.type)?.[typeIndex]?.props;
     const standardVariant =
-      targetTemplate.composition !== "cinematic" &&
+      targetTemplate.composition !== "cinematic-vintage" &&
       section.variant === CINEMATIC_VARIANT
         ? Object.keys(SectionRegistry[section.type]?.variants ?? {}).find(
             (variant) => variant !== CINEMATIC_VARIANT,

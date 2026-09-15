@@ -1,8 +1,11 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { getVariant } from "@/sections/registry";
 import { Reveal } from "@/sections/reveal";
 import { CinematicComposition } from "@/sections/cinematic/composition";
-import { cinematicContent, isCinematicComposition } from "@/sections/cinematic/content";
+import { cinematicContent } from "@/sections/cinematic/content";
+import { EnchantedGardenComposition } from "@/sections/enchanted-garden/composition";
+import { enchantedGardenContent } from "@/sections/enchanted-garden/content";
+import type { TemplateComposition } from "@/lib/templates/catalog";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
 const FONT_STACK: Record<string, string> = {
@@ -26,12 +29,14 @@ export function invitationRootStyle(global: GlobalSettings): CSSProperties {
 export function InvitationRenderer({
   sections,
   global,
+  composition,
   invitationId,
   guestName,
   isPreview = false,
 }: {
   sections: SectionData[];
   global: GlobalSettings;
+  composition: TemplateComposition;
   invitationId?: string;
   guestName?: string | null;
   isPreview?: boolean;
@@ -40,8 +45,39 @@ export function InvitationRenderer({
     .filter((s) => s.visible !== false)
     .sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
-  const cinematic = isCinematicComposition(ordered);
-  const flow = cinematic ? cinematicContent(ordered).remaining : ordered;
+  let flow = ordered;
+  let ownedComposition: ReactNode = null;
+
+  switch (composition) {
+    case "standard":
+      break;
+    case "cinematic-vintage":
+      flow = cinematicContent(ordered, true).remaining;
+      ownedComposition = (
+        <CinematicComposition
+          sections={ordered}
+          global={global}
+          invitationId={invitationId}
+          guestName={guestName}
+          isPreview={isPreview}
+          siblingTypes={siblingTypes}
+        />
+      );
+      break;
+    case "enchanted-garden":
+      flow = enchantedGardenContent(ordered).remaining;
+      ownedComposition = (
+        <EnchantedGardenComposition
+          sections={ordered}
+          global={global}
+          invitationId={invitationId}
+          guestName={guestName}
+          isPreview={isPreview}
+          siblingTypes={siblingTypes}
+        />
+      );
+      break;
+  }
 
   // fixed-position chrome must live outside the animated flow: a wrapper
   // running a CSS transform becomes the containing block for position:fixed.
@@ -49,7 +85,7 @@ export function InvitationRenderer({
 
   return (
     <div className="mx-auto max-w-lg" style={invitationRootStyle(global)}>
-      {cinematic ? <CinematicComposition sections={ordered} global={global} invitationId={invitationId} guestName={guestName} isPreview={isPreview} siblingTypes={siblingTypes} /> : null}
+      {ownedComposition}
       {flow.map((section, i) => {
         const variant = getVariant(section.type, section.variant);
         if (!variant) return null;

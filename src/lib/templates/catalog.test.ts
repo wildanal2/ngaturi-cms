@@ -4,6 +4,18 @@ import { hydrateTemplateSections } from "./hydrate";
 import { getVariant } from "@/sections/registry";
 
 describe("TEMPLATES", () => {
+  it("registers Enchanted Garden as an immersive premium wedding template", () => {
+    expect(getTemplate("enchanted-garden")).toMatchObject({
+      id: "enchanted-garden",
+      name: "Enchanted Garden",
+      category: "wedding",
+      tier: "premium",
+      composition: "enchanted-garden",
+      thumbnail: "/templates/enchanted-garden/card",
+      global_settings: { presentationMode: "cinematic" },
+    });
+  });
+
   it("has unique ids and matching thumbnail paths", () => {
     const ids = TEMPLATES.map((t) => t.id);
     expect(new Set(ids).size).toBe(ids.length);

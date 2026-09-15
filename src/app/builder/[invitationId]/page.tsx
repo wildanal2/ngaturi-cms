@@ -5,7 +5,11 @@ import { invitations } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
 import { isEditLocked } from "@/lib/invitation/entitlement";
 import { getCompositionPolicy } from "@/lib/templates/composition-policy";
-import { getTemplate, TEMPLATES } from "@/lib/templates/catalog";
+import {
+  getTemplate,
+  resolveTemplateComposition,
+  TEMPLATES,
+} from "@/lib/templates/catalog";
 import { filterTemplatesByCategory } from "@/lib/templates/compatibility";
 import { BuilderShell } from "@/components/builder/builder-shell";
 import { TemplatePicker } from "@/components/builder/template-picker";
@@ -59,8 +63,7 @@ export default async function BuilderPage({
 
   const sections = inv.sections as SectionData[];
   const compositionPolicy = getCompositionPolicy({
-    templateComposition: sourceTemplate.composition ?? "standard",
-    sections,
+    composition: resolveTemplateComposition(sourceTemplate.id),
   });
 
   return (

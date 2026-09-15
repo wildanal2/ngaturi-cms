@@ -173,13 +173,13 @@ export function mountCinematicTimeline(
         } else if (kind === "couple") {
           timeline.fromTo(
             body,
-            { scale: 1.5, xPercent: 6 },
+            { scale: 0.94, xPercent: 0 },
             { scale: 1, xPercent: 0, duration: 6 },
             time,
           );
           timeline.to(
             body,
-            { scale: 0.86, xPercent: -3, duration: 5 },
+            { scale: 0.9, xPercent: 0, duration: 5 },
             time + 9,
           );
           const people = scene.querySelectorAll("[data-couple-person]");
@@ -194,8 +194,8 @@ export function mountCinematicTimeline(
         } else if (kind === "quote") {
           timeline.fromTo(
             body,
-            { scale: 1.2 },
-            { scale: 0.94, yPercent: -3, duration },
+            { scale: 0.96 },
+            { scale: 0.9, yPercent: -3, duration },
             time,
           );
         } else if (kind === "venue") {
@@ -206,7 +206,7 @@ export function mountCinematicTimeline(
             time,
           );
         } else {
-          timeline.fromTo(body, { scale: 1.2 }, { scale: 0.8, duration }, time);
+          timeline.fromTo(body, { scale: 0.96 }, { scale: 0.82, duration }, time);
           // Leave the final framing visible while scrolling into functional content.
           timeline.to(scene, { autoAlpha: 1, duration: 0 }, time + duration);
         }

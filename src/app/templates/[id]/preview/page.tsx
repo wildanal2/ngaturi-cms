@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getTemplate } from "@/lib/templates/catalog";
+import {
+  getTemplate,
+  resolveTemplateComposition,
+} from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
 import { InvitationRenderer } from "@/lib/invitation/renderer";
 import { InvitationCover } from "@/components/invitation/cover";
@@ -57,6 +60,7 @@ export default async function TemplatePreviewPage({
         <InvitationRenderer
           sections={sections}
           global={t.global_settings}
+          composition={resolveTemplateComposition(t.id)}
           isPreview
         />
       </div>

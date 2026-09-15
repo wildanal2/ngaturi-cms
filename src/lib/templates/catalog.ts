@@ -1,6 +1,9 @@
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
-export type TemplateComposition = "standard" | "cinematic";
+export type TemplateComposition =
+  | "standard"
+  | "cinematic-vintage"
+  | "enchanted-garden";
 
 export interface TemplatePreset {
   id: string;
@@ -41,6 +44,7 @@ const themeAssets = (root: string): ThemeAssets => ({
 
 const FLOATING_EMAS = themeAssets("floating-emas");
 const FLOATING_TERRACOTTA = themeAssets("floating-terracotta");
+const ENCHANTED_GARDEN_EVENT_DATE = inDays(75);
 
 const themeDecor = (theme: ThemeAssets) => ({
   background_image: theme.bg,
@@ -56,7 +60,7 @@ export const TEMPLATES: TemplatePreset[] = [
     description: "Perjalanan sinematik melewati bingkai kenangan, janji akad, dan perayaan. Burgundy, emas lembut, serta kedalaman yang mengikuti setiap guliran Anda.",
     category: "wedding",
     tier: "premium",
-    composition: "cinematic",
+    composition: "cinematic-vintage",
     thumbnail: "/templates/cinematic-vintage/card",
     global_settings: {
       font_family: "Cormorant",
@@ -80,6 +84,132 @@ export const TEMPLATES: TemplatePreset[] = [
       s("guestbook", "chat", 11),
       s("music", "disc", 12),
       s("navigation", "bar", 13),
+    ],
+  },
+  {
+    id: "enchanted-garden",
+    name: "Enchanted Garden",
+    description:
+      "Perjalanan pernikahan Jawa di antara Candi Bentar, Pendopo, taman temaram, dan pelaminan beraksen emas.",
+    category: "wedding",
+    tier: "premium",
+    composition: "enchanted-garden",
+    thumbnail: "/templates/enchanted-garden/card",
+    global_settings: {
+      font_family: "Cormorant",
+      color_primary: "#4b2d1b",
+      color_secondary: "#b68b3c",
+      color_background: "#f1e7d5",
+      animation: "fade-up",
+      presentationMode: "cinematic",
+    },
+    sections: [
+      s("cover", "enchanted-garden", 0, {
+        names: "Laras & Jati",
+        tagline: "The Wedding Of",
+        note: "Kepada Yth. Bapak/Ibu/Saudara/i",
+        button_label: "Buka Undangan",
+      }),
+      s("hero", "enchanted-garden", 1, {
+        couple_names: "Laras & Jati",
+        tagline: "Pawiwahan",
+        event_date: ENCHANTED_GARDEN_EVENT_DATE,
+      }),
+      s("quote", "centered", 2, {
+        text: "Semoga perjalanan ini menjadi taman tempat kasih, hormat, dan kebahagiaan terus bertumbuh.",
+        source: "Laras & Jati",
+      }),
+      s("couple-intro", "enchanted-garden", 3, {
+        title: "Mempelai",
+        bride: {
+          name: "Laras",
+          full_name: "Larasati Puspa Ningrum",
+          child_order: "Putri pertama dari",
+          parents: "Bapak Arif Nugraha & Ibu Ratih Lestari",
+        },
+        groom: {
+          name: "Jati",
+          full_name: "Jati Wicaksana",
+          child_order: "Putra kedua dari",
+          parents: "Bapak Damar Prasetya & Ibu Sekar Ayu",
+        },
+      }),
+      s("story", "timeline", 4, {
+        eyebrow: "Our Journey",
+        title: "Kisah Kami",
+        items: [
+          {
+            year: "2022",
+            title: "Berkenalan",
+            description: "Sebuah pertemuan sederhana membuka perjalanan kami.",
+          },
+          {
+            year: "2024",
+            title: "Menetapkan Hati",
+            description: "Kami bertumbuh, saling mengenal keluarga, dan menjaga komitmen.",
+          },
+          {
+            year: "2026",
+            title: "Menuju Hari Bahagia",
+            description: "Dengan restu keluarga, kami melangkah menuju pernikahan.",
+          },
+        ],
+      }),
+      s("event-details", "enchanted-garden", 5, {
+        intro:
+          "Dengan penuh syukur, kami mengundang Anda untuk hadir dan memberikan doa restu.",
+        events: [
+          {
+            name: "Akad Nikah",
+            date: ENCHANTED_GARDEN_EVENT_DATE,
+            start_time: "08:00",
+            end_time: "10:00",
+            venue_name: "Pendopo Arunika",
+            address: "Jl. Taman Sari No. 8, Yogyakarta",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=Taman+Sari+Yogyakarta",
+          },
+          {
+            name: "Resepsi",
+            date: ENCHANTED_GARDEN_EVENT_DATE,
+            start_time: "11:00",
+            end_time: "14:00",
+            venue_name: "Pendopo Arunika",
+            address: "Jl. Taman Sari No. 8, Yogyakarta",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=Taman+Sari+Yogyakarta",
+          },
+        ],
+      }),
+      s("map-location", "button", 6, {
+        venue_name: "Pendopo Arunika",
+        address: "Jl. Taman Sari No. 8, Yogyakarta",
+        maps_url:
+          "https://www.google.com/maps/search/?api=1&query=Taman+Sari+Yogyakarta",
+      }),
+      s("countdown", "elegant", 7, {
+        target_date: ENCHANTED_GARDEN_EVENT_DATE,
+      }),
+      s("gallery", "spotlight", 8, { images: [], columns: 3 }),
+      s("rsvp", "form-card", 9, {}),
+      s("guestbook", "cards", 10, {}),
+      s("gift", "cards", 11, {
+        intro: "Doa restu Anda adalah hadiah terindah bagi kami.",
+        bank_accounts: [
+          {
+            bank_name: "Bank Contoh",
+            account_number: "0000000000",
+            account_name: "Larasati Puspa Ningrum",
+          },
+        ],
+      }),
+      s("closing", "enchanted-garden", 12, {
+        names: "Laras & Jati",
+        message:
+          "Merupakan kehormatan bagi kami apabila Anda berkenan hadir dan mengiringi langkah ini dengan doa.",
+      }),
+      s("music", "disc", 13, {}),
+      s("navigation", "dock", 14, { max_items: 7 }),
     ],
   },
   {
@@ -695,4 +825,13 @@ export const TEMPLATES: TemplatePreset[] = [
 
 export function getTemplate(id: string): TemplatePreset | undefined {
   return TEMPLATES.find((t) => t.id === id);
+}
+
+/** Resolve persisted template identity through the official catalog only. */
+export function resolveTemplateComposition(
+  sourceTemplate: string | null | undefined,
+): TemplateComposition {
+  return sourceTemplate
+    ? (getTemplate(sourceTemplate)?.composition ?? "standard")
+    : "standard";
 }

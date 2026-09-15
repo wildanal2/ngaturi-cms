@@ -1,9 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { ImageResponse } from "next/og";
-import { getTemplate } from "@/lib/templates/catalog";
+import {
+  getTemplate,
+  resolveTemplateComposition,
+} from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
-import { isCinematicComposition } from "@/sections/cinematic/content";
 import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
 
 export const runtime = "nodejs";
@@ -12,6 +14,11 @@ export const revalidate = 86400;
 
 const W = 600;
 const H = 800;
+
+const compositionCardBackground: Partial<Record<string, string>> = {
+  "cinematic-vintage": "/themes/cinematic-vintage/cards/template-card.jpg",
+  "enchanted-garden": "/themes/enchanted-garden/cards/template-card.jpg",
+};
 
 /** Satori only shapes Latin reliably — strip the rest. */
 function safe(text: string, fallback: string): string {
@@ -32,7 +39,10 @@ export async function GET(
 
   const g = t.global_settings;
   // This preset intentionally keeps its content in registered variant defaults.
-  const sections = isCinematicComposition(t.sections) ? hydrateTemplateSections(t) : t.sections;
+  const sections =
+    resolveTemplateComposition(t.id) === "cinematic-vintage"
+      ? hydrateTemplateSections(t)
+      : t.sections;
   const cover = sections.find((s) => s.type === "cover");
   const hero = sections.find((s) => s.type === "hero");
   const names = safe(
@@ -49,7 +59,8 @@ export async function GET(
   );
   const origin = new URL(req.url).origin;
   const visual = getCardVisual(sections);
-  const background = cardImageUrl(visual.background, origin);
+  const cardBackground = compositionCardBackground[t.id];
+  const background = cardImageUrl(cardBackground ?? visual.background, origin);
   const foreground = cardImageUrl(visual.foreground, origin);
   const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin);
   const ornamentRight = cardImageUrl(visual.ornamentRight, origin);
@@ -82,7 +93,16 @@ export async function GET(
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              opacity: 0.72,
+              opacity: cardBackground ? 1 : 0.72,
+            }}
+          />
+        ) : null}
+        {cardBackground ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(180deg, rgb(8 5 3 / 18%), rgb(8 5 3 / 42%))",
             }}
           />
         ) : null}
@@ -136,13 +156,14 @@ export async function GET(
             fontSize: 22,
             letterSpacing: 7,
             textTransform: "uppercase",
-            color: g.color_secondary,
+            color: cardBackground ? "#ead6a5" : g.color_secondary,
+            textShadow: cardBackground ? "0 2px 14px #000" : "none",
           }}
         >
           {tagline}
         </div>
 
-        {foreground ? (
+        {foreground && !cardBackground ? (
           <div
             style={{
               width: 270,
@@ -161,6 +182,8 @@ export async function GET(
               style={{ width: 270, height: 270, objectFit: "contain" }}
             />
           </div>
+        ) : cardBackground ? (
+          <div style={{ width: 1, height: 190, margin: "24px 0" }} />
         ) : (
           <div
             style={{
@@ -185,9 +208,10 @@ export async function GET(
           style={{
             fontSize: 58,
             lineHeight: 1.05,
-            color: g.color_primary,
+            color: cardBackground ? "#fff8e8" : g.color_primary,
             textAlign: "center",
             padding: "0 40px",
+            textShadow: cardBackground ? "0 3px 18px #000" : "none",
           }}
         >
           {names}
@@ -201,7 +225,14 @@ export async function GET(
             margin: "26px 0",
           }}
         />
-        <div style={{ fontSize: 22, color: g.color_primary, opacity: 0.85 }}>
+        <div
+          style={{
+            fontSize: 22,
+            color: cardBackground ? "#ead6a5" : g.color_primary,
+            opacity: 0.9,
+            textShadow: cardBackground ? "0 2px 12px #000" : "none",
+          }}
+        >
           {t.name}
         </div>
       </div>

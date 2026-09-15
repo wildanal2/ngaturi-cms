@@ -127,6 +127,13 @@ describe("mergeInvitationGlobalSettings", () => {
     expect(merged.presentationMode).toBe("cinematic");
   });
 
+  it("defaults a standard-to-Enchanted-Garden change to cinematic mode", () => {
+    const target = template("enchanted-garden").global_settings;
+    const merged = mergeInvitationGlobalSettings(existing, target, false, true);
+
+    expect(merged.presentationMode).toBe("cinematic");
+  });
+
   it("removes cinematic presentationMode when switching to standard", () => {
     const target = template("kana-noir").global_settings;
     const merged = mergeInvitationGlobalSettings(existing, target, true, false);
@@ -188,10 +195,26 @@ describe("mergeInvitationIntoTemplate", () => {
     );
     expect(
       getCompositionPolicy({
-        templateComposition: target.composition ?? "standard",
-        sections: merged,
+        composition: target.composition ?? "standard",
       }).composition,
     ).toBe("standard");
+  });
+
+  it("hydrates Enchanted Garden through the generic wedding merge", () => {
+    const source = template("navy-elegan");
+    const target = template("enchanted-garden");
+    const existing = instantiate(source);
+    const hero = byType(existing, "hero");
+    hero.props = { ...hero.props, couple_names: "Alya & Bima" };
+
+    const merged = mergeInvitationIntoTemplate(existing, source, target);
+
+    expect(byType(merged, "hero")).toMatchObject({
+      id: hero.id,
+      variant: "enchanted-garden",
+      props: expect.objectContaining({ couple_names: "Alya & Bima" }),
+    });
+    expect(new Set(merged.map((section) => section.id)).size).toBe(merged.length);
   });
 
   it("activates cinematic variants and locks without losing user content", () => {
@@ -224,8 +247,7 @@ describe("mergeInvitationIntoTemplate", () => {
 
     const merged = mergeInvitationIntoTemplate(existing, source, target);
     const policy = getCompositionPolicy({
-      templateComposition: target.composition,
-      sections: merged,
+      composition: target.composition ?? "standard",
     });
 
     expect(byType(merged, "couple-intro").id).toBe(couple.id);
@@ -250,8 +272,7 @@ describe("mergeInvitationIntoTemplate", () => {
       expect(byType(merged, type).variant).toBe("cinematic-vintage");
     }
     expect(policy).toMatchObject({
-      composition: "cinematic",
-      isCinematic: true,
+      composition: "cinematic-vintage",
       canEditMotion: false,
       canEditCoreVariant: false,
       canReorderCoreSection: false,
@@ -282,8 +303,7 @@ describe("mergeInvitationIntoTemplate", () => {
 
     const merged = mergeInvitationIntoTemplate(existing, source, target);
     const policy = getCompositionPolicy({
-      templateComposition: target.composition ?? "standard",
-      sections: merged,
+      composition: target.composition ?? "standard",
     });
 
     expect(byType(merged, "hero").id).toBe(hero.id);
@@ -298,7 +318,6 @@ describe("mergeInvitationIntoTemplate", () => {
     ).toBe(true);
     expect(policy).toMatchObject({
       composition: "standard",
-      isCinematic: false,
       canEditMotion: true,
       canEditCoreVariant: true,
       canReorderCoreSection: true,

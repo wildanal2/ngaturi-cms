@@ -11,6 +11,7 @@ import { HeroBotanical } from "./hero-botanical";
 import { HeroArch } from "./hero-arch";
 import { HeroGarland } from "./hero-garland";
 import { HeroFloating17 } from "./hero-floating17";
+import { HeroEnchantedGarden } from "./hero-enchanted-garden";
 
 export {
   HeroCentered,
@@ -20,6 +21,7 @@ export {
   HeroArch,
   HeroGarland,
   HeroFloating17,
+  HeroEnchantedGarden,
 };
 
 const baseDefaults = {
@@ -38,6 +40,18 @@ export const heroSection: SectionDefinition = {
     if (!base.background_image) base.background_image = dummyHero(variantKey);
   },
   variants: {
+    "enchanted-garden": {
+      name: "Potret Taman Keraton",
+      description: "Potret melengkung dan tipografi kerajaan Jawa",
+      component: HeroEnchantedGarden,
+      propsSchema: HeroProps,
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Foto pasangan" },
+      ],
+      defaultProps: { ...baseDefaults, has_countdown: false },
+      isPremium: true,
+    },
     "cinematic-vintage": {
       name: "Sinematik Vintage",
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",

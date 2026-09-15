@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Loader2, X } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import {
@@ -174,19 +174,78 @@ export function ChangeTemplateDialog({
   onClose: () => void;
   beforeApply: () => Promise<boolean>;
 }) {
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const confirmationRef = useRef<HTMLDivElement>(null);
   const submitting = useRef(false);
   const [selected, setSelected] = useState<BuilderTemplateOption | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!open) return null;
-
-  function close() {
+  const close = useCallback(() => {
     if (pending || submitting.current) return;
     setSelected(null);
     setPendingId(null);
     onClose();
-  }
+  }, [onClose, pending]);
+
+  const cancelConfirmation = useCallback(() => {
+    if (pending || submitting.current) return;
+    setSelected(null);
+    setPendingId(null);
+  }, [pending]);
+
+  useEffect(() => {
+    if (!open) return;
+    const layer = selected ? confirmationRef.current : pickerRef.current;
+    if (!layer) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      [
+        ...layer.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+        ),
+      ].filter(
+        (element) =>
+          !element.closest("[inert]") && element.getClientRects().length,
+      );
+    (focusable()[0] ?? layer).focus({ preventScroll: true });
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const controls = focusable();
+      const first = controls[0];
+      const last = controls.at(-1);
+      if (!first) {
+        event.preventDefault();
+        layer.focus({ preventScroll: true });
+      } else if (
+        !layer.contains(document.activeElement) ||
+        (event.shiftKey && document.activeElement === first) ||
+        (!event.shiftKey && document.activeElement === last)
+      ) {
+        event.preventDefault();
+        (event.shiftKey ? last : first)?.focus({ preventScroll: true });
+      }
+    };
+    window.addEventListener("keydown", trapFocus);
+    return () => {
+      window.removeEventListener("keydown", trapFocus);
+      if (previous?.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [open, selected]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      if (selected) cancelConfirmation();
+      else close();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [cancelConfirmation, close, open, selected]);
+
+  if (!open) return null;
 
   function apply() {
     if (!selected || pending || submitting.current) return;
@@ -211,6 +270,10 @@ export function ChangeTemplateDialog({
           setPendingId(null);
           return;
         }
+        submitting.current = false;
+        setPendingId(null);
+        setSelected(null);
+        onClose();
         toast.success("Template berhasil diubah.");
       } catch {
         toast.error("Template gagal diterapkan. Silakan coba lagi.");
@@ -222,80 +285,123 @@ export function ChangeTemplateDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      ref={pickerRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-3 sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="change-template-title"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
     >
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-cream-100 shadow-2xl">
-        {selected ? (
-          <div className="w-full max-w-lg self-center p-6 sm:p-8">
+      <div className="relative flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-line bg-paper shadow-2xl sm:max-h-[90vh]">
+        <div
+          inert={Boolean(selected)}
+          className="flex shrink-0 items-start justify-between border-b border-line bg-paper px-5 py-4"
+        >
+          <div>
             <h2 id="change-template-title" className="text-2xl text-ink">
-              Gunakan {selected.name}?
+              Ubah Template
             </h2>
-            <p className="mt-3 text-sm leading-6 text-ink-soft">
-              Konten undangan akan dipertahankan. Tampilan, layout, dan
-              pengaturan visual akan mengikuti template baru.
+            <p className="mt-1 text-sm text-ink-soft">
+              Pilih tampilan baru untuk undanganmu.
             </p>
-            <div className="mt-7 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                disabled={pending}
-                className="rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink hover:bg-cream-200 disabled:opacity-60"
+          </div>
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Tutup pemilih template"
+            className="rounded-full p-2 text-muted hover:bg-cream-200 hover:text-ink"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div
+          inert={Boolean(selected)}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-cream px-4 py-5 sm:px-5"
+        >
+          <TemplateCatalog
+            templates={templates}
+            locked={false}
+            activeTemplateId={activeTemplateId}
+            pendingId={pendingId}
+            pending={pending}
+            onSelect={setSelected}
+          />
+        </div>
+
+        <div
+          inert={Boolean(selected)}
+          className="flex shrink-0 justify-start border-t border-line bg-paper px-5 py-3"
+        >
+          <button
+            type="button"
+            onClick={close}
+            disabled={pending}
+            className="rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink hover:bg-cream-200 disabled:opacity-60"
+          >
+            Batal
+          </button>
+        </div>
+
+        {selected ? (
+          <div
+            ref={confirmationRef}
+            tabIndex={-1}
+            className="absolute inset-0 z-10 flex items-center justify-center bg-black/70 p-3 sm:p-6"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="change-template-confirm-title"
+            aria-describedby="change-template-confirm-description"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) cancelConfirmation();
+            }}
+          >
+            <div className="w-full max-w-lg rounded-2xl border border-line bg-paper p-6 shadow-2xl sm:p-8">
+              <h3
+                id="change-template-confirm-title"
+                className="text-2xl text-ink"
               >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={apply}
-                disabled={pending}
-                aria-busy={pending}
-                className="inline-flex items-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-medium text-cream hover:bg-forest-600 disabled:pointer-events-none disabled:opacity-60"
+                Gunakan {selected.name}?
+              </h3>
+              <p
+                id="change-template-confirm-description"
+                className="mt-3 text-sm leading-6 text-ink-soft"
               >
-                {pending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Menerapkan…
-                  </>
-                ) : (
-                  "Gunakan Template"
-                )}
-              </button>
+                Konten undangan akan dipertahankan. Tampilan, layout, dan
+                pengaturan visual akan mengikuti template baru.
+              </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={cancelConfirmation}
+                  disabled={pending}
+                  className="rounded-full border border-line px-5 py-2.5 text-sm font-medium text-ink hover:bg-cream-200 disabled:opacity-60"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={apply}
+                  disabled={pending}
+                  aria-busy={pending}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-2.5 text-sm font-medium text-cream hover:bg-forest-600 disabled:pointer-events-none disabled:opacity-60"
+                >
+                  {pending ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Menerapkan…
+                    </>
+                  ) : (
+                    "Gunakan Template"
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        ) : (
-          <>
-            <div className="flex items-start justify-between border-b border-line px-5 py-4">
-              <div>
-                <h2 id="change-template-title" className="text-2xl text-ink">
-                  Ubah Template
-                </h2>
-                <p className="mt-1 text-sm text-ink-soft">
-                  Pilih tampilan baru untuk undanganmu.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={close}
-                aria-label="Tutup pemilih template"
-                className="rounded-full p-2 text-muted hover:bg-cream-200 hover:text-ink"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-5">
-              <TemplateCatalog
-                templates={templates}
-                locked={false}
-                activeTemplateId={activeTemplateId}
-                pendingId={pendingId}
-                pending={pending}
-                onSelect={setSelected}
-              />
-            </div>
-          </>
-        )}
+        ) : null}
       </div>
     </div>
   );

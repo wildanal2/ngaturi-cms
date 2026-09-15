@@ -3,6 +3,7 @@ import {
   filterTemplatesByCategory,
   isTemplateChangeCategoryCompatible,
 } from "./compatibility";
+import { TEMPLATES } from "./catalog";
 
 describe("Change Template category compatibility", () => {
   it("allows only matching invitation, active-template and target categories", () => {
@@ -40,5 +41,12 @@ describe("Change Template category compatibility", () => {
       filterTemplatesByCategory(templates, "wedding").map(({ id }) => id),
     ).toEqual(["wedding-a", "wedding-b"]);
     expect(templates).toHaveLength(3);
+  });
+
+  it("includes Enchanted Garden through the generic wedding filter", () => {
+    const wedding = filterTemplatesByCategory(TEMPLATES, "wedding");
+
+    expect(wedding.some((template) => template.id === "enchanted-garden")).toBe(true);
+    expect(wedding.every((template) => template.category === "wedding")).toBe(true);
   });
 });

@@ -4,8 +4,18 @@ import type { SectionRenderProps } from "../types";
 import { NavIcon, scrollToSection, useNavItems } from "./nav-shared";
 
 /** Compact rounded pill dock, centred and floating above the bottom edge. */
-export function NavigationDock({ siblingTypes = [], inCanvas }: SectionRenderProps) {
-  const items = useNavItems(siblingTypes, 5);
+export function NavigationDock({
+  props,
+  siblingTypes = [],
+  inCanvas,
+}: SectionRenderProps) {
+  const configuredMax = Number(
+    (props as { max_items?: number } | undefined)?.max_items,
+  );
+  const maxItems = Number.isFinite(configuredMax)
+    ? Math.max(2, Math.min(9, Math.trunc(configuredMax)))
+    : 5;
+  const items = useNavItems(siblingTypes, maxItems);
   if (items.length < 2) return null;
 
   return (
@@ -18,7 +28,9 @@ export function NavigationDock({ siblingTypes = [], inCanvas }: SectionRenderPro
         {items.map((it) => (
           <button
             key={it.type}
-            onClick={() => scrollToSection(it.type, inCanvas)}
+            onClick={(event) =>
+              scrollToSection(it.type, inCanvas, event.currentTarget)
+            }
             aria-label={it.label}
             title={it.label}
             className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/15"
