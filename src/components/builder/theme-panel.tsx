@@ -1,5 +1,6 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import { useBuilder } from "@/stores/builder-store";
 
 const PRESETS = [
@@ -11,10 +12,20 @@ const PRESETS = [
   { name: "Sage", primary: "#5c6f52", secondary: "#8a5a44", bg: "#f7f8f4" },
 ];
 
-export function ThemePanel() {
+export function ThemePanel({
+  activeTemplateName,
+  onChangeTemplate,
+  changeTemplatePending,
+}: {
+  activeTemplateName: string;
+  onChangeTemplate: () => void;
+  changeTemplatePending: boolean;
+}) {
   const global = useBuilder((s) => s.global);
   const setGlobal = useBuilder((s) => s.setGlobal);
   const locked = useBuilder((s) => s.locked);
+  const canEditMotion = useBuilder((s) => s.compositionPolicy.canEditMotion);
+  const isCinematic = useBuilder((s) => s.compositionPolicy.isCinematic);
 
   return (
     <div className="space-y-5">
@@ -24,6 +35,23 @@ export function ThemePanel() {
           Berlaku untuk semua bagian. Pilih salah satu bagian di kiri untuk
           mengedit isinya.
         </p>
+      </div>
+
+      <div className="rounded-xl border border-line bg-cream-200/50 p-3">
+        <span className="block text-xs font-medium tracking-wide text-muted uppercase">
+          Template
+        </span>
+        <span className="mt-1 block text-sm font-medium text-ink">
+          {activeTemplateName}
+        </span>
+        <button
+          type="button"
+          onClick={onChangeTemplate}
+          disabled={locked || changeTemplatePending}
+          className="mt-3 w-full rounded-full border border-forest px-3 py-2 text-sm font-medium text-forest hover:bg-forest hover:text-cream disabled:pointer-events-none disabled:opacity-60"
+        >
+          {changeTemplatePending ? "Menyimpan…" : "Ubah Template"}
+        </button>
       </div>
 
       <div>
@@ -96,30 +124,72 @@ export function ThemePanel() {
         </select>
       </label>
 
-      <label className="block text-sm">
-        <span className="mb-1 block text-ink-soft">Animasi saat scroll</span>
-        <select
-          value={global.animation ?? "fade-up"}
-          disabled={locked}
-          onChange={(e) =>
-            setGlobal({
-              animation: e.target.value as NonNullable<
-                typeof global.animation
-              >,
-            })
-          }
-          className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
-        >
-          <option value="fade-up">Muncul dari bawah</option>
-          <option value="fade-down">Muncul dari atas</option>
-          <option value="fade-left">Geser dari kanan</option>
-          <option value="fade-right">Geser dari kiri</option>
-          <option value="zoom">Zoom in</option>
-          <option value="flip">Flip</option>
-          <option value="fade">Fade halus</option>
-          <option value="none">Tanpa animasi</option>
-        </select>
-      </label>
+      {isCinematic ? (
+        <div className="text-sm">
+          <span className="mb-1.5 block text-ink-soft">Mode Tampilan</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(["cinematic", "simple"] as const).map((mode) => {
+              const active = (global.presentationMode ?? "cinematic") === mode;
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  disabled={locked}
+                  aria-pressed={active}
+                  onClick={() => setGlobal({ presentationMode: mode })}
+                  className={`rounded-lg border px-3 py-2 text-sm ${
+                    active
+                      ? "border-forest bg-forest text-cream"
+                      : "border-line hover:bg-cream-200"
+                  } disabled:opacity-60`}
+                >
+                  {mode === "cinematic" ? "Sinematik" : "Sederhana"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {canEditMotion ? (
+        <label className="block text-sm">
+          <span className="mb-1 block text-ink-soft">Animasi saat scroll</span>
+          <select
+            value={global.animation ?? "fade-up"}
+            disabled={locked}
+            onChange={(e) =>
+              setGlobal({
+                animation: e.target.value as NonNullable<
+                  typeof global.animation
+                >,
+              })
+            }
+            className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm"
+          >
+            <option value="fade-up">Muncul dari bawah</option>
+            <option value="fade-down">Muncul dari atas</option>
+            <option value="fade-left">Geser dari kanan</option>
+            <option value="fade-right">Geser dari kiri</option>
+            <option value="zoom">Zoom in</option>
+            <option value="flip">Flip</option>
+            <option value="fade">Fade halus</option>
+            <option value="none">Tanpa animasi</option>
+          </select>
+        </label>
+      ) : (
+        <div className="text-sm">
+          <span className="mb-1 block text-ink-soft">Animasi saat scroll</span>
+          <div className="rounded-lg border border-line bg-cream-200/60 px-3 py-2.5">
+            <span className="flex items-center gap-2 font-medium text-ink">
+              <Lock size={14} aria-hidden />
+              Cinematic Timeline
+            </span>
+            <p className="mt-1 text-xs text-muted">
+              Animasi dikendalikan oleh template.
+            </p>
+          </div>
+        </div>
+      )}
 
       <p className="text-xs text-muted">
         Sampul (Buka Undangan), musik latar &amp; navigasi kini jadi bagian

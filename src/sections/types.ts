@@ -18,6 +18,7 @@ export interface GlobalSettings {
   color_background: string;
   animation?: AnimationKind;
   animation_repeat?: boolean;
+  presentationMode?: "cinematic" | "simple";
   music_url?: string;
   is_rtl?: boolean;
   // cover ("Buka Undangan")

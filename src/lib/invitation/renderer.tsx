@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
 import { getVariant } from "@/sections/registry";
 import { Reveal } from "@/sections/reveal";
+import { CinematicComposition } from "@/sections/cinematic/composition";
+import { cinematicContent, isCinematicComposition } from "@/sections/cinematic/content";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
 const FONT_STACK: Record<string, string> = {
@@ -38,6 +40,8 @@ export function InvitationRenderer({
     .filter((s) => s.visible !== false)
     .sort((a, b) => a.order - b.order);
   const siblingTypes = ordered.map((s) => s.type);
+  const cinematic = isCinematicComposition(ordered);
+  const flow = cinematic ? cinematicContent(ordered).remaining : ordered;
 
   // fixed-position chrome must live outside the animated flow: a wrapper
   // running a CSS transform becomes the containing block for position:fixed.
@@ -45,7 +49,8 @@ export function InvitationRenderer({
 
   return (
     <div className="mx-auto max-w-lg" style={invitationRootStyle(global)}>
-      {ordered.map((section, i) => {
+      {cinematic ? <CinematicComposition sections={ordered} global={global} invitationId={invitationId} guestName={guestName} isPreview={isPreview} siblingTypes={siblingTypes} /> : null}
+      {flow.map((section, i) => {
         const variant = getVariant(section.type, section.variant);
         if (!variant) return null;
         const Component = variant.component;

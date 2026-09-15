@@ -19,7 +19,7 @@ export function DeviceFrame({
       className="relative bg-white"
       style={{ width: preset.width, height: `min(${preset.height}px, 74vh)` }}
     >
-      <div className="h-full w-full overflow-y-auto">{children}</div>
+      <div data-device-scroller className="h-full w-full overflow-y-auto">{children}</div>
       {overlay ? (
         <div className="pointer-events-none absolute inset-0 z-40 overflow-hidden">
           {overlay}

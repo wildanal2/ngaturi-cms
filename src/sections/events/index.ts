@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { EventCinematicVintage } from "./event-cinematic-vintage";
+export { EventCinematicVintage };
 import { EventDetailsProps } from "../schema";
 import { eventsArray, nowPlus } from "../fields";
 import { EventTimeline } from "./event-timeline";
@@ -28,6 +30,15 @@ export const eventsSection: SectionDefinition = {
   icon: "CalendarClock",
   category: "content",
   variants: {
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: EventCinematicVintage,
+      propsSchema: EventDetailsProps,
+      fields: [introField, eventsArray],
+      defaultProps: { events: [sampleEvents[0], sampleEvents[1]], intro: "Dengan penuh syukur, kami mengundang Anda merayakan hari bahagia kami." },
+      isPremium: true,
+    },
     timeline: {
       name: "Timeline",
       description: "Daftar vertikal berurutan",
