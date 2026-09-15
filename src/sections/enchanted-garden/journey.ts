@@ -197,7 +197,12 @@ export function getJourneyTargetProgress(sectionType: string) {
   const stop = ENCHANTED_GARDEN_JOURNEY.find(
     (candidate) => "section" in candidate && candidate.section === sectionType,
   );
-  return stop ? (stop.range[0] + stop.range[1]) / 2 : undefined;
+  if (!stop) return undefined;
+  // In Builder the cover is an inline 600px scene. Landing at the midpoint of
+  // its journey range scrolls that scene partly above the DeviceFrame.
+  return sectionType === "cover"
+    ? stop.range[0]
+    : (stop.range[0] + stop.range[1]) / 2;
 }
 
 function smoothstep(value: number) {

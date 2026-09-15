@@ -68,6 +68,7 @@ describe("Enchanted Garden journey", () => {
     expect(getJourneyTargetProgress("gallery")).toBe(
       (gallery.range[0] + gallery.range[1]) / 2,
     );
+    expect(getJourneyTargetProgress("cover")).toBe(0);
     expect(getJourneyTargetProgress("not-a-section")).toBeUndefined();
   });
 });

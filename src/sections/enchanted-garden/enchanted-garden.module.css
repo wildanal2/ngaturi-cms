@@ -6,6 +6,7 @@
   position: relative;
   min-height: 1500svh;
   isolation: isolate;
+  container-type: inline-size;
   background: #120d0a;
 }
 
@@ -59,6 +60,7 @@
   left: 0;
   display: flex;
   width: 100%;
+  min-width: 0;
   height: var(--journey-span);
   align-items: center;
   justify-content: center;
@@ -67,8 +69,7 @@
 
 .contentCard {
   width: min(calc(100% - 1rem), 29rem);
-  max-height: 78svh;
-  overflow-y: auto;
+  min-width: 0;
   border: 1px solid color-mix(in srgb, var(--inv-secondary) 38%, transparent);
   border-radius: 1.75rem;
   background: color-mix(in srgb, var(--inv-bg) 82%, transparent);
@@ -80,7 +81,13 @@
 }
 
 .contentCard > section {
+  width: 100%;
+  min-width: 0;
   min-height: 0;
+}
+
+.contentCard[data-section="story"] > section {
+  padding-block: 1.5rem;
 }
 
 .contentCard[data-section="quote"],
@@ -118,6 +125,7 @@
 .simpleStage {
   position: relative;
   isolation: isolate;
+  container-type: inline-size;
   overflow: hidden;
   min-height: 100%;
   background:
@@ -150,6 +158,7 @@
 .simpleContent {
   margin-inline: auto;
   width: min(100%, 32rem);
+  min-width: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--inv-secondary) 28%, transparent);
   border-radius: 1.5rem;
@@ -185,10 +194,6 @@
   padding-block: 1.5rem;
 }
 
-.stage[data-in-canvas="true"] .contentCard {
-  max-height: calc(var(--device-frame-viewport-height, 600px) - 3rem);
-}
-
 .simpleStage[data-in-canvas="true"] {
   background-attachment: scroll;
 }
@@ -203,7 +208,114 @@
   }
 }
 
-@media (max-width: 480px) {
+/* Native section layout follows the invitation container, not the host window. */
+.royalHero,
+.royalCoupleSection,
+.royalPerson,
+.royalEventGrid,
+.royalEventCard {
+  min-width: 0;
+}
+
+.royalHero {
+  display: grid;
+  gap: 1.25rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.royalHeroPortrait {
+  width: min(52%, 9rem);
+}
+
+.royalHeroTitle {
+  font-size: 2.25rem;
+}
+
+.royalCoupleSection {
+  padding: 2rem 1rem;
+}
+
+.royalCoupleGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.royalPortrait {
+  width: min(100%, 7rem);
+}
+
+.royalName {
+  margin-top: 0.75rem;
+  font-size: 1.35rem;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.royalOrigin {
+  overflow-wrap: anywhere;
+}
+
+.royalAmpersand {
+  align-self: start;
+  margin-top: 4.25rem;
+  line-height: 1;
+}
+
+.royalEventGrid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+@container (min-width: 420px) {
+  .royalHero {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2.5rem 1.5rem;
+    text-align: left;
+  }
+
+  .royalHeroPortrait {
+    width: 100%;
+  }
+
+  .royalHeroTitle {
+    font-size: 3rem;
+  }
+
+  .royalCoupleSection {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .royalCoupleGrid {
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+  }
+
+  .royalPortrait {
+    max-width: 9rem;
+  }
+
+  .royalName {
+    font-size: 1.5rem;
+  }
+
+  .royalAmpersand {
+    margin-top: 5.5rem;
+  }
+
+  .royalEventGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 480px) {
   .contentStop {
     padding-inline: 0.5rem;
     padding-bottom: 12svh;
@@ -211,7 +323,6 @@
 
   .contentCard {
     width: min(calc(100% - 0.75rem), 27rem);
-    max-height: 76svh;
     border-radius: 1.4rem;
     background: color-mix(in srgb, var(--inv-bg) 88%, transparent);
     backdrop-filter: blur(5px);

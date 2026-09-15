@@ -193,10 +193,35 @@ export function useJourneyProgress(
     };
   }, [inCanvas, stageRef, waitForOpen]);
 
-  const seekToTarget = useCallback((sectionType: string) => {
-    const owner = ownerRef.current;
-    return owner ? seekJourneyTarget(owner, sectionType) : false;
-  }, []);
+  const seekToTarget = useCallback(
+    (sectionType: string) => {
+      const owner = ownerRef.current;
+      if (!owner) return false;
+      if (sectionType === "cover") {
+        seekJourneyProgress(owner, 0);
+        return true;
+      }
+      const section = [
+        ...(stageRef.current?.querySelectorAll<HTMLElement>("[data-section]") ??
+          []),
+      ].find((node) => node.dataset.section === sectionType);
+      if (!section) return false;
+      const scroller = owner === window ? null : (owner as HTMLElement);
+      const height = scroller?.clientHeight ?? window.innerHeight;
+      const scrollTop = scroller?.scrollTop ?? window.scrollY;
+      const ownerTop = scroller?.getBoundingClientRect().top ?? 0;
+      const card = section.getBoundingClientRect();
+      // Seek the rendered card, with room for floating controls. Journey range
+      // percentages describe the camera path, not a card's visible position.
+      const inset = Math.max(80, (height - 88 - card.height) / 2);
+      owner.scrollTo({
+        top: scrollTop + card.top - ownerTop - inset,
+        behavior: "auto",
+      });
+      return true;
+    },
+    [stageRef],
+  );
 
   const openAtEntrance = useCallback(() => {
     openedRef.current = true;

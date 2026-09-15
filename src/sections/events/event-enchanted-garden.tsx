@@ -2,6 +2,7 @@ import { CalendarDays, CalendarPlus, MapPin } from "lucide-react";
 import type { SectionRenderProps } from "../types";
 import { formatEventDate, formatTimeRange } from "../shared";
 import { eventCalendarUrl, normalizeEventDetails } from "./event-data";
+import styles from "../enchanted-garden/enchanted-garden.module.css";
 
 /** Compact teak-and-gold ceremony cards for the journey viewport. */
 export function EventEnchantedGarden({ props }: SectionRenderProps) {
@@ -17,11 +18,11 @@ export function EventEnchantedGarden({ props }: SectionRenderProps) {
           {p.intro}
         </p>
       ) : null}
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className={styles.royalEventGrid}>
         {events.map((event, index) => (
           <article
             key={`${event.name ?? "acara"}-${index}`}
-            className="rounded-2xl border border-[color-mix(in_srgb,var(--inv-secondary)_35%,transparent)] bg-[color-mix(in_srgb,var(--inv-bg)_75%,transparent)] p-4"
+            className={`${styles.royalEventCard} rounded-2xl border border-[color-mix(in_srgb,var(--inv-secondary)_35%,transparent)] bg-[color-mix(in_srgb,var(--inv-bg)_75%,transparent)] p-4`}
           >
             <CalendarDays
               className="mx-auto text-[var(--inv-secondary)]"
