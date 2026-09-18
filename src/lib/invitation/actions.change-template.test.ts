@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invitations, templates } from "@/lib/db/schema";
 import type { SectionData } from "@/sections/types";
 import type { TemplatePreset } from "@/lib/templates/catalog";
+import { LEGACY_SEKAR_JAWA_ID, SEKAR_JAWA_ID } from "@/lib/templates/identity";
 
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
@@ -136,6 +137,16 @@ beforeEach(() => {
       (template) => template.id === id,
     ),
   );
+});
+
+describe("legacy template identity", () => {
+  it("does not reapply content when switching from the legacy ID to its canonical ID", async () => {
+    const { set, insert } = transactionBuilder({ ...invitation, sourceTemplate: LEGACY_SEKAR_JAWA_ID });
+    mocks.getTemplate.mockReturnValueOnce(preset(SEKAR_JAWA_ID, "wedding"));
+    expect(await changeInvitationTemplate(invitation.id, SEKAR_JAWA_ID)).toEqual({ ok: true });
+    expect(set).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
+  });
 });
 
 describe("createInvitation catalog materialization", () => {

@@ -127,8 +127,8 @@ describe("mergeInvitationGlobalSettings", () => {
     expect(merged.presentationMode).toBe("cinematic");
   });
 
-  it("defaults a standard-to-Enchanted-Garden change to cinematic mode", () => {
-    const target = template("enchanted-garden").global_settings;
+  it("defaults a standard-to-Sekar-Jawa-3D change to cinematic mode", () => {
+    const target = template("sekar-jawa-3d").global_settings;
     const merged = mergeInvitationGlobalSettings(existing, target, false, true);
 
     expect(merged.presentationMode).toBe("cinematic");
@@ -200,9 +200,9 @@ describe("mergeInvitationIntoTemplate", () => {
     ).toBe("standard");
   });
 
-  it("hydrates Enchanted Garden through the generic wedding merge", () => {
+  it("hydrates Sekar Jawa 3D through the generic wedding merge", () => {
     const source = template("navy-elegan");
-    const target = template("enchanted-garden");
+    const target = template("sekar-jawa-3d");
     const existing = instantiate(source);
     const hero = byType(existing, "hero");
     hero.props = { ...hero.props, couple_names: "Alya & Bima" };
@@ -211,7 +211,7 @@ describe("mergeInvitationIntoTemplate", () => {
 
     expect(byType(merged, "hero")).toMatchObject({
       id: hero.id,
-      variant: "enchanted-garden",
+      variant: "sekar-jawa-3d",
       props: expect.objectContaining({ couple_names: "Alya & Bima" }),
     });
     expect(new Set(merged.map((section) => section.id)).size).toBe(merged.length);

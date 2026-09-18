@@ -11,8 +11,8 @@ import { DeviceFrame } from "./device-frame";
 import { getDevice } from "./devices";
 import { CinematicComposition } from "@/sections/cinematic/composition";
 import { cinematicContent } from "@/sections/cinematic/content";
-import { EnchantedGardenComposition } from "@/sections/enchanted-garden/composition";
-import { enchantedGardenContent } from "@/sections/enchanted-garden/content";
+import { SekarJawa3DComposition } from "@/sections/sekar-jawa-3d/composition";
+import { sekarJawa3DContent } from "@/sections/sekar-jawa-3d/content";
 
 const OVERLAY_TYPES = new Set(["music", "navigation"]);
 
@@ -27,8 +27,8 @@ export function getBuilderFlow(
       return cinematicContent(ordered, true).remaining.filter(
         (section) => section.type !== "cover",
       );
-    case "enchanted-garden":
-      return enchantedGardenContent(ordered).remaining;
+    case "sekar-jawa-3d":
+      return sekarJawa3DContent(ordered).remaining;
   }
 }
 
@@ -40,7 +40,7 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   const select = useBuilder((s) => s.select);
   const composition = useBuilder((s) => s.compositionPolicy.composition);
   const cinematicVintage = composition === "cinematic-vintage";
-  const enchantedGarden = composition === "enchanted-garden";
+  const sekarJawa3D = composition === "sekar-jawa-3d";
   const scrollRef = useRef<HTMLDivElement>(null);
   const clickInCanvas = useRef(false);
 
@@ -74,13 +74,13 @@ export function Canvas({ invitationId }: { invitationId: string }) {
       });
       if (!stage.dispatchEvent(seek)) return;
     }
-    const enchantedStage = root?.querySelector("[data-enchanted-garden-stage]");
-    if (enchantedStage) {
-      const seek = new CustomEvent("enchanted-garden:seek", {
+    const sekarStage = root?.querySelector("[data-sekar-jawa-3d-stage]");
+    if (sekarStage) {
+      const seek = new CustomEvent("sekar-jawa-3d:seek", {
         detail: selectedId,
         cancelable: true,
       });
-      if (!enchantedStage.dispatchEvent(seek)) return;
+      if (!sekarStage.dispatchEvent(seek)) return;
     }
     const el = root?.querySelector<HTMLElement>(
       `[data-section-id="${selectedId}"]`,
@@ -106,9 +106,9 @@ export function Canvas({ invitationId }: { invitationId: string }) {
                 wide ? "inset-x-0" : musicLeft ? "left-0" : "right-0"
               }`
             : "pointer-events-none absolute inset-0 [&_nav]:pointer-events-auto";
-          // Enchanted Garden's overlay buttons own their clicks (seek/audio).
+          // Sekar Jawa 3D's overlay buttons own their clicks (seek/audio).
           // Its flow placeholder remains the selection target for the inspector.
-          const overlaySelectHandler = enchantedGarden
+          const overlaySelectHandler = sekarJawa3D
             ? undefined
             : selectHandler(section.id);
           return (
@@ -192,8 +192,8 @@ export function Canvas({ invitationId }: { invitationId: string }) {
               compositionActive
             />
           ) : null}
-          {enchantedGarden ? (
-            <EnchantedGardenComposition
+          {sekarJawa3D ? (
+            <SekarJawa3DComposition
               sections={ordered}
               global={global}
               invitationId={invitationId}
