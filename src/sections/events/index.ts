@@ -6,9 +6,9 @@ import { eventsArray, nowPlus } from "../fields";
 import { EventTimeline } from "./event-timeline";
 import { EventCards } from "./event-cards";
 import { EventFormal } from "./event-formal";
-import { EventEnchantedGarden } from "./event-enchanted-garden";
+import { EventSekarJawa3D } from "./event-sekar-jawa-3d";
 
-export { EventTimeline, EventCards, EventFormal, EventEnchantedGarden };
+export { EventTimeline, EventCards, EventFormal, EventSekarJawa3D };
 
 const introField = {
   kind: "textarea" as const,
@@ -31,10 +31,10 @@ export const eventsSection: SectionDefinition = {
   icon: "CalendarClock",
   category: "content",
   variants: {
-    "enchanted-garden": {
+    "sekar-jawa-3d": {
       name: "Kartu Pendopo",
       description: "Kartu acara ringkas dengan aksen kayu dan emas",
-      component: EventEnchantedGarden,
+      component: EventSekarJawa3D,
       propsSchema: EventDetailsProps,
       fields: [introField, eventsArray],
       defaultProps: {

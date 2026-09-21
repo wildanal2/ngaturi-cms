@@ -1,9 +1,10 @@
+import { canonicalTemplateId } from "./identity";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
 export type TemplateComposition =
   | "standard"
   | "cinematic-vintage"
-  | "enchanted-garden";
+  | "sekar-jawa-3d";
 
 export interface TemplatePreset {
   id: string;
@@ -44,7 +45,7 @@ const themeAssets = (root: string): ThemeAssets => ({
 
 const FLOATING_EMAS = themeAssets("floating-emas");
 const FLOATING_TERRACOTTA = themeAssets("floating-terracotta");
-const ENCHANTED_GARDEN_EVENT_DATE = inDays(75);
+const SEKAR_JAWA_3D_EVENT_DATE = inDays(75);
 
 const themeDecor = (theme: ThemeAssets) => ({
   background_image: theme.bg,
@@ -87,14 +88,14 @@ export const TEMPLATES: TemplatePreset[] = [
     ],
   },
   {
-    id: "enchanted-garden",
-    name: "Enchanted Garden",
+    id: "sekar-jawa-3d",
+    name: "Sekar Jawa 3D",
     description:
-      "Perjalanan pernikahan Jawa di antara Candi Bentar, Pendopo, taman temaram, dan pelaminan beraksen emas.",
+      "Premium Javanese Wedding — perjalanan sakral melalui Candi Bentar, taman melati, Pendopo, dan pelaminan kayu jati.",
     category: "wedding",
     tier: "premium",
-    composition: "enchanted-garden",
-    thumbnail: "/templates/enchanted-garden/card",
+    composition: "sekar-jawa-3d",
+    thumbnail: "/templates/sekar-jawa-3d/card",
     global_settings: {
       font_family: "Cormorant",
       color_primary: "#4b2d1b",
@@ -104,22 +105,22 @@ export const TEMPLATES: TemplatePreset[] = [
       presentationMode: "cinematic",
     },
     sections: [
-      s("cover", "enchanted-garden", 0, {
+      s("cover", "sekar-jawa-3d", 0, {
         names: "Laras & Jati",
         tagline: "The Wedding Of",
         note: "Kepada Yth. Bapak/Ibu/Saudara/i",
         button_label: "Buka Undangan",
       }),
-      s("hero", "enchanted-garden", 1, {
+      s("hero", "sekar-jawa-3d", 1, {
         couple_names: "Laras & Jati",
         tagline: "Pawiwahan",
-        event_date: ENCHANTED_GARDEN_EVENT_DATE,
+        event_date: SEKAR_JAWA_3D_EVENT_DATE,
       }),
       s("quote", "centered", 2, {
         text: "Semoga perjalanan ini menjadi taman tempat kasih, hormat, dan kebahagiaan terus bertumbuh.",
         source: "Laras & Jati",
       }),
-      s("couple-intro", "enchanted-garden", 3, {
+      s("couple-intro", "sekar-jawa-3d", 3, {
         title: "Mempelai",
         bride: {
           name: "Laras",
@@ -155,13 +156,13 @@ export const TEMPLATES: TemplatePreset[] = [
           },
         ],
       }),
-      s("event-details", "enchanted-garden", 5, {
+      s("event-details", "sekar-jawa-3d", 5, {
         intro:
           "Dengan penuh syukur, kami mengundang Anda untuk hadir dan memberikan doa restu.",
         events: [
           {
             name: "Akad Nikah",
-            date: ENCHANTED_GARDEN_EVENT_DATE,
+            date: SEKAR_JAWA_3D_EVENT_DATE,
             start_time: "08:00",
             end_time: "10:00",
             venue_name: "Pendopo Arunika",
@@ -171,7 +172,7 @@ export const TEMPLATES: TemplatePreset[] = [
           },
           {
             name: "Resepsi",
-            date: ENCHANTED_GARDEN_EVENT_DATE,
+            date: SEKAR_JAWA_3D_EVENT_DATE,
             start_time: "11:00",
             end_time: "14:00",
             venue_name: "Pendopo Arunika",
@@ -188,7 +189,7 @@ export const TEMPLATES: TemplatePreset[] = [
           "https://www.google.com/maps/search/?api=1&query=Taman+Sari+Yogyakarta",
       }),
       s("countdown", "elegant", 7, {
-        target_date: ENCHANTED_GARDEN_EVENT_DATE,
+        target_date: SEKAR_JAWA_3D_EVENT_DATE,
       }),
       s("gallery", "spotlight", 8, { images: [], columns: 3 }),
       s("rsvp", "form-card", 9, {}),
@@ -203,7 +204,7 @@ export const TEMPLATES: TemplatePreset[] = [
           },
         ],
       }),
-      s("closing", "enchanted-garden", 12, {
+      s("closing", "sekar-jawa-3d", 12, {
         names: "Laras & Jati",
         message:
           "Merupakan kehormatan bagi kami apabila Anda berkenan hadir dan mengiringi langkah ini dengan doa.",
@@ -824,7 +825,7 @@ export const TEMPLATES: TemplatePreset[] = [
 ];
 
 export function getTemplate(id: string): TemplatePreset | undefined {
-  return TEMPLATES.find((t) => t.id === id);
+  return TEMPLATES.find((t) => t.id === canonicalTemplateId(id));
 }
 
 /** Resolve persisted template identity through the official catalog only. */

@@ -1,5 +1,6 @@
 "use client";
 
+import { canonicalTemplateId } from "@/lib/templates/identity";
 import { useBuilder, getDeep, setDeep } from "@/stores/builder-store";
 import { SectionRegistry } from "@/sections/registry";
 import { FieldRenderer, type FieldContext } from "./field-editors";
@@ -42,7 +43,7 @@ export function Inspector({
   if (!def) return null;
 
   const variants = Object.entries(def.variants);
-  const currentVariant = def.variants[section.variant];
+  const currentVariant = def.variants[canonicalTemplateId(section.variant)];
   const variantEditable = canEditSectionVariant(compositionPolicy, section.type);
 
   const ctx: FieldContext = {
@@ -85,7 +86,7 @@ export function Inspector({
           </span>
           <div className="grid grid-cols-2 gap-2.5">
             {variants.map(([key, v]) => {
-              const active = section.variant === key;
+              const active = canonicalTemplateId(section.variant) === key;
               return (
                 <div
                   key={key}

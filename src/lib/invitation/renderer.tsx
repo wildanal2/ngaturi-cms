@@ -3,8 +3,8 @@ import { getVariant } from "@/sections/registry";
 import { Reveal } from "@/sections/reveal";
 import { CinematicComposition } from "@/sections/cinematic/composition";
 import { cinematicContent } from "@/sections/cinematic/content";
-import { EnchantedGardenComposition } from "@/sections/enchanted-garden/composition";
-import { enchantedGardenContent } from "@/sections/enchanted-garden/content";
+import { SekarJawa3DComposition } from "@/sections/sekar-jawa-3d/composition";
+import { sekarJawa3DContent } from "@/sections/sekar-jawa-3d/content";
 import type { TemplateComposition } from "@/lib/templates/catalog";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
@@ -64,10 +64,10 @@ export function InvitationRenderer({
         />
       );
       break;
-    case "enchanted-garden":
-      flow = enchantedGardenContent(ordered).remaining;
+    case "sekar-jawa-3d":
+      flow = sekarJawa3DContent(ordered).remaining;
       ownedComposition = (
-        <EnchantedGardenComposition
+        <SekarJawa3DComposition
           sections={ordered}
           global={global}
           invitationId={invitationId}

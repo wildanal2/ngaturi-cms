@@ -31,12 +31,12 @@ describe("template composition identity", () => {
     expect(resolveTemplateComposition("cinematic")).toBe("standard");
   });
 
-  it("resolves the registered Enchanted Garden identity exactly", () => {
-    const composition: TemplateComposition = "enchanted-garden";
+  it("resolves the registered Sekar Jawa 3D identity exactly", () => {
+    const composition: TemplateComposition = "sekar-jawa-3d";
 
-    expect(resolveTemplateComposition("enchanted-garden")).toBe(composition);
+    expect(resolveTemplateComposition("sekar-jawa-3d")).toBe(composition);
     expect(getCompositionPolicy({ composition }).composition).toBe(
-      "enchanted-garden",
+      "sekar-jawa-3d",
     );
     expect(TEMPLATES.some((template) => template.id === composition)).toBe(
       true,
@@ -56,15 +56,15 @@ describe("template composition identity", () => {
 
     const cinematic = render("cinematic-vintage");
     const standard = render("standard");
-    const enchanted = render("enchanted-garden");
+    const sekar = render("sekar-jawa-3d");
 
     expect(cinematic).toContain("data-cinematic-stage");
-    expect(cinematic).not.toContain("data-enchanted-garden-stage");
+    expect(cinematic).not.toContain("data-sekar-jawa-3d-stage");
     expect(standard).not.toContain("data-cinematic-stage");
-    expect(standard).not.toContain("data-enchanted-garden-stage");
-    expect(enchanted).not.toContain("data-cinematic-stage");
-    expect(enchanted).toContain("data-enchanted-garden-stage");
-    expect(enchanted.match(/data-enchanted-garden-canvas/g)).toHaveLength(1);
+    expect(standard).not.toContain("data-sekar-jawa-3d-stage");
+    expect(sekar).not.toContain("data-cinematic-stage");
+    expect(sekar).toContain("data-sekar-jawa-3d-stage");
+    expect(sekar.match(/data-sekar-jawa-3d-canvas/g)).toHaveLength(1);
   });
 
   it("keeps Cinematic Vintage locks composition-specific", () => {
@@ -72,8 +72,8 @@ describe("template composition identity", () => {
       composition: "cinematic-vintage",
     });
     const standardPolicy = getCompositionPolicy({ composition: "standard" });
-    const enchantedPolicy = getCompositionPolicy({
-      composition: "enchanted-garden",
+    const sekarPolicy = getCompositionPolicy({
+      composition: "sekar-jawa-3d",
     });
 
     expect(cinematicPolicy).not.toHaveProperty("isCinematic");
@@ -87,12 +87,12 @@ describe("template composition identity", () => {
     expect(canEditSectionVariant(standardPolicy, "hero")).toBe(true);
     expect(canReorderSection(standardPolicy, "hero")).toBe(true);
 
-    expect(enchantedPolicy.canEditMotion).toBe(false);
-    expect(canEditSectionVariant(enchantedPolicy, "hero")).toBe(false);
-    expect(canReorderSection(enchantedPolicy, "hero")).toBe(false);
-    expect(canEditSectionVariant(enchantedPolicy, "story")).toBe(false);
-    expect(canReorderSection(enchantedPolicy, "closing")).toBe(false);
-    expect(canEditSectionVariant(enchantedPolicy, "rsvp")).toBe(true);
-    expect(canReorderSection(enchantedPolicy, "gift")).toBe(true);
+    expect(sekarPolicy.canEditMotion).toBe(false);
+    expect(canEditSectionVariant(sekarPolicy, "hero")).toBe(false);
+    expect(canReorderSection(sekarPolicy, "hero")).toBe(false);
+    expect(canEditSectionVariant(sekarPolicy, "story")).toBe(false);
+    expect(canReorderSection(sekarPolicy, "closing")).toBe(false);
+    expect(canEditSectionVariant(sekarPolicy, "rsvp")).toBe(true);
+    expect(canReorderSection(sekarPolicy, "gift")).toBe(true);
   });
 });

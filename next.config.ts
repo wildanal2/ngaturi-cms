@@ -21,6 +21,14 @@ const allowedDevOrigins =
 const nextConfig: NextConfig = {
   ...(allowedDevOrigins.length > 0 && { allowedDevOrigins }),
 
+  // Legacy links and persisted asset URLs share the single canonical template.
+  redirects() {
+    return [
+      { source: "/templates/enchanted-garden/:path*", destination: "/templates/sekar-jawa-3d/:path*", permanent: true },
+      { source: "/themes/enchanted-garden/:path*", destination: "/themes/sekar-jawa-3d/:path*", permanent: true },
+    ];
+  },
+
   turbopack: {
     root: import.meta.dirname,
   },

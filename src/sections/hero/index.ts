@@ -11,7 +11,7 @@ import { HeroBotanical } from "./hero-botanical";
 import { HeroArch } from "./hero-arch";
 import { HeroGarland } from "./hero-garland";
 import { HeroFloating17 } from "./hero-floating17";
-import { HeroEnchantedGarden } from "./hero-enchanted-garden";
+import { HeroSekarJawa3D } from "./hero-sekar-jawa-3d";
 
 export {
   HeroCentered,
@@ -21,7 +21,7 @@ export {
   HeroArch,
   HeroGarland,
   HeroFloating17,
-  HeroEnchantedGarden,
+  HeroSekarJawa3D,
 };
 
 const baseDefaults = {
@@ -40,10 +40,10 @@ export const heroSection: SectionDefinition = {
     if (!base.background_image) base.background_image = dummyHero(variantKey);
   },
   variants: {
-    "enchanted-garden": {
+    "sekar-jawa-3d": {
       name: "Potret Taman Keraton",
       description: "Potret melengkung dan tipografi kerajaan Jawa",
-      component: HeroEnchantedGarden,
+      component: HeroSekarJawa3D,
       propsSchema: HeroProps,
       fields: [
         ...heroBase,

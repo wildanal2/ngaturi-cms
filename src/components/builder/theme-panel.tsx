@@ -28,7 +28,7 @@ export function presentationModeLabel(
   mode: "cinematic" | "simple",
 ) {
   if (mode === "simple") return "Sederhana";
-  return composition === "enchanted-garden" ? "Imersif" : "Sinematik";
+  return composition === "sekar-jawa-3d" ? "Imersif" : "Sinematik";
 }
 
 export function ThemePanel({
@@ -46,7 +46,7 @@ export function ThemePanel({
   const canEditMotion = useBuilder((s) => s.compositionPolicy.canEditMotion);
   const composition = useBuilder((s) => s.compositionPolicy.composition);
   const cinematicVintage = composition === "cinematic-vintage";
-  const enchantedGarden = composition === "enchanted-garden";
+  const sekarJawa3D = composition === "sekar-jawa-3d";
 
   return (
     <div className="space-y-5">
@@ -145,7 +145,7 @@ export function ThemePanel({
         </select>
       </label>
 
-      {cinematicVintage || enchantedGarden ? (
+      {cinematicVintage || sekarJawa3D ? (
         <div className="text-sm">
           <span className="mb-1.5 block text-ink-soft">Mode Tampilan</span>
           <div className="grid grid-cols-2 gap-2">

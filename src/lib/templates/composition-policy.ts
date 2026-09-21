@@ -1,5 +1,5 @@
 import { isCinematicCoreSectionType } from "@/sections/cinematic/content";
-import { isEnchantedGardenCoreSectionType } from "@/sections/enchanted-garden/content";
+import { isSekarJawa3DCoreSectionType } from "@/sections/sekar-jawa-3d/content";
 import type { TemplateComposition } from "./catalog";
 
 export interface CompositionPolicy {
@@ -23,8 +23,8 @@ const CINEMATIC_VINTAGE_COMPOSITION_POLICY: CompositionPolicy = {
   canReorderCoreSection: false,
 };
 
-const ENCHANTED_GARDEN_COMPOSITION_POLICY: CompositionPolicy = {
-  composition: "enchanted-garden",
+const SEKAR_JAWA_3D_COMPOSITION_POLICY: CompositionPolicy = {
+  composition: "sekar-jawa-3d",
   canEditMotion: false,
   canEditCoreVariant: false,
   canReorderCoreSection: false,
@@ -39,8 +39,8 @@ function isCompositionCoreSection(
       return false;
     case "cinematic-vintage":
       return isCinematicCoreSectionType(sectionType);
-    case "enchanted-garden":
-      return isEnchantedGardenCoreSectionType(sectionType);
+    case "sekar-jawa-3d":
+      return isSekarJawa3DCoreSectionType(sectionType);
   }
 }
 
@@ -54,8 +54,8 @@ export function getCompositionPolicy({
       return STANDARD_COMPOSITION_POLICY;
     case "cinematic-vintage":
       return CINEMATIC_VINTAGE_COMPOSITION_POLICY;
-    case "enchanted-garden":
-      return ENCHANTED_GARDEN_COMPOSITION_POLICY;
+    case "sekar-jawa-3d":
+      return SEKAR_JAWA_3D_COMPOSITION_POLICY;
   }
 }
 

@@ -2,7 +2,7 @@
 
 import { refresh, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   invitations,
@@ -11,6 +11,7 @@ import {
   userProfiles,
 } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
+import { canonicalTemplateId, templateIdentityAliases } from "@/lib/templates/identity";
 import { getTemplate } from "@/lib/templates/catalog";
 import {
   hydrateTemplateSections,
@@ -242,7 +243,7 @@ export async function changeInvitationTemplate(
           error: "Masa edit gratis sudah berakhir.",
         };
       }
-      if (inv.sourceTemplate === targetTemplate.id) {
+      if (canonicalTemplateId(inv.sourceTemplate) === targetTemplate.id) {
         return { ok: true as const, slug: inv.slug };
       }
 
@@ -387,7 +388,7 @@ export async function saveComposition(
       and(
         eq(invitations.id, invitationId),
         eq(invitations.userId, inv.userId),
-        eq(invitations.sourceTemplate, payload.source_template),
+        inArray(invitations.sourceTemplate, templateIdentityAliases(payload.source_template)),
       ),
     )
     .returning({ id: invitations.id });

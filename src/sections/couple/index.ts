@@ -10,7 +10,7 @@ import { CouplePolaroid } from "./couple-polaroid";
 import { CoupleCard } from "./couple-card";
 import { CoupleDuoPortrait } from "./couple-duo-portrait";
 import { CoupleFloating17 } from "./couple-floating17";
-import { CoupleEnchantedGarden } from "./couple-enchanted-garden";
+import { CoupleSekarJawa3D } from "./couple-sekar-jawa-3d";
 
 export {
   CoupleSideBySide,
@@ -19,7 +19,7 @@ export {
   CoupleCard,
   CoupleDuoPortrait,
   CoupleFloating17,
-  CoupleEnchantedGarden,
+  CoupleSekarJawa3D,
 };
 
 export const coupleSection: SectionDefinition = {
@@ -35,10 +35,10 @@ export const coupleSection: SectionDefinition = {
     if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
   },
   variants: {
-    "enchanted-garden": {
+    "sekar-jawa-3d": {
       name: "Potret Keraton",
       description: "Dua potret lengkung dalam panel Pendopo",
-      component: CoupleEnchantedGarden,
+      component: CoupleSekarJawa3D,
       propsSchema: CoupleIntroProps,
       fields: [{ kind: "text", key: "title", label: "Judul" }, ...coupleFields],
       defaultProps: {

@@ -1,17 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { TEMPLATES, getTemplate } from "./catalog";
+import { TEMPLATES, getTemplate, resolveTemplateComposition } from "./catalog";
+import { LEGACY_SEKAR_JAWA_ID, SEKAR_JAWA_ID, templateIdentityAliases } from "./identity";
 import { hydrateTemplateSections } from "./hydrate";
 import { getVariant } from "@/sections/registry";
 
 describe("TEMPLATES", () => {
-  it("registers Enchanted Garden as an immersive premium wedding template", () => {
-    expect(getTemplate("enchanted-garden")).toMatchObject({
-      id: "enchanted-garden",
-      name: "Enchanted Garden",
+  it("resolves the legacy identity to one canonical template and its native variants", () => {
+    const canonical = getTemplate(SEKAR_JAWA_ID)!;
+    expect(getTemplate(LEGACY_SEKAR_JAWA_ID)).toBe(canonical);
+    expect(resolveTemplateComposition(LEGACY_SEKAR_JAWA_ID)).toBe(SEKAR_JAWA_ID);
+    expect(TEMPLATES.some((t) => t.id === LEGACY_SEKAR_JAWA_ID)).toBe(false);
+    for (const type of ["cover", "hero", "couple-intro", "event-details", "closing"]) {
+      expect(getVariant(type, LEGACY_SEKAR_JAWA_ID)).toBe(getVariant(type, SEKAR_JAWA_ID));
+    }
+    expect(hydrateTemplateSections(getTemplate(LEGACY_SEKAR_JAWA_ID)!)).toEqual(hydrateTemplateSections(canonical));
+    expect(templateIdentityAliases(LEGACY_SEKAR_JAWA_ID)).toEqual(templateIdentityAliases(SEKAR_JAWA_ID));
+    expect(templateIdentityAliases("cinematic-vintage")).toEqual(["cinematic-vintage"]);
+  });
+
+  it("registers Sekar Jawa 3D as an immersive premium wedding template", () => {
+    expect(getTemplate("sekar-jawa-3d")).toMatchObject({
+      id: "sekar-jawa-3d",
+      name: "Sekar Jawa 3D",
       category: "wedding",
       tier: "premium",
-      composition: "enchanted-garden",
-      thumbnail: "/templates/enchanted-garden/card",
+      composition: "sekar-jawa-3d",
+      thumbnail: "/templates/sekar-jawa-3d/card",
       global_settings: { presentationMode: "cinematic" },
     });
   });

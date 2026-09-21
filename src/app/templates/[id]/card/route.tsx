@@ -17,7 +17,7 @@ const H = 800;
 
 const compositionCardBackground: Partial<Record<string, string>> = {
   "cinematic-vintage": "/themes/cinematic-vintage/cards/template-card.jpg",
-  "enchanted-garden": "/themes/enchanted-garden/cards/template-card.jpg",
+  "sekar-jawa-3d": "/themes/sekar-jawa-3d/cards/template-card.jpg",
 };
 
 /** Satori only shapes Latin reliably — strip the rest. */
@@ -65,6 +65,72 @@ export async function GET(
   const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin);
   const ornamentRight = cardImageUrl(visual.ornamentRight, origin);
   const seal = cardImageUrl(visual.seal, origin);
+
+  // Match the existing picker crop so the split gate is visible in full.
+  if (t.id === "sekar-jawa-3d" && background) {
+    return new ImageResponse(
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          position: "relative",
+          background: "#25291f",
+        }}
+      >
+        <img
+          src={background}
+          alt=""
+          width={600}
+          height={450}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, transparent 60%, rgba(20,24,18,.88))",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: 22,
+            left: 0,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            color: "#fff4df",
+          }}
+        >
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 36 }}>
+            {t.name}
+          </div>
+          <div
+            style={{
+              marginTop: 5,
+              fontSize: 11,
+              letterSpacing: 3,
+              color: "#dec99e",
+            }}
+          >
+            PREMIUM JAVANESE WEDDING
+          </div>
+        </div>
+      </div>,
+      {
+        width: 600,
+        height: 450,
+        headers: {
+          "Cache-Control":
+            "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800",
+        },
+      },
+    );
+  }
+
 
   return new ImageResponse(
     (

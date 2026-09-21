@@ -6,9 +6,9 @@ import { dummyClosing } from "../dummy";
 import { ClosingSimple } from "./closing-simple";
 import { ClosingPhoto } from "./closing-photo";
 import { ClosingThankYou } from "./closing-thankyou";
-import { ClosingEnchantedGarden } from "./closing-enchanted-garden";
+import { ClosingSekarJawa3D } from "./closing-sekar-jawa-3d";
 
-export { ClosingSimple, ClosingPhoto, ClosingThankYou, ClosingEnchantedGarden };
+export { ClosingSimple, ClosingPhoto, ClosingThankYou, ClosingSekarJawa3D };
 
 export const closingSection: SectionDefinition = {
   type: "closing",
@@ -20,10 +20,10 @@ export const closingSection: SectionDefinition = {
     if ((variantKey === "photo" || variantKey === "cinematic-vintage") && !base.photo) base.photo = dummyClosing();
   },
   variants: {
-    "enchanted-garden": {
+    "sekar-jawa-3d": {
       name: "Pelaminan Jawa",
       description: "Ucapan penutup di depan pelaminan tiga dimensi",
-      component: ClosingEnchantedGarden,
+      component: ClosingSekarJawa3D,
       propsSchema: ClosingProps,
       fields: [
         { kind: "textarea", key: "message", label: "Pesan penutup" },

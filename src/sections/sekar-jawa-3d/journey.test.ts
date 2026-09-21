@@ -1,0 +1,74 @@
+import { describe, expect, it } from "vitest";
+import {
+  clampJourneyProgress,
+  createJourneyCameraTransform,
+  SEKAR_JAWA_3D_JOURNEY,
+  getJourneyTargetProgress,
+  writeJourneyCameraTransform,
+} from "./journey";
+
+describe("Sekar Jawa 3D journey", () => {
+  it("has unique identities and one contiguous normalized range", () => {
+    const ids = SEKAR_JAWA_3D_JOURNEY.map((stop) => stop.id);
+    const sections = SEKAR_JAWA_3D_JOURNEY.flatMap((stop) =>
+      "section" in stop ? [stop.section] : [],
+    );
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(sections).size).toBe(sections.length);
+    expect(SEKAR_JAWA_3D_JOURNEY[0].range[0]).toBe(0);
+    expect(SEKAR_JAWA_3D_JOURNEY.at(-1)?.range[1]).toBe(1);
+
+    SEKAR_JAWA_3D_JOURNEY.forEach((stop, index) => {
+      expect(stop.range[0]).toBeLessThan(stop.range[1]);
+      if (index > 0) {
+        expect(stop.range[0]).toBe(
+          SEKAR_JAWA_3D_JOURNEY[index - 1].range[1],
+        );
+      }
+    });
+  });
+
+  it("clamps invalid and out-of-range progress", () => {
+    expect(clampJourneyProgress(Number.NaN)).toBe(0);
+    expect(clampJourneyProgress(-1)).toBe(0);
+    expect(clampJourneyProgress(0.4)).toBe(0.4);
+    expect(clampJourneyProgress(2)).toBe(1);
+  });
+
+  it("writes smooth camera transforms into caller-owned storage", () => {
+    const output = createJourneyCameraTransform();
+    const position = output.position;
+    const target = output.target;
+    const result = writeJourneyCameraTransform(0.1, output);
+
+    expect(result).toBe(output);
+    expect(result.position).toBe(position);
+    expect(result.target).toBe(target);
+    expect(result.position[2]).toBeLessThan(21);
+    expect(result.position[2]).toBeGreaterThan(14.5);
+  });
+
+  it("holds the final camera stop at progress one", () => {
+    const output = writeJourneyCameraTransform(
+      1,
+      createJourneyCameraTransform(),
+    );
+    const last = SEKAR_JAWA_3D_JOURNEY.at(-1)!;
+
+    expect(output.position).toEqual(last.camera.position);
+    expect(output.target).toEqual(last.camera.target);
+    expect(output.fov).toBe(last.camera.fov);
+  });
+
+  it("derives navigation targets from the authoritative journey stops", () => {
+    const gallery = SEKAR_JAWA_3D_JOURNEY.find(
+      (stop) => "section" in stop && stop.section === "gallery",
+    )!;
+    expect(getJourneyTargetProgress("gallery")).toBe(
+      (gallery.range[0] + gallery.range[1]) / 2,
+    );
+    expect(getJourneyTargetProgress("cover")).toBe(0);
+    expect(getJourneyTargetProgress("not-a-section")).toBeUndefined();
+  });
+});

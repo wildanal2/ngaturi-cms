@@ -4,23 +4,23 @@ import { dispatchCompositionSeek, scrollToSection } from "./nav-shared";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("composition navigation bridge", () => {
-  it("dispatches an Enchanted Garden target instead of creating a timeline", () => {
+  it("dispatches an Sekar Jawa 3D target instead of creating a timeline", () => {
     const dispatchEvent = vi.fn((_event: Event) => false);
     const stage = { dispatchEvent };
     const section = {
       dataset: { sectionId: "gallery-id" },
       closest: vi.fn((selector: string) =>
-        selector === "[data-enchanted-garden-stage]" ? stage : null,
+        selector === "[data-sekar-jawa-3d-stage]" ? stage : null,
       ),
     } as unknown as HTMLElement;
 
     expect(dispatchCompositionSeek(section, "gallery")).toBe(true);
     const event = dispatchEvent.mock.calls[0][0] as CustomEvent<string>;
-    expect(event.type).toBe("enchanted-garden:navigate");
+    expect(event.type).toBe("sekar-jawa-3d:navigate");
     expect(event.detail).toBe("gallery");
   });
 
-  it("scrolls Enchanted Garden Simple mode only inside DeviceFrame", () => {
+  it("scrolls Sekar Jawa 3D Simple mode only inside DeviceFrame", () => {
     const scrollTo = vi.fn();
     const scroller = {
       scrollTop: 120,
@@ -32,7 +32,7 @@ describe("composition navigation bridge", () => {
       dataset: { sectionId: "gift-id" },
       getBoundingClientRect: () => ({ top: 320 }),
       closest: vi.fn((selector: string) =>
-        selector === "[data-enchanted-garden-simple]" ? {} : null,
+        selector === "[data-sekar-jawa-3d-simple]" ? {} : null,
       ),
     };
     scroller.querySelector.mockReturnValue(section);
@@ -46,7 +46,7 @@ describe("composition navigation bridge", () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 420, behavior: "smooth" });
   });
 
-  it("retains the existing Builder no-op outside Enchanted Garden", () => {
+  it("retains the existing Builder no-op outside Sekar Jawa 3D", () => {
     const scrollTo = vi.fn();
     const scroller = {
       scrollTop: 0,

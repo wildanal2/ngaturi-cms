@@ -43,10 +43,10 @@ describe("Change Template category compatibility", () => {
     expect(templates).toHaveLength(3);
   });
 
-  it("includes Enchanted Garden through the generic wedding filter", () => {
+  it("includes Sekar Jawa 3D through the generic wedding filter", () => {
     const wedding = filterTemplatesByCategory(TEMPLATES, "wedding");
 
-    expect(wedding.some((template) => template.id === "enchanted-garden")).toBe(true);
+    expect(wedding.some((template) => template.id === "sekar-jawa-3d")).toBe(true);
     expect(wedding.every((template) => template.category === "wedding")).toBe(true);
   });
 });

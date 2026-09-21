@@ -38,19 +38,19 @@ export function dispatchCompositionSeek(section: HTMLElement, type: string) {
     if (!cinematicStage.dispatchEvent(seek)) return true;
   }
 
-  const enchantedStage = section.closest("[data-enchanted-garden-stage]");
-  if (enchantedStage) {
-    const navigate = new CustomEvent("enchanted-garden:navigate", {
+  const sekarStage = section.closest("[data-sekar-jawa-3d-stage]");
+  if (sekarStage) {
+    const navigate = new CustomEvent("sekar-jawa-3d:navigate", {
       detail: type,
       cancelable: true,
     });
-    if (!enchantedStage.dispatchEvent(navigate)) return true;
+    if (!sekarStage.dispatchEvent(navigate)) return true;
   }
   return false;
 }
 
 /** Uses each composition's existing scroll runtime publicly. In Builder only
- * Enchanted Garden opts into local navigation; the other preview paths retain
+ * Sekar Jawa 3D opts into local navigation; the other preview paths retain
  * their existing behavior. */
 export function scrollToSection(
   type: string,
@@ -69,11 +69,11 @@ export function scrollToSection(
     );
     if (!scroller || !section) return;
     if (
-      section.closest("[data-enchanted-garden-stage]") &&
+      section.closest("[data-sekar-jawa-3d-stage]") &&
       dispatchCompositionSeek(section, type)
     )
       return;
-    if (!section.closest("[data-enchanted-garden-simple]")) return;
+    if (!section.closest("[data-sekar-jawa-3d-simple]")) return;
 
     const top =
       section.getBoundingClientRect().top -
