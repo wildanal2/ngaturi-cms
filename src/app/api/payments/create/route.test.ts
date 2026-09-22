@@ -8,9 +8,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth/helpers", () => ({ getSession: mocks.getSession }));
-vi.mock("@/lib/db", () => ({
-  db: { transaction: mocks.transaction, update: mocks.update },
-}));
+vi.mock("@/lib/db", () => {
+  const db = { transaction: mocks.transaction, update: mocks.update };
+  return { db, getDb: () => db };
+});
 vi.mock("@/lib/payments/doku", () => ({
   createCheckout: mocks.createCheckout,
   DOKU_CHECKOUT_DUE_MINUTES: 60,

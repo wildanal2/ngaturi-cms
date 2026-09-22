@@ -8,8 +8,12 @@ const eslintConfig = [
     ignores: [
       ".agent-input/**",
       ".next/**",
+      ".vinext/**",
+      ".wrangler/**",
+      "dist/**",
       "node_modules/**",
       "src/lib/db/migrations/**",
+      "worker-configuration.d.ts",
     ],
   },
 ];

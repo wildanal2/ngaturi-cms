@@ -1,5 +1,5 @@
 import { and, asc, eq, gte, isNotNull, lte } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { db, type Database } from "@/lib/db";
 import { payments } from "@/lib/db/schema";
 import { checkOrderStatus } from "./doku";
 import {
@@ -26,13 +26,21 @@ interface ReconciliationWindow {
 
 type CandidateLoader = (
   window: ReconciliationWindow,
+  database: Database,
 ) => Promise<PendingDokuPayment[]>;
 
+type ResultApplier = (
+  result: Parameters<typeof applyDokuResult>[0],
+  metadata: Parameters<typeof applyDokuResult>[1],
+  database: Database,
+) => ReturnType<typeof applyDokuResult>;
+
 interface ReconciliationDependencies {
+  database?: Database;
   now?: Date;
   loadCandidates?: CandidateLoader;
   checkStatus?: typeof checkOrderStatus;
-  applyResult?: typeof applyDokuResult;
+  applyResult?: ResultApplier;
 }
 
 export interface DokuReconciliationSummary {
@@ -45,12 +53,11 @@ export interface DokuReconciliationSummary {
   truncated: boolean;
 }
 
-export async function loadPendingDokuPayments({
-  oldestCreatedAt,
-  newestCreatedAt,
-  limit,
-}: ReconciliationWindow): Promise<PendingDokuPayment[]> {
-  const rows = await db
+export async function loadPendingDokuPayments(
+  { oldestCreatedAt, newestCreatedAt, limit }: ReconciliationWindow,
+  database: Database = db,
+): Promise<PendingDokuPayment[]> {
+  const rows = await database
     .select({
       id: payments.id,
       providerOrderId: payments.providerOrderId,
@@ -113,21 +120,25 @@ async function runWithConcurrency<T>(
 export async function reconcilePendingDokuPayments(
   dependencies: ReconciliationDependencies = {},
 ): Promise<DokuReconciliationSummary> {
+  const database = dependencies.database ?? db;
   const now = dependencies.now ?? new Date();
   const loadCandidates = dependencies.loadCandidates ?? loadPendingDokuPayments;
   const checkStatus = dependencies.checkStatus ?? checkOrderStatus;
   const applyResult = dependencies.applyResult ?? applyDokuResult;
   const queryLimit = DOKU_RECONCILIATION_BATCH_SIZE + 1;
 
-  const rows = await loadCandidates({
-    oldestCreatedAt: new Date(
-      now.getTime() - DOKU_RECONCILIATION_MAX_AGE_HOURS * 3_600_000,
-    ),
-    newestCreatedAt: new Date(
-      now.getTime() - DOKU_RECONCILIATION_MIN_AGE_MINUTES * 60_000,
-    ),
-    limit: queryLimit,
-  });
+  const rows = await loadCandidates(
+    {
+      oldestCreatedAt: new Date(
+        now.getTime() - DOKU_RECONCILIATION_MAX_AGE_HOURS * 3_600_000,
+      ),
+      newestCreatedAt: new Date(
+        now.getTime() - DOKU_RECONCILIATION_MIN_AGE_MINUTES * 60_000,
+      ),
+      limit: queryLimit,
+    },
+    database,
+  );
   const truncated = rows.length > DOKU_RECONCILIATION_BATCH_SIZE;
   const candidates = rows.slice(0, DOKU_RECONCILIATION_BATCH_SIZE);
   const summary: DokuReconciliationSummary = {
@@ -146,9 +157,13 @@ export async function reconcilePendingDokuPayments(
     async (candidate) => {
       try {
         const result = await checkStatus(candidate.providerOrderId);
-        const applied: AppliedPaymentResult = await applyResult(result, {
-          source: "reconciliation",
-        });
+        const applied: AppliedPaymentResult = await applyResult(
+          result,
+          {
+            source: "reconciliation",
+          },
+          database,
+        );
         summary.checked += 1;
         summary.statuses[applied.status] += 1;
         if (applied.transitioned) summary.transitioned += 1;

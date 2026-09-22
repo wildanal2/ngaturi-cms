@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/helpers";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { invitations, payments } from "@/lib/db/schema";
 import { PLANS, RENEWAL_PRICE, type PaidPlan } from "@/lib/payments/plans";
 import {
@@ -19,6 +19,7 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const db = getDb();
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

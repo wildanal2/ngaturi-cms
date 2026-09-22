@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DokuPaymentResult } from "./doku";
 import type { AppliedPaymentResult } from "./grant";
+import type { Database } from "@/lib/db";
 import {
   DOKU_RECONCILIATION_BATCH_SIZE,
   reconcilePendingDokuPayments,
@@ -35,18 +36,23 @@ function applied(
 describe("reconcilePendingDokuPayments", () => {
   it("uses the bounded two-minute to 24-hour eligibility window", async () => {
     const now = new Date("2026-09-22T12:00:00.000Z");
+    const database = {} as Database;
     const loadCandidates = vi.fn().mockResolvedValue([]);
 
     const summary = await reconcilePendingDokuPayments({
       now,
+      database,
       loadCandidates,
     });
 
-    expect(loadCandidates).toHaveBeenCalledWith({
-      oldestCreatedAt: new Date("2026-09-21T12:00:00.000Z"),
-      newestCreatedAt: new Date("2026-09-22T11:58:00.000Z"),
-      limit: DOKU_RECONCILIATION_BATCH_SIZE + 1,
-    });
+    expect(loadCandidates).toHaveBeenCalledWith(
+      {
+        oldestCreatedAt: new Date("2026-09-21T12:00:00.000Z"),
+        newestCreatedAt: new Date("2026-09-22T11:58:00.000Z"),
+        limit: DOKU_RECONCILIATION_BATCH_SIZE + 1,
+      },
+      database,
+    );
     expect(summary).toEqual({
       selected: 0,
       checked: 0,
@@ -59,6 +65,7 @@ describe("reconcilePendingDokuPayments", () => {
   });
 
   it("checks each candidate and reuses the reconciliation fulfillment path", async () => {
+    const database = {} as Database;
     const candidates = [candidate(1), candidate(2)];
     const checkStatus = vi.fn(async (invoiceNumber: string) =>
       result(
@@ -67,8 +74,13 @@ describe("reconcilePendingDokuPayments", () => {
       ),
     );
     const applyResult = vi.fn(
-      async (paymentResult: DokuPaymentResult, metadata) => {
+      async (
+        paymentResult: DokuPaymentResult,
+        metadata: { source: string },
+        receivedDatabase: Database,
+      ) => {
         expect(metadata).toEqual({ source: "reconciliation" });
+        expect(receivedDatabase).toBe(database);
         return applied(
           paymentResult.invoiceNumber,
           paymentResult.status === "SUCCESS" ? "paid" : "pending",
@@ -77,6 +89,7 @@ describe("reconcilePendingDokuPayments", () => {
     );
 
     const summary = await reconcilePendingDokuPayments({
+      database,
       loadCandidates: async () => candidates,
       checkStatus,
       applyResult,
@@ -84,6 +97,9 @@ describe("reconcilePendingDokuPayments", () => {
 
     expect(checkStatus).toHaveBeenCalledTimes(2);
     expect(applyResult).toHaveBeenCalledTimes(2);
+    expect(applyResult.mock.calls.every((call) => call[2] === database)).toBe(
+      true,
+    );
     expect(summary).toEqual({
       selected: 2,
       checked: 2,

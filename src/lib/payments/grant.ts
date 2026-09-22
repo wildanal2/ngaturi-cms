@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { db } from "@/lib/db";
+import { db, type Database } from "@/lib/db";
 import { invitations, payments, userProfiles } from "@/lib/db/schema";
 import { PAID_PACKAGE_QUOTA_BONUS } from "@/lib/invitation/entitlement";
 import { RENEWAL_DAYS } from "./plans";
@@ -40,8 +40,9 @@ interface ApplyMetadata {
 export async function applyDokuResult(
   result: DokuPaymentResult,
   metadata: ApplyMetadata,
+  database: Database = db,
 ): Promise<AppliedPaymentResult> {
-  return db.transaction(async (tx) => {
+  return database.transaction(async (tx) => {
     const [pay] = await tx
       .select()
       .from(payments)
@@ -187,8 +188,9 @@ export function dokuResult(
 
 export async function invitationIdForInvoice(
   invoiceNumber: string,
+  database: Database = db,
 ): Promise<string | null> {
-  const [pay] = await db
+  const [pay] = await database
     .select({ invitationId: payments.invitationId })
     .from(payments)
     .where(eq(payments.providerOrderId, invoiceNumber))

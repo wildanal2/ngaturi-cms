@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/helpers";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
 import { presignPut, publicUrl } from "@/lib/storage";
 import { env } from "@/lib/env";
@@ -15,6 +15,7 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const db = getDb();
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -44,10 +45,18 @@ export async function POST(req: Request) {
     )
     .limit(1);
   if (!inv) {
-    return NextResponse.json({ error: "Undangan tidak ditemukan." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Undangan tidak ditemukan." },
+      { status: 404 },
+    );
   }
 
-  const ext = filename.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const ext =
+    filename
+      .split(".")
+      .pop()
+      ?.toLowerCase()
+      .replace(/[^a-z0-9]/g, "") || "jpg";
   const key = `invitations/${invitationId}/${crypto.randomUUID()}.${ext}`;
   const uploadUrl = await presignPut(key, contentType);
 

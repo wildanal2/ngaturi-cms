@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isDokuStatus, verifyNotification } from "@/lib/payments/doku";
+import { getDb } from "@/lib/db";
 import {
   applyDokuResult,
   dokuResult,
@@ -24,6 +25,7 @@ const Notification = z
 // Register this exact URL as the Notification URL in the DOKU dashboard:
 //   https://<app>/payment/webhook/doku
 export async function POST(req: Request) {
+  const db = getDb();
   const raw = await req.text();
   const path = new URL(req.url).pathname; // "/payment/webhook/doku"
 
@@ -57,6 +59,7 @@ export async function POST(req: Request) {
         order.currency,
       ),
       { requestId, source: "webhook" },
+      db,
     );
     console.info(
       "DOKU webhook processed",

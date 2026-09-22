@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getDb } from "@/lib/db";
 import { checkOrderStatus } from "@/lib/payments/doku";
 import { applyDokuResult, invitationIdForInvoice } from "@/lib/payments/grant";
 
@@ -13,6 +14,7 @@ export default async function PaymentCallbackPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const db = getDb();
   const sp = await searchParams;
   const invoice =
     (sp.invoice_number as string) ||
@@ -24,12 +26,16 @@ export default async function PaymentCallbackPage({
   let invitationId: string | null = null;
 
   if (invoice) {
-    invitationId = await invitationIdForInvoice(invoice);
+    invitationId = await invitationIdForInvoice(invoice, db);
     try {
       const paymentResult = await checkOrderStatus(invoice);
-      const applied = await applyDokuResult(paymentResult, {
-        source: "status_query",
-      });
+      const applied = await applyDokuResult(
+        paymentResult,
+        {
+          source: "status_query",
+        },
+        db,
+      );
       result = applied.status;
     } catch {
       result = "pending";

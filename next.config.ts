@@ -24,15 +24,22 @@ const nextConfig: NextConfig = {
   // Legacy links and persisted asset URLs share the single canonical template.
   redirects() {
     return [
-      { source: "/templates/enchanted-garden/:path*", destination: "/templates/sekar-jawa-3d/:path*", permanent: true },
-      { source: "/themes/enchanted-garden/:path*", destination: "/themes/sekar-jawa-3d/:path*", permanent: true },
+      {
+        source: "/templates/enchanted-garden/:path*",
+        destination: "/templates/sekar-jawa-3d/:path*",
+        permanent: true,
+      },
+      {
+        source: "/themes/enchanted-garden/:path*",
+        destination: "/themes/sekar-jawa-3d/:path*",
+        permanent: true,
+      },
     ];
   },
 
   turbopack: {
     root: import.meta.dirname,
   },
-  serverExternalPackages: ["sharp"],
   // keep recently-visited dynamic pages (dashboard) in the client router
   // cache briefly so back-and-forth navigation is instant
   experimental: {

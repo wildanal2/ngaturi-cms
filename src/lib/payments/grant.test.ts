@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({ transaction: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { transaction: mocks.transaction } }));
 
 import { invitations, payments, userProfiles } from "@/lib/db/schema";
+import type { Database } from "@/lib/db";
 import { applyDokuResult, PaymentResultError } from "./grant";
 
 function lockedRows<T>(rows: T[]) {
@@ -61,6 +62,33 @@ describe("applyDokuResult", () => {
       ),
     ).rejects.toEqual(new PaymentResultError("amount_mismatch"));
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it("uses the explicitly injected invocation database", async () => {
+    const injectedTransaction = vi.fn(async (callback) =>
+      callback({
+        select: () => lockedRows([payment({ status: "paid" })]),
+      }),
+    );
+
+    await expect(
+      applyDokuResult(
+        {
+          invoiceNumber: "NGUNL-test",
+          amount: 49_000,
+          currency: "IDR",
+          status: "SUCCESS",
+        },
+        { source: "reconciliation" },
+        { transaction: injectedTransaction } as unknown as Database,
+      ),
+    ).resolves.toMatchObject({
+      status: "paid",
+      transitioned: false,
+      fulfilled: false,
+    });
+    expect(injectedTransaction).toHaveBeenCalledOnce();
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
   it("rejects an explicit currency mismatch before fulfillment", async () => {

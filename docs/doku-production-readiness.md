@@ -80,37 +80,37 @@ tidak boleh memperkenalkan implementasi fulfillment kedua.
 
 ## Compatibility review
 
-| Area | Status | Evidence and required work |
-|---|---|---|
-| Next.js runtime | CHANGE REQUIRED | Repo belum memiliki adapter atau entrypoint Cloudflare Worker; build `next start` saat ini tidak dapat dianggap sebagai Worker deployment. |
-| DOKU fetch | COMPATIBLE | Implementasi memakai Web Fetch API dan URL HTTPS. |
-| HMAC/crypto | COMPATIBLE | Implementasi memakai `node:crypto` dan `Buffer`; Worker harus memakai compatibility date dan Node.js compatibility yang mendukung API tersebut. |
-| PostgreSQL/Drizzle | CHANGE REQUIRED | Client `postgres` saat ini dibuat di module scope dari `DATABASE_URL`. Worker harus membuat client per request/event menggunakan connection string dari binding Hyperdrive. |
-| DB transaction/`FOR UPDATE` | CHANGE REQUIRED | Semantik transaksi wajib dipertahankan dan dibuktikan dengan integration test PostgreSQL melalui Hyperdrive sebelum deploy. |
-| Scheduled reconciliation | CHANGE REQUIRED | Tambahkan Worker `scheduled()` handler dan Cron Trigger pada fase migrasi; jangan memakai Vercel cron. |
-| Environment/secrets | CHANGE REQUIRED | `process.env`/`.env.local` development harus dipetakan ke Worker vars, secrets, dan bindings tanpa memasukkan nilai ke repository. |
-| Logging | CHANGE REQUIRED | Aktifkan Workers observability, retention, dan alerting; log pembayaran tetap hanya memuat identifier dan kategori aman. |
+| Area                        | Status                            | Evidence and required work                                                                                                                              |
+| --------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js runtime             | IMPLEMENTED, NOT DEPLOYED         | vinext, Vite, Wrangler config, and the custom Worker entrypoint build locally. Staging deployment is not yet verified.                                  |
+| DOKU fetch                  | COMPATIBLE                        | Implementasi memakai Web Fetch API dan URL HTTPS.                                                                                                       |
+| HMAC/crypto                 | COMPATIBLE                        | Implementasi memakai `node:crypto` dan `Buffer`; Worker harus memakai compatibility date dan Node.js compatibility yang mendukung API tersebut.         |
+| PostgreSQL/Drizzle          | IMPLEMENTED, NOT STAGING-VERIFIED | Worker invocation memakai satu client Postgres.js/Drizzle dari Hyperdrive dengan `max: 5`; Node development tetap memakai `DATABASE_URL`.               |
+| DB transaction/`FOR UPDATE` | IMPLEMENTED, NOT STAGING-VERIFIED | Payment paths inject DB invocation yang sama dan fulfillment tetap memakai satu transaction-scoped `tx`; integration test Hyperdrive nyata masih wajib. |
+| Scheduled reconciliation    | IMPLEMENTED, NOT STAGING-VERIFIED | Worker `scheduled()` dan Cron Trigger `*/5 * * * *` memanggil helper reconciliation langsung.                                                           |
+| Environment/secrets         | PARTIAL                           | Typed bindings dan contoh variable tersedia; nilai staging tetap harus dipasang sebagai Worker vars/secrets tanpa masuk repository.                     |
+| Logging                     | PARTIAL                           | Wrangler observability aktif; retention, alerting, dan dashboard staging belum diverifikasi.                                                            |
 
 PM2, Linux cron, serta script localhost adalah mekanisme development dan tidak
 boleh diimpor ke runtime Worker. Payment core tidak menggunakan filesystem.
-Di luar payment core, deployment aplikasi penuh juga harus menangani dua risiko
-konkret: upload route memakai native package `sharp` dengan runtime Node.js, dan
-Redis dibuat sebagai client `ioredis` module-scoped. Keduanya tidak boleh dianggap
-Worker-compatible sebelum diganti atau dibuktikan melalui adapter/runtime test.
+Di luar payment core, branch migrasi mengganti native `sharp` dengan binding
+Cloudflare Images/R2 dan mengganti `ioredis` module-scoped dengan Redis REST.
+Perilaku upload, OAuth/session, dan rate limit tetap harus dibuktikan di staging;
+lihat `docs/cloudflare-vinext-migration.md`.
 
 ## Production secret separation
 
 Development dan Production harus menjadi lingkungan terpisah:
 
-| Secret/configuration | Development | Production target |
-|---|---|---|
-| DOKU client ID and secret | Sandbox di `.env.local` | DOKU Production melalui Cloudflare secrets |
-| DOKU base URL | Sandbox | Production, diubah hanya saat aktivasi terkontrol |
-| DOKU callback URL | Host development | Domain Production yang sudah diverifikasi |
-| Notification URL | DOKU Sandbox Back Office | DOKU Production Back Office per channel |
-| Database credentials | `DATABASE_URL` development | Hyperdrive configuration/binding; direct URL terpisah hanya untuk migration tooling |
-| Auth/OAuth/storage secrets | `.env.local` development | Cloudflare secrets pada environment Production |
-| Cron authentication | `CRON_SECRET` untuk HTTP localhost | Hanya diperlukan bila HTTP cron route dipertahankan; tidak diperlukan oleh native scheduled event |
+| Secret/configuration       | Development                        | Production target                                                                                 |
+| -------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| DOKU client ID and secret  | Sandbox di `.env.local`            | DOKU Production melalui Cloudflare secrets                                                        |
+| DOKU base URL              | Sandbox                            | Production, diubah hanya saat aktivasi terkontrol                                                 |
+| DOKU callback URL          | Host development                   | Domain Production yang sudah diverifikasi                                                         |
+| Notification URL           | DOKU Sandbox Back Office           | DOKU Production Back Office per channel                                                           |
+| Database credentials       | `DATABASE_URL` development         | Hyperdrive configuration/binding; direct URL terpisah hanya untuk migration tooling               |
+| Auth/OAuth/storage secrets | `.env.local` development           | Cloudflare secrets pada environment Production                                                    |
+| Cron authentication        | `CRON_SECRET` untuk HTTP localhost | Hanya diperlukan bila HTTP cron route dipertahankan; tidak diperlukan oleh native scheduled event |
 
 Nilai secret tidak boleh ditulis ke `.env.example`, Wrangler configuration,
 crontab, dokumentasi, log, atau Git. Nilai `NEXT_PUBLIC_*` bukan secret dan

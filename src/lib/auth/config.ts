@@ -23,15 +23,10 @@ export const auth = betterAuth({
 
   secondaryStorage: {
     get: (key) => redis.get(key),
-    set: (key, value, ttl) =>
-      ttl ? redis.set(key, value, "EX", ttl) : redis.set(key, value),
-    delete: (key) => redis.del(key).then(() => undefined),
-    getAndDelete: async (key) => {
-      const value = await redis.get(key);
-      if (value !== null) await redis.del(key);
-      return value;
-    },
-    increment: (key) => redis.incr(key),
+    set: (key, value, ttl) => redis.set(key, value, ttl),
+    delete: (key) => redis.delete(key),
+    getAndDelete: (key) => redis.getAndDelete(key),
+    increment: (key) => redis.increment(key),
   },
 
   emailAndPassword: { enabled: false },

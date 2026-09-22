@@ -6,15 +6,15 @@ Spesifikasi lengkap di `PRD.md`.
 ## Stack
 
 - **Next.js 16** (App Router, Turbopack) · TypeScript strict
-- **PostgreSQL 16** + **Drizzle ORM**
-- **Redis 7** (ioredis) — session store & rate limiting
+- **PostgreSQL 16** + **Drizzle ORM** (Hyperdrive on Workers)
+- **Redis REST** (`@upstash/redis`) — session store & atomic rate limiting
 - **Better Auth** — Google OAuth only, sesi di Redis
-- **Tigris** (S3-compatible) — object storage, upload diproses `sharp` (resize 1920 + WebP)
+- **Cloudflare R2 + Images** — storage and image processing (resize 1920 + WebP)
 - **Tailwind CSS 4** + CSS Modules (isolasi gaya per-section)
 - **dnd-kit** (reorder), **zundo** (undo/redo), **sonner** (toast), **react-easy-crop**
 - **DOKU** Jokul Checkout — pembayaran (sandbox default)
 - **Development:** cloud-lab VM + PM2 + Linux cron
-- **Production target:** Cloudflare Workers + Cron Triggers (migrasi belum dijalankan)
+- **Production target:** Cloudflare Workers + vinext + Cron Triggers (staging migration)
 - **Vitest** — unit test (`npm test`): integritas registry, entitlement, hydrate, DOKU
 
 ## Setup
@@ -58,11 +58,11 @@ Bentuk satu section (`src/sections/types.ts`):
 ```ts
 interface SectionData {
   id: string;
-  type: string;      // "hero" | "countdown" | ...
-  variant: string;   // "botanical" | "flip" | ...  ← komponen tampilan
+  type: string; // "hero" | "countdown" | ...
+  variant: string; // "botanical" | "flip" | ...  ← komponen tampilan
   order: number;
   visible: boolean;
-  props: Record<string, unknown>;   // isi konten + s_* (gaya) + dummy
+  props: Record<string, unknown>; // isi konten + s_* (gaya) + dummy
 }
 ```
 

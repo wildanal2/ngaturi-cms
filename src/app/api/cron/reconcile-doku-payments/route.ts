@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAuthorizedCron } from "@/lib/cron-auth";
 import { isPaymentConfigured } from "@/lib/payments/doku";
 import { reconcilePendingDokuPayments } from "@/lib/payments/reconcile";
+import { getDb } from "@/lib/db";
 
 export async function GET(req: Request) {
   if (!isAuthorizedCron(req)) {
@@ -15,7 +16,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const summary = await reconcilePendingDokuPayments();
+    const summary = await reconcilePendingDokuPayments({ database: getDb() });
     console.info("DOKU reconciliation completed", JSON.stringify(summary));
     return NextResponse.json(summary, {
       status: summary.errors > 0 ? 502 : 200,
