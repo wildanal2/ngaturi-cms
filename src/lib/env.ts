@@ -35,7 +35,6 @@ const schema = z.object({
   DOKU_CLIENT_ID: z.string().optional(),
   DOKU_SECRET_KEY: z.string().optional(),
   DOKU_BASE_URL: z.string().default("https://api-sandbox.doku.com"),
-  DOKU_NOTIFICATION_URL: z.string().optional(),
   DOKU_CALLBACK_URL: z.string().optional(),
   JAMENDO_CLIENT_ID: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),

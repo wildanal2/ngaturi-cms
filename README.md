@@ -13,7 +13,8 @@ Spesifikasi lengkap di `PRD.md`.
 - **Tailwind CSS 4** + CSS Modules (isolasi gaya per-section)
 - **dnd-kit** (reorder), **zundo** (undo/redo), **sonner** (toast), **react-easy-crop**
 - **DOKU** Jokul Checkout — pembayaran (sandbox default)
-- **Vercel** — hosting, Speed Insights, Analytics, Cron
+- **Development:** cloud-lab VM + PM2 + Linux cron
+- **Production target:** Cloudflare Workers + Cron Triggers (migrasi belum dijalankan)
 - **Vitest** — unit test (`npm test`): integritas registry, entitlement, hydrate, DOKU
 
 ## Setup
@@ -122,6 +123,14 @@ renderer → track view via `after()`. OG card: `src/app/[slug]/opengraph-image.
 - Balik: `GET /payment/callback` (re-check status) + S2S `POST /payment/webhook/doku`
   (verifikasi signature, idempoten via `applyDokuResult`) → `is_paid=true`,
   hapus watermark, buka edit, tambah kuota.
+- Cron `GET /api/cron/reconcile-doku-payments` berjalan tiap 5 menit untuk
+  mengecek ulang pembayaran DOKU `pending` berumur 2 menit–24 jam. Check Status
+  tetap diverifikasi dan hasilnya masuk ke jalur fulfillment atomik yang sama.
+  Deployment cloud-lab/PM2 menjalankannya dari Linux cron melalui
+  `scripts/reconcile-doku-cron.mjs` ke `127.0.0.1:3009`; secret dibaca dari
+  `.env.local`, bukan ditulis literal di crontab. Production nantinya memakai
+  Cloudflare Cron Trigger yang memanggil helper rekonsiliasi yang sama secara
+  langsung; webhook tetap jalur konfirmasi utama.
 
 ---
 
@@ -254,13 +263,19 @@ Template = preset section + palet, di `src/lib/templates/catalog.ts`:
 
 ---
 
-## Deploy (Vercel + GitHub Actions)
+## Deployment
 
-- Push ke `main` → `.github/workflows/deploy.yml`: typecheck + lint →
-  `vercel pull/build/deploy --prod`.
-- Secrets repo: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
-- `vercel.json` set `git.deploymentEnabled.main=false` — Actions = satu-satunya deployer.
-- Env produksi dikelola di Vercel (`vercel env`), bukan `.env.local`.
+- Development saat ini berjalan sebagai proses PM2 `ngaturi-dev` di port 3009,
+  diakses publik melalui Cloudflare Tunnel.
+- Rekonsiliasi DOKU development dijadwalkan Linux cron tiap 5 menit dan hanya
+  memanggil endpoint localhost yang dilindungi `CRON_SECRET`.
+- Target Production adalah Cloudflare Workers, bukan Vercel. Adapter Next.js,
+  lifecycle koneksi PostgreSQL/Hyperdrive, Worker Cron Trigger, bindings, dan
+  observability masih memerlukan fase migrasi serta uji integrasi tersendiri.
+- `vercel.json` dipertahankan untuk konfigurasi historis yang tidak terkait
+  rekonsiliasi DOKU; file tersebut bukan konfigurasi scheduler Production.
+- Rincian alur pembayaran, bukti Sandbox, strategi secret, dan batas migrasi ada
+  di [`docs/doku-production-readiness.md`](docs/doku-production-readiness.md).
 
 ## Scripts
 

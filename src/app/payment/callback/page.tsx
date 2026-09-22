@@ -26,8 +26,11 @@ export default async function PaymentCallbackPage({
   if (invoice) {
     invitationId = await invitationIdForInvoice(invoice);
     try {
-      const status = await checkOrderStatus(invoice);
-      result = await applyDokuResult(invoice, status);
+      const paymentResult = await checkOrderStatus(invoice);
+      const applied = await applyDokuResult(paymentResult, {
+        source: "status_query",
+      });
+      result = applied.status;
     } catch {
       result = "pending";
     }

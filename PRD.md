@@ -12,7 +12,10 @@
 > - Middleware Edge-safe (cek cookie saja, verifikasi role di server component).
 > - Builder localStorage = draft-only; server `updated_at` tetap source of truth.
 > - Ditambah: undangan per-tamu (`?to=`), anti-spam, kebijakan retensi data & PII.
-> - BullMQ worker ditunda ke Phase 2; MVP pakai Vercel Cron + `after()`.
+> - BullMQ worker ditunda ke Phase 2; development memakai Linux cron + `after()`,
+>   sedangkan target Production memakai Cloudflare Worker Cron Triggers.
+> - Payment provider aktif adalah DOKU. Webhook, callback Check Status, dan
+>   scheduled reconciliation memakai satu jalur fulfillment atomik/idempoten.
 
 ---
 
@@ -180,9 +183,9 @@
 
 1. **Next.js Server Actions + API Routes cukup** untuk 95% use case MVP
 2. **TypeScript end-to-end** sudah terjaga tanpa perlu Eden/tRPC tambahan
-3. **Deployment lebih simple** — satu Vercel/Cloudflare project
+3. **Deployment lebih simple** — satu Cloudflare Workers project sebagai target Production
 4. **Server Actions** di Next.js 16 sudah sangat powerful untuk mutations
-5. **Background jobs MVP** cukup pakai Vercel Cron + `after()` (dari `next/server`). BullMQ worker terpisah **ditunda ke Phase 2** saat volume image processing sudah tinggi.
+5. **Background jobs MVP** cukup pakai platform scheduler + `after()` (dari `next/server`). Development memakai Linux cron; target Production memakai Cloudflare Cron Triggers. BullMQ worker terpisah **ditunda ke Phase 2** saat volume image processing sudah tinggi.
 
 **Kapan butuh ElysiaJS terpisah (Phase 3+):**
 - Real-time WebSocket untuk RSVP notifications (ElysiaJS + Bun sangat cepat untuk ini)
@@ -196,7 +199,7 @@
 |-------|-----------|--------|
 | **Framework** | Next.js 16 (App Router) | SSR/ISR, Server Actions, Cache Components, async request APIs |
 | **Language** | TypeScript (strict mode) | Type safety, better DX |
-| **Runtime** | Node.js 22 LTS (production) / Bun (dev, optional) | Stability + performance |
+| **Runtime** | Cloudflare Workers (target Production) / Node.js + PM2 (development saat ini) | Runtime Production masih memerlukan fase adapter dan compatibility migration |
 | **Database** | PostgreSQL 16 | JSONB untuk sections, relational untuk users/RSVP |
 | **ORM** | Drizzle ORM | Type-safe, lightweight, SQL-like syntax |
 | **Cache** | Redis 7 | Session, rate limiting, ISR cache, BullMQ |
@@ -206,9 +209,9 @@
 | **UI Components** | shadcn/ui (dashboard) + Custom (sections) | Consistency + flexibility |
 | **State Management** | Zustand + React Hook Form | Builder state + form handling |
 | **Validation** | Zod | Schema validation for sections, forms, API |
-| **Background Jobs** | MVP: Vercel Cron + `after()` · Phase 2: BullMQ | Image processing, emails, analytics aggregation |
+| **Background Jobs** | MVP: Linux cron (dev), Cloudflare Cron Triggers (target Production) + `after()` · Phase 2: BullMQ | Image processing, emails, analytics aggregation |
 | **Email** | Resend / AWS SES | Transactional emails |
-| **Deployment** | Vercel (app) + Railway/Fly.io (worker) + Neon/Supabase (DB) | Managed, scalable |
+| **Deployment** | Cloudflare Workers (target app runtime) + PostgreSQL melalui Hyperdrive (planned) | Worker adapter, bindings, dan database lifecycle harus diverifikasi sebelum Production |
 | **Monitoring** | Sentry + Axiom | Error tracking + logging |
 
 ---
@@ -578,7 +581,7 @@ CREATE INDEX idx_stats_invitation_date ON invitation_daily_stats(invitation_id, 
 -- =====================================================
 
 CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded', 'expired');
-CREATE TYPE payment_provider AS ENUM ('midtrans', 'xendit', 'manual');
+CREATE TYPE payment_provider AS ENUM ('midtrans', 'xendit', 'doku', 'manual');
 CREATE TYPE purchase_kind AS ENUM ('invitation_unlock', 'invitation_renewal', 'business_subscription');
 
 CREATE TABLE payments (
@@ -588,7 +591,7 @@ CREATE TABLE payments (
   -- Payment details
   provider payment_provider NOT NULL,
   provider_payment_id VARCHAR(255),  -- transaction/order ID dari provider
-  provider_order_id VARCHAR(255) UNIQUE, -- order_id yang kita generate, dikirim ke Snap
+  provider_order_id VARCHAR(255) UNIQUE, -- invoice/reference yang kita generate dan kirim ke provider
   amount DECIMAL(10,2) NOT NULL,
   currency VARCHAR(3) DEFAULT 'IDR',
   status payment_status DEFAULT 'pending',
@@ -609,8 +612,9 @@ CREATE INDEX idx_payments_user ON payments(user_id);
 CREATE INDEX idx_payments_status ON payments(status);
 CREATE INDEX idx_payments_invitation ON payments(invitation_id);
 
--- Webhook Midtrans: verifikasi signature_key = sha512(order_id + status_code + gross_amount + server_key).
--- Proses idempoten berdasarkan provider_order_id; abaikan event yang statusnya mundur.
+-- Webhook DOKU: verifikasi signature request serta invoice, amount, dan currency.
+-- Callback dan reconciliation memakai signed DOKU Check Status.
+-- Semua jalur idempoten berdasarkan provider_order_id dan memakai fulfillment atomik yang sama.
 -- Saat status -> 'paid':
 --   kind='invitation_unlock'      => invitations.is_paid=true, plan=<tier>, has_watermark=false,
 --                                    is_edit_locked=false, edit_expires_at=NULL, paid_at=now()
@@ -987,14 +991,16 @@ undangan-platform/
 │   │   │   │   ├── presign/route.ts # S3 presigned URL
 │   │   │   │   └── confirm/route.ts # confirm + enqueue image processing
 │   │   │   ├── payments/
-│   │   │   │   └── create/route.ts  # buat payment + Snap token
-│   │   │   ├── webhooks/
-│   │   │   │   └── payment/
-│   │   │   │       └── route.ts     # Midtrans webhook (verify signature, idempoten)
+│   │   │   │   └── create/route.ts  # buat payment + DOKU checkout URL
 │   │   │   └── cron/
-│   │   │       ├── aggregate-stats/route.ts   # Daily stats (Vercel Cron)
+│   │   │       ├── reconcile-doku-payments/route.ts # missed-webhook recovery
+│   │   │       ├── aggregate-stats/route.ts   # Daily stats (platform scheduler)
 │   │   │       ├── lock-expired-edits/route.ts # set is_edit_locked utk trial lewat 7 hari
 │   │   │       └── archive-expired/route.ts    # status='expired' utk lewat expires_at
+│   │   │
+│   │   ├── payment/
+│   │   │   ├── callback/page.tsx     # signed Check Status fallback
+│   │   │   └── webhook/doku/route.ts # DOKU webhook (verify signature, idempoten)
 │   │   │
 │   │   ├── layout.tsx               # Root layout
 │   │   └── globals.css              # Global styles (Tailwind)
@@ -2487,38 +2493,39 @@ export async function GET(
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              PAYMENT FLOW (Midtrans)             │
+│                PAYMENT FLOW (DOKU)               │
 ├─────────────────────────────────────────────────┤
 │                                                 │
 │  User clicks "Upgrade to Premium"              │
 │       │                                         │
 │       ▼                                         │
-│  Select plan (Basic/Premium/Business)          │
+│  Select plan (Basic/Premium) or renewal        │
 │       │                                         │
 │       ▼                                         │
 │  Create payment record in DB                   │
 │  (status: 'pending')                           │
 │       │                                         │
 │       ▼                                         │
-│  Generate Midtrans Snap Token                  │
+│  Create signed DOKU Checkout request           │
 │       │                                         │
 │       ▼                                         │
-│  Show payment page (Midtrans Snap)             │
+│  Redirect browser to DOKU hosted checkout      │
 │  [VA Transfer / QRIS / E-wallet / Card]        │
 │       │                                         │
 │       ▼                                         │
 │  User completes payment                        │
 │       │                                         │
 │       ▼                                         │
-│  Midtrans sends webhook to:                    │
-│  /api/webhooks/payment                         │
+│  DOKU sends HTTP Notification to:              │
+│  /payment/webhook/doku                         │
 │       │                                         │
 │       ▼                                         │
-│  Verify webhook signature                      │
+│  Verify request signature, provider reference, │
+│  amount, currency, and provider status         │
 │       │                                         │
 │       ▼                                         │
-│  Verify signature_key (sha512), idempoten     │
-│  by provider_order_id                          │
+│  Lock payment row and atomically apply result  │
+│  idempotently by provider_order_id             │
 │  Update payment status → 'paid'                │
 │  kind=invitation_unlock:                       │
 │    invitations.is_paid=true, plan=<tier>,      │
@@ -2536,6 +2543,16 @@ export async function GET(
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
+
+Webhook adalah jalur konfirmasi utama. Callback browser tidak mempercayai status
+client: callback menjalankan signed server-to-server DOKU Check Status lalu
+memakai jalur fulfillment yang sama. Pembayaran DOKU `pending` berumur 2 menit
+sampai 24 jam juga direkonsiliasi tiap 5 menit (batch 50, concurrency 5, kandidat
+tertua lebih dulu) melalui Check Status dan jalur fulfillment yang sama.
+
+Real Sandbox E2E telah memverifikasi webhook pertama, duplicate webhook sebagai
+safe no-op, callback reconciliation sebagai safe no-op setelah fulfillment,
+serta aktivasi undangan dan increment kuota tepat satu kali.
 
 ---
 
@@ -2655,7 +2672,8 @@ export async function GET(
 □ Create Docker Compose for local dev (postgres + redis + minio)
 □ Setup Sentry for error tracking
 □ Create base folder structure (as defined above)
-□ (BullMQ / worker TIDAK di phase ini — pakai Vercel Cron + after())
+□ (BullMQ / worker TIDAK di phase ini — pakai Linux cron saat development,
+  Cloudflare Cron Triggers pada target Production, dan after())
 ```
 
 ### Environment Variables:
@@ -2688,17 +2706,18 @@ GOOGLE_CLIENT_SECRET=
 TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
 
-# Cron (Vercel Cron memanggil /api/cron/* dengan header ini)
+# Cron (autentikasi endpoint HTTP /api/cron/*; native Worker Cron tidak memerlukannya)
 CRON_SECRET=
 
 # Email (Resend)
 RESEND_API_KEY=
 EMAIL_FROM="Undangan Platform <noreply@undangan.com>"
 
-# Payment (Midtrans)
-MIDTRANS_SERVER_KEY=
-MIDTRANS_CLIENT_KEY=
-MIDTRANS_WEBHOOK_SECRET=
+# Payment (DOKU; Notification URL dikonfigurasi di DOKU Back Office)
+DOKU_CLIENT_ID=
+DOKU_SECRET_KEY=
+DOKU_BASE_URL=https://api-sandbox.doku.com
+DOKU_CALLBACK_URL=http://localhost:3000/payment/callback
 
 # Analytics
 SENTRY_DSN=
@@ -2844,10 +2863,12 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 ### Sprint 3.1: Payment Integration  ⚠️ NAIKKAN KE PHASE 1 (Sprint 1.7)
 > Karena free_trial terkunci setelah 7 hari, monetisasi adalah jalur kritis MVP — bukan Phase 3.
 ```
-□ Integrate Midtrans Snap (server: create transaction, client: snap.js)
-□ /api/payments/create → buat row payments (kind, plan_tier, provider_order_id), return snapToken
+□ Integrate DOKU hosted Checkout (signed server-to-server create request)
+□ /api/payments/create → buat row payments (kind, plan_tier, provider_order_id), return redirectUrl
 □ Pricing page + /invitations/[id]/unlock page
-□ Webhook /api/webhooks/payment: verify signature_key (sha512), idempoten by provider_order_id
+□ Webhook /payment/webhook/doku: verify signature, invoice, amount, currency, dan status; idempoten by provider_order_id
+□ Callback /payment/callback: signed DOKU Check Status, tidak mempercayai status browser
+□ Scheduled reconciliation: eligible pending DOKU payment → signed Check Status → fulfillment path yang sama
 □ On 'paid': terapkan efek per `kind` (unlock / renewal / business) — lihat komentar schema payments
 □ Feature gating helper: canRemoveWatermark(inv), maxPhotos(inv), canUseGuestInvites(inv)
 □ Email konfirmasi pembayaran (Resend)
@@ -2881,7 +2902,7 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ Sitemap generation
 □ robots.txt
 □ Structured data (JSON-LD)
-□ Performance monitoring (Vercel Analytics)
+□ Performance monitoring dan Workers observability
 ```
 
 ## Phase 4: Production Launch
@@ -2901,14 +2922,14 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 
 ### Sprint 4.2: Deployment
 ```
-□ Deploy to Vercel (app)
+□ Migrate dan deploy app ke Cloudflare Workers setelah adapter compatibility lulus
 □ Setup Neon/Supabase (PostgreSQL)
 □ Setup Upstash (Redis)
 □ Setup Cloudflare R2 (S3 storage)
 □ Setup Railway/Fly.io (BullMQ workers)
 □ Configure custom domains
 □ Setup monitoring (Sentry + Axiom)
-□ Configure Vercel Cron (stats aggregation)
+□ Configure Cloudflare Cron Triggers (reconciliation dan scheduled jobs)
 ```
 
 ### Sprint 4.3: Launch Preparation
@@ -2981,11 +3002,15 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 │                                                             │
 │  PAYMENTS                                                   │
 │  ├── POST /api/payments/create                              │
-│  │   Body: { kind, planTier, invitationId? }              │
-│  │   kind: invitation_unlock|invitation_renewal|business   │
-│  │   Returns: { snapToken, orderId }                       │
-│  └── POST /api/webhooks/payment                             │
-│      (Midtrans webhook — verify sha512 signature_key)      │
+│  │   Body: { invitationId, kind, plan? }                  │
+│  │   kind: invitation_unlock|invitation_renewal           │
+│  │   Returns: { redirectUrl }                              │
+│  ├── POST /payment/webhook/doku                             │
+│  │   (DOKU notification — verify signature/reference/value)│
+│  ├── GET  /payment/callback                                 │
+│  │   (signed Check Status fallback, then safe redirect)    │
+│  └── GET  /api/cron/reconcile-doku-payments                 │
+│      (authenticated missed-webhook recovery)               │
 │                                                             │
 │  GUEST INVITES (requires auth, premium)                     │
 │  ├── GET    /api/invitations/:id/guests                     │
@@ -3014,7 +3039,7 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 │                CACHING LAYERS                        │
 ├─────────────────────────────────────────────────────┤
 │                                                     │
-│  Layer 1: CDN (Vercel Edge / Cloudflare)           │
+│  Layer 1: Cloudflare CDN                           │
 │  ├── Static assets (images, CSS, JS)               │
 │  └── ISR pages (invitation pages)                  │
 │                                                     │
@@ -3101,7 +3126,7 @@ Dokumen ini mencakup seluruh spesifikasi untuk membangun platform undangan digit
 - Redis (cache + rate limit + session); BullMQ hanya Phase 2
 - S3-compatible (Cloudflare R2 untuk production, MinIO untuk dev)
 - Better Auth — Google OAuth only
-- Midtrans Snap — one-time payment per undangan
+- DOKU hosted Checkout — one-time payment per undangan
 - TIDAK PERLU ElysiaJS terpisah untuk MVP (Next.js Server Actions cukup)
 
 **Keputusan produk kunci (v1.1):**
@@ -3110,4 +3135,3 @@ Dokumen ini mencakup seluruh spesifikasi untuk membangun platform undangan digit
 - Monetisasi = jalur kritis MVP → Sprint payment dinaikkan ke Phase 1 (1.7).
 
 **Estimasi Waktu Build secepatnya:**
-
