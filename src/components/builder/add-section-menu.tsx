@@ -7,9 +7,9 @@ import { useBuilder } from "@/stores/builder-store";
 import { getSectionsByCategory } from "@/sections/registry";
 
 function Icon({ name, size = 18 }: { name: string; size?: number }) {
-  const Cmp = (Icons as unknown as Record<string, React.ComponentType<{ size?: number }>>)[
-    name
-  ];
+  const Cmp = (
+    Icons as unknown as Record<string, React.ComponentType<{ size?: number }>>
+  )[name];
   return Cmp ? <Cmp size={size} /> : <Plus size={size} />;
 }
 
@@ -17,6 +17,7 @@ export function AddSectionButton({ atIndex }: { atIndex?: number }) {
   const [open, setOpen] = useState(false);
   const addSection = useBuilder((s) => s.addSection);
   const locked = useBuilder((s) => s.locked);
+  const premiumFeatures = useBuilder((s) => s.premiumFeatures);
 
   if (locked) return null;
 
@@ -51,32 +52,45 @@ export function AddSectionButton({ atIndex }: { atIndex?: number }) {
                     {group.label}
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {group.sections.map((def) => (
-                      <button
-                        key={def.type}
-                        onClick={() => {
-                          addSection(
-                            def.type,
-                            Object.keys(def.variants)[0],
-                            atIndex,
-                          );
-                          setOpen(false);
-                        }}
-                        className="flex items-start gap-3 rounded-xl border border-line p-3 text-left hover:border-forest hover:bg-cream-200"
-                      >
-                        <span className="mt-0.5 text-forest">
-                          <Icon name={def.icon} />
-                        </span>
-                        <span>
-                          <span className="block text-sm font-medium">
-                            {def.name}
+                    {group.sections.map((def) => {
+                      const variants = Object.entries(def.variants);
+                      const firstVariant = premiumFeatures
+                        ? variants[0]?.[0]
+                        : variants.find(
+                            ([, variant]) => !variant.isPremium,
+                          )?.[0];
+                      const premiumBlocked =
+                        !premiumFeatures &&
+                        (def.type === "music" ||
+                          def.isPremium ||
+                          !firstVariant);
+                      return (
+                        <button
+                          key={def.type}
+                          disabled={premiumBlocked}
+                          onClick={() => {
+                            if (!firstVariant) return;
+                            addSection(def.type, firstVariant, atIndex);
+                            setOpen(false);
+                          }}
+                          className="flex items-start gap-3 rounded-xl border border-line p-3 text-left hover:border-forest hover:bg-cream-200 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <span className="mt-0.5 text-forest">
+                            <Icon name={def.icon} />
                           </span>
-                          <span className="block text-xs text-muted">
-                            {def.description}
+                          <span>
+                            <span className="block text-sm font-medium">
+                              {def.name}
+                            </span>
+                            <span className="block text-xs text-muted">
+                              {premiumBlocked
+                                ? `${def.description} · Perlu Premium`
+                                : def.description}
+                            </span>
                           </span>
-                        </span>
-                      </button>
-                    ))}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

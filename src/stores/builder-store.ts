@@ -19,6 +19,7 @@ interface BuilderState {
   deviceId: string;
   dirty: boolean;
   locked: boolean;
+  premiumFeatures: boolean;
   compositionPolicy: CompositionPolicy;
 
   load: (data: {
@@ -26,6 +27,7 @@ interface BuilderState {
     sections: SectionData[];
     global: GlobalSettings;
     locked: boolean;
+    premiumFeatures?: boolean;
     compositionPolicy: CompositionPolicy;
   }) => void;
   select: (id: string | null) => void;
@@ -90,14 +92,23 @@ export const useBuilder = create<BuilderState>()(
       deviceId: DEFAULT_DEVICE,
       dirty: false,
       locked: false,
+      premiumFeatures: true,
       compositionPolicy: STANDARD_COMPOSITION_POLICY,
 
-      load: ({ invitationId, sections, global, locked, compositionPolicy }) =>
+      load: ({
+        invitationId,
+        sections,
+        global,
+        locked,
+        premiumFeatures = true,
+        compositionPolicy,
+      }) =>
         set({
           invitationId,
           sections: reindex([...sections].sort((a, b) => a.order - b.order)),
           global,
           locked,
+          premiumFeatures,
           compositionPolicy,
           dirty: false,
           selectedId: null,
@@ -108,8 +119,17 @@ export const useBuilder = create<BuilderState>()(
 
       addSection: (type, variant, atIndex) =>
         set((s) => {
-          const def = SectionRegistry[type]?.variants[variant];
-          if (!def) return s;
+          const sectionDefinition = SectionRegistry[type];
+          const def = sectionDefinition?.variants[variant];
+          if (
+            !def ||
+            (!s.premiumFeatures &&
+              (type === "music" ||
+                sectionDefinition?.isPremium ||
+                def.isPremium))
+          ) {
+            return s;
+          }
           const section: SectionData = {
             id: crypto.randomUUID(),
             type,
@@ -120,15 +140,30 @@ export const useBuilder = create<BuilderState>()(
           };
           const list = [...s.sections];
           list.splice(atIndex ?? list.length, 0, section);
-          return { sections: reindex(list), selectedId: section.id, dirty: true };
+          return {
+            sections: reindex(list),
+            selectedId: section.id,
+            dirty: true,
+          };
         }),
 
       duplicateSection: (id) =>
         set((s) => {
           const idx = s.sections.findIndex((x) => x.id === id);
           if (idx < 0) return s;
+          const source = s.sections[idx];
+          const sourceDefinition = SectionRegistry[source.type];
+          const sourceVariant = sourceDefinition?.variants[source.variant];
+          if (
+            !s.premiumFeatures &&
+            (source.type === "music" ||
+              sourceDefinition?.isPremium ||
+              sourceVariant?.isPremium)
+          ) {
+            return s;
+          }
           const copy: SectionData = {
-            ...structuredClone(s.sections[idx]),
+            ...structuredClone(source),
             id: crypto.randomUUID(),
           };
           const list = [...s.sections];
@@ -183,7 +218,10 @@ export const useBuilder = create<BuilderState>()(
           const section = s.sections.find((x) => x.id === id);
           if (
             !section ||
-            !canEditSectionVariant(s.compositionPolicy, section.type)
+            !canEditSectionVariant(s.compositionPolicy, section.type) ||
+            (!s.premiumFeatures &&
+              SectionRegistry[section.type]?.variants[variant]?.isPremium &&
+              section.variant !== variant)
           ) {
             return s;
           }
@@ -238,9 +276,7 @@ export const useBuilder = create<BuilderState>()(
           if (Object.keys(nextPatch).length === 0) return s;
           return {
             sections: s.sections.map((x) =>
-              x.id === id
-                ? { ...x, props: { ...x.props, ...nextPatch } }
-                : x,
+              x.id === id ? { ...x, props: { ...x.props, ...nextPatch } } : x,
             ),
             dirty: true,
           };

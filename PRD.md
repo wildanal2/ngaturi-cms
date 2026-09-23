@@ -5,7 +5,7 @@
 > **Changelog v1.1** — direvisi sesuai rekomendasi teknis & keputusan bisnis:
 > - Framework dinaikkan ke **Next.js 16** (App Router, async request APIs, Cache Components).
 > - **Auth: Google OAuth WAJIB** (satu-satunya metode). Tidak ada email/password.
-> - **Model bisnis: one-time payment per undangan**, bukan subscription. User baru dapat **1 undangan gratis dengan masa edit 7 hari**; setelah itu builder terkunci sampai bayar (mulai Rp 49k).
+> - **Model bisnis: one-time payment per undangan**, bukan subscription. User baru dapat **1 undangan gratis dengan masa edit tepat 72 jam sejak undangan berhasil dibuat**; setelah itu builder terkunci sampai bayar (mulai Rp 49k).
 > - Tabel auth digenerate lewat Better Auth CLI (tidak ditulis manual).
 > - Revalidation halaman undangan pakai **tag-based on-demand** (bukan pre-render massal).
 > - API publik dipindah ke `app/api/public/[slug]/...` (bukan nested di `[slug]`).
@@ -50,7 +50,7 @@
 
 ### Must-Have (MVP)
 - [ ] User authentication (**Google OAuth wajib — satu-satunya metode**, no email/password)
-- [ ] Free trial gating: 1 undangan gratis, masa edit 7 hari sejak dibuat, lalu builder terkunci sampai bayar
+- [ ] Free trial gating: 1 trial seumur akun, masa edit 72 jam sejak undangan berhasil dibuat, lalu builder terkunci sampai bayar
 - [ ] Undangan per-tamu (personalisasi nama via `?to=` di share link)
 - [ ] Template gallery (browse, preview, select)
 - [ ] Section-based builder (edit content, ganti variant, reorder)
@@ -89,11 +89,13 @@
 **Model: one-time payment per undangan** (bukan subscription). User bayar sekali untuk meng-unlock 1 undangan; undangan aktif sampai `expires_at` (hari-H + 30 hari, bisa diperpanjang berbayar). Tier **Business** tetap subscription bulanan untuk event organizer.
 
 ### Free Trial (default semua user baru)
-- Otomatis dapat **1 undangan gratis** saat pertama login.
-- **Masa edit 7 hari** sejak undangan dibuat (`edit_expires_at = created_at + 7 hari`).
-- Selama trial: bisa publish, share, terima RSVP & ucapan, tapi **ada watermark** "Dibuat dengan [Platform]" + galeri maks 5 foto.
-- Setelah 7 hari **atau** saat mau hilangkan watermark / naik kuota: builder **read-only** sampai user upgrade undangan tsb.
-- Undangan yang sudah dipublish **tetap online** walau trial habis (tidak di-takedown) — hanya editing yang terkunci.
+- Setiap akun memperoleh **1 trial seumur akun** pada undangan pertama yang berhasil dibuat; menghapus undangan tidak mengulang trial.
+- **Masa edit tepat 72 jam (3 hari)** sejak undangan berhasil dibuat (`edit_expires_at = created_at + interval '72 hours'`).
+- Selama trial: seluruh fitur Premium dapat dicoba, termasuk semua template, bagian, musik, galeri, personalisasi tamu, RSVP, buku tamu, dan analitik yang tersedia. Watermark "Dibuat dengan Ngaturi" tetap tampil.
+- Tepat saat `edit_expires_at`, edit, publish, perubahan slug/template, dan upload baru terkunci. Cron hanya mematerialisasi status dan bukan sumber otorisasi.
+- Undangan yang sudah dipublish **tetap online** setelah masa edit habis sampai `expires_at` publiknya sendiri; RSVP, buku tamu, tautan personal, dan media tetap aktif selama masa tayang.
+- Undangan baru yang diizinkan oleh bonus kuota setelah trial pernah dipakai dibuat sebagai draf unpaid terkunci dan diarahkan ke upgrade, tanpa jendela trial baru.
+- Upgrade Premium mempertahankan seluruh isi. Upgrade Basic juga mempertahankan artefak Premium yang sudah ada, tetapi tidak boleh menambah tamu personal atau musik baru, menambah foto melewati batas 30, maupun berpindah ke template Premium lain.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -103,12 +105,12 @@
 │  Rp 0         │  Rp 49k     │  Rp 99k      │   Rp 499k / bulan        │
 ├───────────────┼─────────────┼──────────────┼─────────────────────────┤
 │ 1 undangan    │ per undangan│ per undangan │ Unlimited undangan       │
-│ Edit 7 hari   │ Edit selama │ Edit selama  │ Edit selamanya           │
+│ Edit 72 jam   │ Edit selama │ Edit selama  │ Edit selamanya           │
 │ Watermark     │ aktif       │ aktif        │ White-label              │
-│ 5 foto        │ No watermark│ No watermark │ Custom domain            │
-│ Basic RSVP    │ 30 foto     │ Foto unlimited│ Priority support        │
-│ Basic template│ RSVP+Guest  │ +Video+Music │ API access               │
-│               │ +Analytics  │ +Undangan per-tamu│ Bulk import          │
+│ Semua fitur   │ No watermark│ No watermark │ Custom domain            │
+│ Premium trial │ 30 foto     │ Foto unlimited│ Priority support        │
+│ Semua template│ RSVP+Guest  │ +Video+Music │ API access               │
+│ +watermark    │ +Analytics  │ +Undangan per-tamu│ Bulk import          │
 │               │ All basic tpl│ +Adv analytics│                        │
 │               │             │ All premium tpl│                        │
 └───────────────┴─────────────┴──────────────┴─────────────────────────┘
@@ -328,7 +330,7 @@ CREATE TABLE invitations (
   plan invitation_plan DEFAULT 'free_trial',
   is_paid BOOLEAN DEFAULT false,
   has_watermark BOOLEAN DEFAULT true,           -- false setelah bayar basic/premium
-  edit_expires_at TIMESTAMP,                    -- free_trial: created_at + 7 hari; paid: NULL (edit selama aktif)
+  edit_expires_at TIMESTAMP,                    -- trial pertama: created_at + 72 jam; paid/locked draft berikutnya: NULL
   is_edit_locked BOOLEAN DEFAULT false,         -- true kalau edit_expires_at lewat & belum bayar (di-set oleh cron / saat load builder)
   paid_at TIMESTAMP,
   -- Status & Analytics
@@ -348,9 +350,9 @@ CREATE TABLE invitations (
 );
 
 -- Catatan aturan trial:
---   * User baru: undangan pertama otomatis plan='free_trial', edit_expires_at = created_at + interval '7 days'.
+--   * User baru: undangan pertama otomatis plan='free_trial', edit_expires_at = created_at + interval '72 hours'.
 --   * user_profiles.free_invitation_used di-set true saat undangan free_trial pertama dibuat.
---   * Undangan free_trial ke-2+ tidak diizinkan (harus bayar dulu undangan sebelumnya atau tier business).
+--   * Penghapusan tidak mereset flag. Undangan berikutnya yang diizinkan bonus kuota dibuat unpaid + is_edit_locked=true tanpa trial baru.
 --   * Undangan yang sudah published tetap tampil walau is_edit_locked = true.
 
 CREATE INDEX idx_invitations_slug ON invitations(slug);
@@ -361,8 +363,8 @@ CREATE INDEX idx_invitations_sections ON invitations USING GIN(sections);
 -- Untuk cron pengunci trial & pengarsip
 CREATE INDEX idx_invitations_edit_expiry ON invitations(edit_expires_at) WHERE is_edit_locked = false AND is_paid = false;
 CREATE INDEX idx_invitations_expiry ON invitations(expires_at) WHERE status = 'published';
--- Enforce: maks 1 undangan free_trial per user
-CREATE UNIQUE INDEX idx_invitations_one_free_trial ON invitations(user_id) WHERE plan = 'free_trial';
+-- Satu start trial per akun ditegakkan secara transaksional dengan mengunci
+-- user_profiles dan membaca/menulis free_invitation_used pada transaksi create.
 
 -- =====================================================
 -- SECTIONS METADATA (for analytics & marketplace)
@@ -1008,7 +1010,7 @@ undangan-platform/
 │   │   │   └── cron/
 │   │   │       ├── reconcile-doku-payments/route.ts # missed-webhook recovery
 │   │   │       ├── aggregate-stats/route.ts   # Daily stats (platform scheduler)
-│   │   │       ├── lock-expired-edits/route.ts # set is_edit_locked utk trial lewat 7 hari
+│   │   │       ├── lock-expired-edits/route.ts # materialisasi is_edit_locked utk trial lewat 72 jam
 │   │   │       └── archive-expired/route.ts    # status='expired' utk lewat expires_at
 │   │   │
 │   │   ├── payment/
@@ -2177,9 +2179,11 @@ export const useBuilderStore = create<BuilderState>()(
 )
 
 // CATATAN GATING: sebelum mengizinkan mutasi (addSection/updateSectionProps/dst),
-// builder page harus cek `invitation.is_edit_locked`. Jika true -> render builder
-// read-only + banner "Masa edit gratis habis. Unlock mulai Rp 49k" -> /invitations/[id]/unlock.
-// Server action `saveInvitation` juga WAJIB menolak (403) bila is_edit_locked.
+// builder page harus membandingkan `edit_expires_at` dengan waktu request. Jika
+// kedaluwarsa -> render builder read-only + banner "Masa edit gratis habis.
+// Unlock mulai Rp 49k" -> /invitations/[id]/unlock. `is_edit_locked` hanya
+// materialisasi UI; server action `saveInvitation` juga WAJIB menolak berdasarkan
+// `edit_expires_at` tanpa menunggu cron.
 ```
 
 ## 6.6 RSVP API Route
@@ -2370,9 +2374,9 @@ export async function GET(
 
 > **Perubahan v1.1 pada flow di bawah:**
 > - Node "REGISTER / LOGIN" → **hanya "Login dengan Google"** (OAuth). Akun dibuat otomatis; tidak ada form register.
-> - Setelah login pertama: user diberi entitlement **1 undangan free_trial**, `edit_expires_at = now + 7 hari`.
-> - Node "PUBLISH CHECK": free_trial **boleh publish** (dengan watermark + maks 5 foto). Tidak dipaksa bayar saat publish.
-> - Builder jadi **read-only** ketika: (a) 7 hari lewat, atau (b) user klik "Hilangkan watermark / tambah foto / undangan per-tamu". Saat itu → node "UPGRADE (Payment)".
+> - Trial dimulai saat undangan pertama berhasil dibuat, bukan saat login: **1 trial seumur akun**, `edit_expires_at = created_at + 72 jam`.
+> - Node "PUBLISH CHECK": free_trial aktif **boleh publish** dengan watermark dan seluruh entitlement Premium. Tidak dipaksa bayar saat publish.
+> - Builder menjadi **read-only tepat saat 72 jam lewat**. Undangan published tetap aktif sampai `expires_at`; upgrade tetap tersedia sebelum atau sesudah edit-lock.
 > - "UPGRADE" = **one-time payment per undangan** (Basic Rp 49k / Premium Rp 99k), bukan langganan.
 
 ```
@@ -2797,11 +2801,12 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ Build template gallery page
 □ Build template preview page (live render)
 □ Implement "Use This Template" flow (server action, transaksi DB):
-  - Cek: user_profiles.free_invitation_used === false → izinkan; else arahkan ke /pricing
-  - Clone composition ke invitation baru: plan='free_trial', edit_expires_at = now()+7d, has_watermark=true
-  - Set user_profiles.free_invitation_used = true
-  - Redirect ke builder
-□ Guard unique index idx_invitations_one_free_trial (race condition)
+  - Kunci row user_profiles dan cek kuota aktif dalam transaksi yang sama
+  - Jika free_invitation_used=false: clone composition dengan plan='free_trial', edit_expires_at=now()+72h, has_watermark=true
+  - Set free_invitation_used=true pada transaksi yang sama; deletion tidak pernah meresetnya
+  - Jika trial sudah dipakai tetapi bonus kuota tersedia: buat draf unpaid terkunci tanpa edit_expires_at lalu redirect ke upgrade
+  - Redirect trial pertama ke builder
+□ Guard row user_profiles dengan SELECT FOR UPDATE (race condition)
 ```
 
 ### Sprint 1.4: Basic Builder
@@ -2811,8 +2816,8 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ Load flow: fetch server → offer restore hanya jika draft lebih baru
 □ Add / remove / reorder (up-down dulu) / edit props (form dari propsSchema)
 □ Basic live preview (render sections in canvas)
-□ Trial lock: jika invitation.is_edit_locked → builder read-only + banner ke /invitations/[id]/unlock
-□ Server action saveInvitation: tolak 403 bila is_edit_locked; validasi composition via SectionSchema.superRefine
+□ Trial lock: cek edit_expires_at pada setiap request; is_edit_locked hanya state materialized untuk UI → builder read-only + banner ke /invitations/[id]/unlock
+□ Server action saveInvitation: tolak bila edit_expires_at sudah lewat; validasi composition via SectionSchema.superRefine
 □ Setelah save sukses: revalidateTag(`invitation:${id}`)
 ```
 
@@ -2821,10 +2826,10 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ Implement [slug] dynamic route (public invitation page, Cache Components + cacheTag)
 □ On-demand revalidation: revalidateTag pada publish/unpublish/edit
 □ Generate slug dari input user (unik, lowercase-dash, cek tabrakan)
-□ Publish/unpublish (free_trial boleh publish — render watermark bila has_watermark)
+□ Publish/unpublish (free_trial aktif boleh publish; setelah 72 jam publish ditolak, unpublish tetap tersedia — render watermark bila has_watermark)
 □ Share link (copy to clipboard) + WhatsApp share
 □ SEO metadata + opengraph-image (nama + tanggal)
-□ Cron /api/cron/lock-expired-edits (harian): set is_edit_locked=true utk trial lewat 7 hari
+□ Cron /api/cron/lock-expired-edits: materialisasi is_edit_locked=true untuk trial lewat 72 jam; semua request tetap cek edit_expires_at langsung
 □ Cron /api/cron/archive-expired (harian): status='expired' utk lewat expires_at
 ```
 
@@ -2894,7 +2899,7 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 ## Phase 3: Monetization & Polish
 
 ### Sprint 3.1: Payment Integration  ⚠️ NAIKKAN KE PHASE 1 (Sprint 1.7)
-> Karena free_trial terkunci setelah 7 hari, monetisasi adalah jalur kritis MVP — bukan Phase 3.
+> Karena free_trial terkunci setelah 72 jam, monetisasi adalah jalur kritis MVP — bukan Phase 3.
 ```
 □ Integrate DOKU hosted Checkout (signed server-to-server create request)
 □ /api/payments/create → buat row payments (kind, plan_tier, provider_order_id), return redirectUrl
@@ -3165,8 +3170,8 @@ Dokumen ini mencakup seluruh spesifikasi untuk membangun platform undangan digit
 - TIDAK PERLU ElysiaJS terpisah untuk MVP (Next.js Server Actions cukup)
 
 **Keputusan produk kunci (v1.1):**
-- Login wajib Google. 1 undangan gratis / akun, masa edit 7 hari, lalu builder terkunci sampai bayar (Basic Rp 49k / Premium Rp 99k, sekali bayar per undangan).
-- Undangan yang sudah publish tetap online walau trial habis — hanya editing yang dikunci.
+- Login wajib Google. Satu trial seumur akun dimulai saat undangan pertama berhasil dibuat, dengan masa edit tepat 72 jam; deletion tidak mengulang trial. Setelah itu builder terkunci sampai bayar (Basic Rp 49k / Premium Rp 99k, sekali bayar per undangan).
+- Trial setara Premium dengan watermark. Undangan yang sudah publish tetap online setelah masa edit habis sampai `expires_at` publiknya — hanya mutasi edit/publish/upload yang dikunci.
 - Monetisasi = jalur kritis MVP → Sprint payment dinaikkan ke Phase 1 (1.7).
 
 **Estimasi Waktu Build secepatnya:**

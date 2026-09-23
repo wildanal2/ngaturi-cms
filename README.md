@@ -115,10 +115,24 @@ renderer → track view via `after()`. OG card: `src/app/[slug]/opengraph-image.
 
 ### 5. Kuota, trial & pembayaran
 
-- Akun gratis: **1 undangan**, `plan=free_trial`, `edit_expires_at = +3 hari`.
-  Kuota dicek atomik (transaksi + `SELECT … FOR UPDATE` di `user_profiles`).
+- Setiap akun mendapat **1 trial seumur akun** yang dimulai ketika undangan
+  pertama berhasil dibuat: `plan=free_trial`, `edit_expires_at = +72 jam`,
+  Premium-equivalent, dan tetap ber-watermark. Kuota serta konsumsi trial dicek
+  atomik (transaksi + `SELECT … FOR UPDATE` di `user_profiles`). Menghapus
+  undangan tidak mereset `free_invitation_used`.
+- Jika trial sudah pernah dipakai, undangan baru yang diizinkan bonus kuota
+  dibuat sebagai draf unpaid terkunci dan langsung diarahkan ke upgrade; tidak
+  memperoleh 72 jam baru.
 - Beli paket Basic/Premium → `+1` kuota (`user_profiles.invitation_quota_bonus`).
-- Cron `lock-expired-edits` → `is_edit_locked=true`; undangan tetap online.
+- `edit_expires_at` dicek langsung oleh setiap mutasi edit, publish, slug,
+  template, dan upload. Cron `lock-expired-edits` hanya mematerialisasi
+  `is_edit_locked=true` dan bukan mekanisme otorisasi.
+- Habisnya masa edit tidak menghapus isi atau menutup undangan published.
+  Halaman publik, RSVP, buku tamu, tautan personal, dan media tetap aktif sampai
+  `expires_at` publik yang terpisah.
+- Upgrade Premium mempertahankan semua artefak. Upgrade Basic juga
+  mempertahankannya, tetapi menolak tamu personal atau musik baru, penambahan
+  foto galeri melewati batas 30, serta perpindahan ke template Premium lain.
 - `/invitations/[id]/unlock` → `POST /api/payments/create` → DOKU hosted checkout.
 - Undangan berbayar memakai halaman yang sama untuk renewal Rp25.000. Renewal
   boleh dilakukan sebelum expiry; sisa waktu aktif dipertahankan dan setiap

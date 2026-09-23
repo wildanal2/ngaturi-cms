@@ -30,6 +30,7 @@ export function BuilderShell({
   compositionPolicy,
   activeTemplate,
   templates,
+  premiumFeatures,
 }: {
   invitationId: string;
   slug: string;
@@ -42,6 +43,7 @@ export function BuilderShell({
   compositionPolicy: CompositionPolicy;
   activeTemplate: { id: string; name: string };
   templates: BuilderTemplateOption[];
+  premiumFeatures: boolean;
 }) {
   const load = useBuilder((s) => s.load);
   const dirty = useBuilder((s) => s.dirty);
@@ -62,6 +64,7 @@ export function BuilderShell({
       sections: initialSections,
       global: initialGlobal,
       locked,
+      premiumFeatures,
       compositionPolicy,
     });
     useBuilder.temporal.getState().clear();
@@ -70,6 +73,7 @@ export function BuilderShell({
     initialSections,
     initialGlobal,
     locked,
+    premiumFeatures,
     compositionPolicy,
     load,
   ]);
@@ -189,12 +193,18 @@ export function BuilderShell({
 
   async function onPublish() {
     setPublishing(true);
-    await save();
+    const saved = await save();
+    if (!saved) {
+      setPublishing(false);
+      return;
+    }
     const res = await publishInvitation(invitationId);
     setPublishing(false);
     if (res.ok) {
       toast.success("Undangan terbit!");
       window.open(`/${res.slug}`, "_blank");
+    } else {
+      toast.error(res.error);
     }
   }
 
@@ -280,6 +290,7 @@ export function BuilderShell({
         open={templatePickerOpen}
         onClose={() => setTemplatePickerOpen(false)}
         beforeApply={prepareTemplateApply}
+        premiumFeatures={premiumFeatures}
       />
 
       {preparingTemplate ? (

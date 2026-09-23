@@ -245,15 +245,22 @@ Sebelum Production deploy:
    Notification URL di DOKU Production Back Office, lalu lakukan smoke test
    Production yang terkontrol.
 
-## Deferred business-rule decisions
+## Trial business rules (resolved separately from payment readiness)
 
-Kebijakan refund financial-only dan renewal sudah ditetapkan di bagian terkait.
-Pekerjaan deployment tetap tidak menentukan atau mengubah:
+Kebijakan refund financial-only, renewal, serta kontrak DOKU di bagian terkait
+tidak berubah. Kebijakan produk trial yang kini definitif adalah:
 
-- perbedaan trial 3 hari dan 7 hari;
-- perbedaan entitlement fitur selama trial.
+- satu trial seumur akun, dimulai ketika undangan pertama berhasil dibuat;
+- masa edit tepat 72 jam, dengan entitlement setara Premium dan watermark;
+- deletion tidak mengulang trial; undangan quota-backed berikutnya dimulai
+  sebagai draf unpaid terkunci;
+- edit expiry tidak memengaruhi masa tayang publik `expires_at`;
+- Basic mempertahankan artefak Premium dari trial, tetapi tidak boleh
+  menambah/memperluas fitur Premium baru.
 
-Semua item tersebut harus diselesaikan sebagai keputusan produk terpisah.
+Keputusan ini ditegakkan oleh policy internal undangan dan tidak mengubah harga,
+payload, callback, webhook, fulfillment, refund, renewal, atau rencana deploy
+DOKU/Cloudflare.
 
 ## Platform references
 

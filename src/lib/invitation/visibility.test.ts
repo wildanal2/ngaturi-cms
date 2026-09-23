@@ -28,6 +28,16 @@ describe("invitation runtime visibility", () => {
     ).toBe(true);
   });
 
+  it("keeps public access independent from trial edit expiry", () => {
+    const invitation = {
+      status: "published",
+      expiresAt: new Date("2026-09-24T00:00:00.000Z"),
+      editExpiresAt: new Date("2026-09-01T00:00:00.000Z"),
+      isEditLocked: true,
+    };
+    expect(isInvitationPubliclyActive(invitation, now)).toBe(true);
+  });
+
   it("keeps owner preview available for expired and draft invitations", () => {
     expect(
       canViewInvitation(

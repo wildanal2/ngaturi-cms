@@ -28,7 +28,7 @@ const PLANS = [
       "+1 kuota membuat undangan",
       "30 foto galeri",
       "Edit selama undangan aktif",
-      "Analitik dasar",
+      "RSVP, buku tamu & analitik dasar",
     ],
     cta: "Pilih Basic",
     highlight: true,
@@ -42,7 +42,7 @@ const PLANS = [
       "+1 kuota membuat undangan",
       "Foto galeri tanpa batas",
       "Undangan per-tamu permanen",
-      "Musik latar & analitik lengkap",
+      "Semua template, musik & analitik lengkap",
     ],
     cta: "Pilih Premium",
   },
@@ -78,10 +78,7 @@ export default function PricingPage() {
             <ul className="mt-5 flex-1 space-y-2.5 text-sm text-ink-soft">
               {p.features.map((f) => (
                 <li key={f} className="flex gap-2">
-                  <Check
-                    size={16}
-                    className="mt-0.5 shrink-0 text-forest"
-                  />
+                  <Check size={16} className="mt-0.5 shrink-0 text-forest" />
                   <span>{f}</span>
                 </li>
               ))}
@@ -99,8 +96,9 @@ export default function PricingPage() {
       </div>
 
       <p className="mx-auto mt-10 max-w-xl text-center text-sm text-muted">
-        Pembayaran online diproses aman oleh DOKU. Untuk sekarang paket Basic dan
-        Premium memberi manfaat yang sama.
+        Pembayaran online diproses aman oleh DOKU. Jika memilih Basic setelah
+        trial, fitur Premium yang sudah dipakai tetap tampil; penambahan fitur
+        Premium baru memerlukan upgrade Premium.
       </p>
     </MarketingPage>
   );

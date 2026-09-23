@@ -38,7 +38,9 @@ export async function createGuestInvite(
         "Undangan per-tamu tersedia gratis selama masa coba, atau dengan paket Premium.",
     };
   }
-  const guestName = String(formData.get("guest_name") ?? "").trim().slice(0, 200);
+  const guestName = String(formData.get("guest_name") ?? "")
+    .trim()
+    .slice(0, 200);
   if (!guestName) return { ok: false, error: "Nama tamu wajib diisi." };
 
   await db.insert(guestInvites).values({
@@ -47,7 +49,8 @@ export async function createGuestInvite(
     slugToken: token(),
     guestGroup: String(formData.get("guest_group") ?? "").slice(0, 100) || null,
     maxGuests: Math.max(1, Number(formData.get("max_guests")) || 2),
-    whatsappPhone: String(formData.get("whatsapp_phone") ?? "").slice(0, 50) || null,
+    whatsappPhone:
+      String(formData.get("whatsapp_phone") ?? "").slice(0, 50) || null,
   });
   revalidatePath(`/invitations/${invitationId}/guests`);
   return { ok: true };
@@ -77,6 +80,11 @@ export async function markGuestSent(
   await db
     .update(guestInvites)
     .set({ isSent: true, sentAt: new Date() })
-    .where(eq(guestInvites.id, guestId));
+    .where(
+      and(
+        eq(guestInvites.id, guestId),
+        eq(guestInvites.invitationId, invitationId),
+      ),
+    );
   revalidatePath(`/invitations/${invitationId}/guests`);
 }

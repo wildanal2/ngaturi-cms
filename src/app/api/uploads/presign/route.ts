@@ -6,6 +6,12 @@ import { getDb } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
 import { presignPut, publicUrl } from "@/lib/storage";
 import { env } from "@/lib/env";
+import {
+  canEditInvitation,
+  canUploadMedia,
+} from "@/lib/invitation/entitlement";
+import { countGalleryPhotos } from "@/lib/invitation/composition-entitlement";
+import type { SectionData } from "@/sections/types";
 
 const Body = z.object({
   invitationId: z.string().uuid(),
@@ -35,7 +41,7 @@ export async function POST(req: Request) {
   }
 
   const [inv] = await db
-    .select({ id: invitations.id })
+    .select()
     .from(invitations)
     .where(
       and(
@@ -49,6 +55,18 @@ export async function POST(req: Request) {
       { error: "Undangan tidak ditemukan." },
       { status: 404 },
     );
+  }
+  if (
+    !canUploadMedia(
+      inv,
+      "image",
+      countGalleryPhotos(inv.sections as SectionData[]),
+    )
+  ) {
+    const error = !canEditInvitation(inv)
+      ? "Masa edit gratis sudah berakhir."
+      : "Paket Basic mendukung maksimal 30 foto galeri.";
+    return NextResponse.json({ error }, { status: 403 });
   }
 
   const ext =

@@ -6,13 +6,41 @@ import { db } from "@/lib/db";
 import { invitations, guestbookMessages } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
-import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
+import {
+  canViewInvitation,
+  isInvitationPubliclyActive,
+} from "@/lib/invitation/visibility";
+import { getSession } from "@/lib/auth/helpers";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const [inv] = await db
+    .select({
+      status: invitations.status,
+      expiresAt: invitations.expiresAt,
+      userId: invitations.userId,
+    })
+    .from(invitations)
+    .where(eq(invitations.id, id))
+    .limit(1);
+  if (!inv) {
+    return NextResponse.json(
+      { error: "Undangan tidak aktif." },
+      { status: 404 },
+    );
+  }
+  const isPubliclyActive = isInvitationPubliclyActive(inv);
+  const viewerUserId = isPubliclyActive ? null : (await getSession())?.user.id;
+  if (!canViewInvitation(inv, viewerUserId)) {
+    return NextResponse.json(
+      { error: "Undangan tidak aktif." },
+      { status: 404 },
+    );
+  }
+
   const rows = await db
     .select({
       id: guestbookMessages.id,

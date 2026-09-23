@@ -41,10 +41,10 @@ function fullRefund() {
   };
 }
 
-function success() {
+function success(amount = 49_000) {
   return {
     invoiceNumber: "NGUNL-test",
-    amount: 49_000,
+    amount,
     currency: "IDR",
     status: "SUCCESS" as const,
   };
@@ -211,6 +211,46 @@ describe("applyDokuResult", () => {
     });
   });
 
+  it.each([
+    ["basic", "active", false, 49_000],
+    ["premium", "expired", true, 99_000],
+  ] as const)(
+    "unlocks %s from an %s trial without deleting existing artifacts",
+    async (planTier, trialState, expired, amount) => {
+      void trialState;
+      const storedPayment = payment({
+        amount: `${amount}.00`,
+        planTier,
+      });
+      const harness = useTransactionHarness(storedPayment, {
+        invitation: {
+          isPaid: false,
+          plan: "free_trial",
+          hasWatermark: true,
+          isEditLocked: expired,
+          editExpiresAt: expired
+            ? new Date("2020-01-01T00:00:00Z")
+            : new Date("2099-01-01T00:00:00Z"),
+        },
+      });
+
+      await expect(
+        applyDokuResult(success(amount), { source: "webhook" }),
+      ).resolves.toMatchObject({ status: "paid", fulfilled: true });
+      expect(harness.storedInvitation).toMatchObject({
+        isPaid: true,
+        plan: planTier,
+        hasWatermark: false,
+        isEditLocked: false,
+        editExpiresAt: null,
+      });
+      expect(harness.stats()).toMatchObject({
+        invitationUpdates: 1,
+        profileInserts: 1,
+      });
+    },
+  );
+
   it("keeps duplicate SUCCESS idempotent before recording REFUNDED", async () => {
     const originalPaidAt = new Date("2026-09-22T10:05:00Z");
     const originalEvidence = { transaction: { status: "SUCCESS" } };
@@ -271,10 +311,7 @@ describe("applyDokuResult", () => {
     ).resolves.toMatchObject({ status: "refunded", transitioned: false });
     for (const status of ["SUCCESS", "PENDING", "FAILED"] as const) {
       await expect(
-        applyDokuResult(
-          { ...success(), status },
-          { source: "status_query" },
-        ),
+        applyDokuResult({ ...success(), status }, { source: "status_query" }),
       ).resolves.toMatchObject({
         status: "refunded",
         transitioned: false,

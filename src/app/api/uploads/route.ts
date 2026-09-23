@@ -6,6 +6,12 @@ import { invitations, mediaAssets } from "@/lib/db/schema";
 import { isTrustedPublicUrl, publicUrl, putObject } from "@/lib/storage";
 import { env } from "@/lib/env";
 import { getWorkerEnv } from "@/lib/runtime/context";
+import {
+  canEditInvitation,
+  canUploadMedia,
+} from "@/lib/invitation/entitlement";
+import { countGalleryPhotos } from "@/lib/invitation/composition-entitlement";
+import type { SectionData } from "@/sections/types";
 
 // Foto diproses oleh Cloudflare Images: crop, resize sisi terpanjang hingga
 // 1920, lalu konversi ke WebP. Audio tetap melewati jalur non-image.
@@ -35,6 +41,37 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
   }
 
+  const [inv] = await db
+    .select()
+    .from(invitations)
+    .where(
+      and(
+        eq(invitations.id, invitationId),
+        eq(invitations.userId, session.user.id),
+      ),
+    )
+    .limit(1);
+  if (!inv) {
+    return NextResponse.json(
+      { error: "Undangan tidak ditemukan." },
+      { status: 404 },
+    );
+  }
+
+  const galleryPhotoCount = countGalleryPhotos(inv.sections as SectionData[]);
+  const mediaKind = kind === "audio" ? "audio" : "image";
+  const mayUpload = sourceUrl
+    ? canEditInvitation(inv)
+    : canUploadMedia(inv, mediaKind, galleryPhotoCount);
+  if (!mayUpload) {
+    const error = !canEditInvitation(inv)
+      ? "Masa edit gratis sudah berakhir."
+      : mediaKind === "audio"
+        ? "Upload musik baru memerlukan paket Premium."
+        : "Paket Basic mendukung maksimal 30 foto galeri.";
+    return NextResponse.json({ error }, { status: 403 });
+  }
+
   // ---- AUDIO: simpan apa adanya (tanpa sharp) ----
   if (kind === "audio" && file instanceof File) {
     if (!file.type.startsWith("audio/")) {
@@ -44,22 +81,6 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Ukuran audio maksimal 15 MB." },
         { status: 413 },
-      );
-    }
-    const [own] = await db
-      .select({ id: invitations.id })
-      .from(invitations)
-      .where(
-        and(
-          eq(invitations.id, invitationId),
-          eq(invitations.userId, session.user.id),
-        ),
-      )
-      .limit(1);
-    if (!own) {
-      return NextResponse.json(
-        { error: "Undangan tidak ditemukan." },
-        { status: 404 },
       );
     }
     const ext =
@@ -113,23 +134,6 @@ export async function POST(req: Request) {
     } catch {
       /* ignore malformed crop */
     }
-  }
-
-  const [inv] = await db
-    .select({ id: invitations.id })
-    .from(invitations)
-    .where(
-      and(
-        eq(invitations.id, invitationId),
-        eq(invitations.userId, session.user.id),
-      ),
-    )
-    .limit(1);
-  if (!inv) {
-    return NextResponse.json(
-      { error: "Undangan tidak ditemukan." },
-      { status: 404 },
-    );
   }
 
   let out: ArrayBuffer;

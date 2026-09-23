@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
-import { isEditLocked } from "@/lib/invitation/entitlement";
+import { hasProFeatures, isEditLocked } from "@/lib/invitation/entitlement";
 import { getCompositionPolicy } from "@/lib/templates/composition-policy";
 import {
   getTemplate,
@@ -57,6 +57,7 @@ export default async function BuilderPage({
         invitationId={inv.id}
         templates={templateOptions}
         locked={locked}
+        premiumFeatures={hasProFeatures(inv)}
       />
     );
   }
@@ -83,6 +84,7 @@ export default async function BuilderPage({
         templateOptions,
         sourceTemplate.category,
       )}
+      premiumFeatures={hasProFeatures(inv)}
     />
   );
 }
