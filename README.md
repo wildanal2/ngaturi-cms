@@ -120,6 +120,11 @@ renderer → track view via `after()`. OG card: `src/app/[slug]/opengraph-image.
 - Beli paket Basic/Premium → `+1` kuota (`user_profiles.invitation_quota_bonus`).
 - Cron `lock-expired-edits` → `is_edit_locked=true`; undangan tetap online.
 - `/invitations/[id]/unlock` → `POST /api/payments/create` → DOKU hosted checkout.
+- Undangan berbayar memakai halaman yang sama untuk renewal Rp25.000. Renewal
+  boleh dilakukan sebelum expiry; sisa waktu aktif dipertahankan dan setiap
+  payment berbeda yang berhasil menambah tepat 90 hari. `grant_until` mencatat
+  expiry hasil fulfillment, sedangkan `plan_tier` menangkap tier undangan saat
+  checkout. Row legacy `plan_tier=renewal` tetap didukung tanpa menebak tier.
 - Balik: `GET /payment/callback` (re-check status) + S2S `POST /payment/webhook/doku`
   (verifikasi signature, idempoten via `applyDokuResult`) → `is_paid=true`,
   hapus watermark, buka edit, tambah kuota.
@@ -147,6 +152,11 @@ renderer → track view via `after()`. OG card: `src/app/[slug]/opengraph-image.
   mempertahankan audit review lalu langsung mengambil signed DOKU Check Status
   baru; blokir hanya dilepas oleh hasil provider tersebut sebelum fulfillment
   dapat dilanjutkan.
+- Publish menghitung expiry sebagai nilai yang lebih akhir antara expiry aktif
+  yang sudah ada dan tanggal acara +30 hari, sehingga tidak memotong hasil
+  renewal. Halaman publik, RSVP, dan guestbook menolak `expires_at` yang sudah
+  lewat walaupun cron belum mengubah status; pemilik tetap dapat membuka
+  preview dan halaman pengelolaan.
 
 ---
 

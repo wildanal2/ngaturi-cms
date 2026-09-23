@@ -114,7 +114,11 @@
 └───────────────┴─────────────┴──────────────┴─────────────────────────┘
 ```
 
-**Perpanjangan:** setelah `expires_at`, undangan diarsipkan. User bisa bayar Rp 25k untuk memperpanjang 90 hari + akses download galeri/ucapan.
+**Perpanjangan:** undangan berbayar dapat diperpanjang sebelum atau setelah
+`expires_at` dengan harga Rp 25k untuk +90 hari. Renewal awal mempertahankan
+sisa masa aktif (`max(expires_at, waktu fulfillment) + 90 hari`); renewal
+setelah expiry menghitung dari waktu fulfillment. Status `expired` kembali
+`published`, sedangkan `draft` dan `archived` tidak diubah.
 
 ## 1.6 Success Metrics (KPIs)
 
@@ -597,9 +601,9 @@ CREATE TABLE payments (
   status payment_status DEFAULT 'pending',
   -- Apa yang dibeli
   kind purchase_kind NOT NULL,
-  plan_tier VARCHAR(50) NOT NULL,    -- 'basic' | 'premium' | 'business'
+  plan_tier VARCHAR(50) NOT NULL,    -- tier undangan saat checkout; legacy renewal memakai 'renewal'
   -- one-time unlock: grant_until NULL (permanen selama undangan aktif)
-  -- renewal / subscription: grant_until diisi
+  -- renewal: NULL saat pending, lalu hasil expires_at setelah fulfillment
   grant_until TIMESTAMP,
   -- Idempotensi webhook
   raw_webhook JSONB,
@@ -620,7 +624,8 @@ CREATE INDEX idx_payments_invitation ON payments(invitation_id);
 -- Saat status -> 'paid':
 --   kind='invitation_unlock'      => invitations.is_paid=true, plan=<tier>, has_watermark=false,
 --                                    is_edit_locked=false, edit_expires_at=NULL, paid_at=now()
---   kind='invitation_renewal'     => invitations.expires_at += 90 hari, status='published'
+--   kind='invitation_renewal'     => lock invitation; expires_at=max(expires_at, paid_at)+90 hari;
+--                                    hanya status expired yang kembali published; grant_until=hasil expires_at
 --   kind='business_subscription'  => user_profiles.business_subscription_expires_at = now()+30 hari
 -- Refund policy:
 --   * refund approval/initiation tetap manual melalui operasi merchant DOKU;
@@ -2539,7 +2544,9 @@ export async function GET(
 │    invitations.is_paid=true, plan=<tier>,      │
 │    has_watermark=false, is_edit_locked=false,  │
 │    edit_expires_at=NULL                        │
-│  kind=invitation_renewal: expires_at += 90d    │
+│  kind=invitation_renewal:                      │
+│    expires_at=max(expires_at, fulfilled_at)+90d│
+│    grant_until=hasil expires_at                 │
 │  kind=business_subscription: profile +30d      │
 │       │                                         │
 │       ▼                                         │
@@ -2909,7 +2916,9 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ QR code generation (for sharing)
 □ WhatsApp share integration (bulk dari daftar guest_invites)
 □ Custom domain (per user, business feature)
-□ Renewal flow (Rp 25k / 90 hari) + download galeri & ucapan
+☑ Renewal flow inti (Rp 25k / +90 hari, early renewal menumpuk,
+  expiry publik/submission ditegakkan saat request)
+□ Download galeri & ucapan
 ```
 
 ### Sprint 3.3: Admin Panel

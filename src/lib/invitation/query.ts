@@ -13,6 +13,7 @@ export interface PublicInvitation {
   eventTitle: string | null;
   eventType: string;
   eventDate: string | null;
+  expiresAt: string | null;
   hasWatermark: boolean;
   sections: SectionData[];
   global: GlobalSettings;
@@ -40,6 +41,7 @@ export const getPublicInvitation = cache(async function getPublicInvitation(
     eventTitle: row.eventTitle,
     eventType: row.eventType,
     eventDate: row.eventDate?.toISOString() ?? null,
+    expiresAt: row.expiresAt?.toISOString() ?? null,
     hasWatermark: row.hasWatermark,
     sections: row.sections as SectionData[],
     global: row.globalSettings as GlobalSettings,
@@ -75,8 +77,9 @@ export function invitationSummary(inv: PublicInvitation) {
     pick(hero?.props?.background_image) ||
     null;
 
-  const firstEvent = (events?.props?.events as Array<Record<string, unknown>>)
-    ?.[0];
+  const firstEvent = (
+    events?.props?.events as Array<Record<string, unknown>>
+  )?.[0];
 
   return {
     names,

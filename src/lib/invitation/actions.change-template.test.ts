@@ -35,6 +35,7 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 import {
   changeInvitationTemplate,
   createInvitation,
+  publishInvitation,
   saveComposition,
 } from "./actions";
 
@@ -95,7 +96,9 @@ const invitation = {
   editExpiresAt: null,
   isEditLocked: false,
   eventTitle: "Alya & Bima",
-  eventDate: null,
+  eventDate: null as Date | null,
+  expiresAt: null as Date | null,
+  publishedAt: null as Date | null,
 };
 
 function selectBuilder(row = invitation) {
@@ -141,11 +144,38 @@ beforeEach(() => {
 
 describe("legacy template identity", () => {
   it("does not reapply content when switching from the legacy ID to its canonical ID", async () => {
-    const { set, insert } = transactionBuilder({ ...invitation, sourceTemplate: LEGACY_SEKAR_JAWA_ID });
+    const { set, insert } = transactionBuilder({
+      ...invitation,
+      sourceTemplate: LEGACY_SEKAR_JAWA_ID,
+    });
     mocks.getTemplate.mockReturnValueOnce(preset(SEKAR_JAWA_ID, "wedding"));
-    expect(await changeInvitationTemplate(invitation.id, SEKAR_JAWA_ID)).toEqual({ ok: true });
+    expect(
+      await changeInvitationTemplate(invitation.id, SEKAR_JAWA_ID),
+    ).toEqual({ ok: true });
     expect(set).not.toHaveBeenCalled();
     expect(insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("publishInvitation renewal safety", () => {
+  it("does not shorten an existing later renewal expiry", async () => {
+    const renewedUntil = new Date("2099-03-01T00:00:00.000Z");
+    const { set } = transactionBuilder({
+      ...invitation,
+      eventDate: new Date("2026-10-01T00:00:00.000Z"),
+      expiresAt: renewedUntil,
+    });
+
+    await expect(publishInvitation(invitation.id)).resolves.toEqual({
+      ok: true,
+      slug: invitation.slug,
+    });
+    expect(set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "published",
+        expiresAt: renewedUntil,
+      }),
+    );
   });
 });
 
@@ -203,9 +233,7 @@ describe("createInvitation catalog materialization", () => {
     expect(invitationValues).toHaveBeenCalledWith(
       expect.objectContaining({ sourceTemplate: targetTemplate.id }),
     );
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/builder/created-invitation",
-    );
+    expect(mocks.redirect).toHaveBeenCalledWith("/builder/created-invitation");
   });
 });
 

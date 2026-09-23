@@ -11,7 +11,10 @@ import {
   userProfiles,
 } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
-import { canonicalTemplateId, templateIdentityAliases } from "@/lib/templates/identity";
+import {
+  canonicalTemplateId,
+  templateIdentityAliases,
+} from "@/lib/templates/identity";
 import { getTemplate } from "@/lib/templates/catalog";
 import {
   hydrateTemplateSections,
@@ -22,6 +25,7 @@ import { isTemplateChangeCategoryCompatible } from "@/lib/templates/compatibilit
 import { makeSlug, validateCustomSlug } from "./slug";
 import { CompositionSchema } from "@/sections/schema";
 import type { SectionData } from "@/sections/types";
+import { publicationExpiry } from "./publication";
 import {
   editExpiresAtFor,
   isEditLocked,
@@ -388,7 +392,10 @@ export async function saveComposition(
       and(
         eq(invitations.id, invitationId),
         eq(invitations.userId, inv.userId),
-        inArray(invitations.sourceTemplate, templateIdentityAliases(payload.source_template)),
+        inArray(
+          invitations.sourceTemplate,
+          templateIdentityAliases(payload.source_template),
+        ),
       ),
     )
     .returning({ id: invitations.id });
@@ -408,24 +415,40 @@ export async function saveComposition(
 export async function publishInvitation(
   invitationId: string,
 ): Promise<{ ok: true; slug: string }> {
-  const inv = await loadOwned(invitationId);
-  const now = new Date();
-  const eventDate = inv.eventDate ?? now;
-  const expiresAt = new Date(eventDate.getTime() + 30 * 86_400_000);
+  const session = await requireUser();
+  const result = await db.transaction(async (tx) => {
+    const [inv] = await tx
+      .select()
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.id, invitationId),
+          eq(invitations.userId, session.user.id),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!inv) throw new Error("Undangan tidak ditemukan");
 
-  await db
-    .update(invitations)
-    .set({
-      status: "published",
-      publishedAt: inv.publishedAt ?? now,
-      expiresAt,
-      updatedAt: now,
-    })
-    .where(eq(invitations.id, invitationId));
+    const now = new Date();
+    const expiresAt = publicationExpiry(inv.eventDate, inv.expiresAt, now);
+
+    await tx
+      .update(invitations)
+      .set({
+        status: "published",
+        publishedAt: inv.publishedAt ?? now,
+        expiresAt,
+        updatedAt: now,
+      })
+      .where(eq(invitations.id, invitationId));
+
+    return { slug: inv.slug };
+  });
 
   updateTag(`invitation:${invitationId}`);
-  updateTag(`invitation:slug:${inv.slug}`);
-  return { ok: true, slug: inv.slug };
+  updateTag(`invitation:slug:${result.slug}`);
+  return { ok: true, slug: result.slug };
 }
 
 /** Ganti nama tautan (slug) undangan. */

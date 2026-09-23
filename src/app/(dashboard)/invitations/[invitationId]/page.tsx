@@ -104,7 +104,14 @@ export default async function InvitationDetailPage({
             >
               Upgrade
             </Link>
-          ) : null}
+          ) : (
+            <Link
+              href={`/invitations/${inv.id}/unlock`}
+              className="rounded-full border border-line px-3.5 py-1.5 hover:bg-cream-200"
+            >
+              Perpanjang
+            </Link>
+          )}
         </nav>
       </div>
 

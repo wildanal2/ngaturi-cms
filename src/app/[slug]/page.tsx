@@ -15,6 +15,10 @@ import {
 } from "@/lib/invitation/query";
 import { InvitationCover } from "@/components/invitation/cover";
 import { resolveTemplateComposition } from "@/lib/templates/catalog";
+import {
+  canViewInvitation,
+  isInvitationPubliclyActive,
+} from "@/lib/invitation/visibility";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
 
@@ -25,7 +29,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const inv = await getPublicInvitation(slug);
-  if (!inv || inv.status !== "published") {
+  if (!inv || !isInvitationPubliclyActive(inv)) {
     return { title: "Undangan tidak ditemukan", robots: { index: false } };
   }
 
@@ -88,12 +92,12 @@ export default async function InvitationPage({
   const inv = await getPublicInvitation(slug);
   if (!inv) notFound();
 
-  // owners can preview their own invitation before publishing
-  const isDraft = inv.status !== "published";
-  const isOwner = isDraft
-    ? (await getSession())?.user.id === inv.userId
-    : false;
-  if (isDraft && !isOwner) notFound();
+  // Owners retain preview access when draft or expired; public visitors do not.
+  const now = new Date();
+  const isPubliclyActive = isInvitationPubliclyActive(inv, now);
+  const viewerUserId = isPubliclyActive ? null : (await getSession())?.user.id;
+  if (!canViewInvitation(inv, viewerUserId, now)) notFound();
+  const isPreview = !isPubliclyActive;
 
   const guest = to ? await getGuestByToken(inv.id, to) : null;
   const guestName = guest?.name ?? null;
@@ -155,16 +159,18 @@ export default async function InvitationPage({
       <h1 className="sr-only">
         Undangan {s.eventLabel} {s.names}
       </h1>
-      {isDraft ? (
+      {isPreview ? (
         <div className="fixed inset-x-0 top-0 z-[60] bg-wine py-1.5 text-center text-xs font-medium text-white">
-          PRATINJAU — undangan ini belum dipublikasikan
+          PRATINJAU PEMILIK — undangan ini tidak sedang aktif untuk publik
         </div>
       ) : null}
       {!hasCoverSection && inv.global.cover_enabled !== false ? (
         <InvitationCover
           names={
             (inv.sections.find((s) => s.type === "hero")?.props
-              ?.couple_names as string) ?? inv.eventTitle ?? "Undangan"
+              ?.couple_names as string) ??
+            inv.eventTitle ??
+            "Undangan"
           }
           guestName={guestName}
           global={inv.global}

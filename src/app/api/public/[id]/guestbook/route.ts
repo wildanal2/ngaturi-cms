@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { invitations, guestbookMessages } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
 
 export async function GET(
   _req: Request,
@@ -49,7 +50,10 @@ export async function POST(
   const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
 
   if (!(await rateLimit(`gb:${ip}`, 5, 60))) {
-    return NextResponse.json({ error: "Terlalu banyak percobaan." }, { status: 429 });
+    return NextResponse.json(
+      { error: "Terlalu banyak percobaan." },
+      { status: 429 },
+    );
   }
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
@@ -68,22 +72,30 @@ export async function POST(
   const [inv] = await db
     .select({
       status: invitations.status,
+      expiresAt: invitations.expiresAt,
       settings: invitations.globalSettings,
       sections: invitations.sections,
     })
     .from(invitations)
     .where(eq(invitations.id, id))
     .limit(1);
-  if (!inv || inv.status !== "published") {
-    return NextResponse.json({ error: "Undangan tidak aktif." }, { status: 404 });
+  if (!inv || !isInvitationPubliclyActive(inv)) {
+    return NextResponse.json(
+      { error: "Undangan tidak aktif." },
+      { status: 404 },
+    );
   }
 
-  const gbSection = (inv.sections as Array<{ type: string; props?: Record<string, unknown> }>).find(
-    (s) => s.type === "guestbook",
-  );
+  const gbSection = (
+    inv.sections as Array<{ type: string; props?: Record<string, unknown> }>
+  ).find((s) => s.type === "guestbook");
   const requireApproval = gbSection?.props?.require_approval !== false;
   const looksSpammy = LINK_RE.test(parsed.data.message);
-  const status = looksSpammy ? "spam" : requireApproval ? "pending" : "approved";
+  const status = looksSpammy
+    ? "spam"
+    : requireApproval
+      ? "pending"
+      : "approved";
 
   const [row] = await db
     .insert(guestbookMessages)

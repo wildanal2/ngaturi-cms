@@ -86,6 +86,25 @@ Jalur operator ini sengaja terpisah dari cron payment `pending`. Nilai refund
 yang tampil di admin dilaporkan terpisah dan tidak dihitung sebagai pendapatan
 paid.
 
+### Renewal yang sudah disetujui
+
+- Checkout renewal tersedia untuk setiap undangan milik user yang sudah paid;
+  harga server-authoritative Rp25.000 dan durasi +90 hari.
+- Fulfillment mengunci payment dan invitation. Expiry baru adalah
+  `max(expires_at, fulfilled_at) + 90 hari`; dua payment valid berbeda menumpuk.
+- Payment pending memakai `grant_until=NULL`. Setelah fulfillment,
+  `grant_until` berisi expiry hasil update yang sama, dan `plan_tier` berisi tier
+  undangan saat checkout. Nilai legacy `plan_tier=renewal` dilaporkan sebagai
+  legacy/tidak diketahui dan tidak di-backfill berdasarkan tebakan.
+- Hanya status invitation `expired` yang dipulihkan menjadi `published`.
+  `draft` dan `archived` dipertahankan.
+- Request halaman publik, RSVP, dan guestbook memeriksa `expires_at` langsung;
+  cron bukan satu-satunya enforcement. Preview dan management pemilik tetap
+  tersedia.
+- Reporting paid renewal memisahkan amount, count, dan breakdown Basic/Premium/
+  legacy-tidak-diketahui. Refund tetap memakai kebijakan financial-only dan
+  tidak mencabut extension yang sudah fulfilled.
+
 ### Runbook manual review refund
 
 Review parsial/ambigu harus diselesaikan oleh operator berwenang menggunakan
@@ -228,11 +247,9 @@ Sebelum Production deploy:
 
 ## Deferred business-rule decisions
 
-Kebijakan refund financial-only sudah ditetapkan di bagian Refund. Pekerjaan
-deployment tetap tidak menentukan atau mengubah:
+Kebijakan refund financial-only dan renewal sudah ditetapkan di bagian terkait.
+Pekerjaan deployment tetap tidak menentukan atau mengubah:
 
-- semantics renewal `planTier` / `grantUntil`;
-- kebijakan early renewal;
 - perbedaan trial 3 hari dan 7 hari;
 - perbedaan entitlement fitur selama trial.
 

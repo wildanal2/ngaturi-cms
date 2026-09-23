@@ -34,13 +34,30 @@ export default async function AdminHome() {
       label: "Refund penuh (Rp)",
       value: revenue.refundedAmount.toLocaleString("id-ID"),
     },
+    {
+      label: "Renewal dibayar (Rp)",
+      value: revenue.renewalPaidAmount.toLocaleString("id-ID"),
+    },
+    { label: "Renewal dibayar", value: String(revenue.renewalPaidCount) },
+    {
+      label: "Renewal Basic",
+      value: `${revenue.renewalByTier.basic.paidCount} · Rp ${revenue.renewalByTier.basic.paidAmount.toLocaleString("id-ID")}`,
+    },
+    {
+      label: "Renewal Premium",
+      value: `${revenue.renewalByTier.premium.paidCount} · Rp ${revenue.renewalByTier.premium.paidAmount.toLocaleString("id-ID")}`,
+    },
+    {
+      label: "Renewal legacy/tidak diketahui",
+      value: `${revenue.renewalByTier.legacyUnknown.paidCount} · Rp ${revenue.renewalByTier.legacyUnknown.paidAmount.toLocaleString("id-ID")}`,
+    },
     { label: "Review refund", value: String(refundReviews) },
   ];
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl">Ringkasan platform</h1>
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-7">
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {stats.map((s) => (
           <div
             key={s.label}

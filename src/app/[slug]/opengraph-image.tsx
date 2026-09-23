@@ -6,6 +6,7 @@ import {
 } from "@/lib/invitation/query";
 import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
 import { env } from "@/lib/env";
+import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
 
 export const alt = "Undangan";
 export const size = { width: 1200, height: 630 };
@@ -32,7 +33,11 @@ export default async function OgImage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const inv = await getPublicInvitation(slug);
+  const loadedInvitation = await getPublicInvitation(slug);
+  const inv =
+    loadedInvitation && isInvitationPubliclyActive(loadedInvitation)
+      ? loadedInvitation
+      : null;
   const g = inv?.global;
   const primary = g?.color_primary ?? "#34503f";
   const secondary = g?.color_secondary ?? "#7a2e3c";
