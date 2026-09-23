@@ -9,6 +9,7 @@ const FAKE: Record<string, string> = {
   DATABASE_URL: "postgres://user:pass@localhost:5432/test",
   REDIS_REST_URL: "https://redis.example.com",
   REDIS_REST_TOKEN: "test-token",
+  REDIS_URL: "redis://localhost:6379/0",
   AWS_ACCESS_KEY_ID: "test",
   AWS_SECRET_ACCESS_KEY: "test",
   AWS_ENDPOINT_URL_S3: "https://s3.example.com",

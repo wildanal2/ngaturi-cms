@@ -15,6 +15,8 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1).optional(),
   DATABASE_POOL_SIZE: z.coerce.number().int().positive().default(10),
 
+  // Node development/PM2 uses TCP. Workers use the REST pair below.
+  REDIS_URL: z.string().min(1).optional(),
   REDIS_REST_URL: z.url().optional(),
   REDIS_REST_TOKEN: z.string().min(1).optional(),
 
@@ -52,7 +54,7 @@ const completeRedisRestCredentials = schema.superRefine((value, ctx) => {
       code: "custom",
       path: ["REDIS_REST_URL"],
       message:
-        "REDIS_REST_URL and REDIS_REST_TOKEN must be configured together",
+        "Cloudflare Worker Redis requires REDIS_REST_URL and REDIS_REST_TOKEN together",
     });
   }
 });
