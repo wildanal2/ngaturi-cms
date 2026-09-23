@@ -83,7 +83,7 @@ describe("mapStatus", () => {
     expect(mapStatus("PENDING")).toBe("pending");
     expect(mapStatus("TIMEOUT")).toBe("pending");
     expect(mapStatus("REDIRECT")).toBe("pending");
-    expect(mapStatus("REFUNDED")).toBe("pending");
+    expect(mapStatus("REFUNDED")).toBe("refunded");
   });
 });
 
@@ -206,6 +206,34 @@ describe("DOKU protocol validation", () => {
       amount: 49_000,
       currency: undefined,
       status: "SUCCESS",
+    });
+  });
+
+  it("parses signed full-refund evidence from a status response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((_url, init: RequestInit) =>
+        Promise.resolve(
+          signedDokuResponse(
+            {
+              order: { invoice_number: "NGUNL-test", amount: 49_000 },
+              transaction: { status: "REFUNDED" },
+              refund: { id: "refund-1", amount: 49_000 },
+            },
+            init,
+            "/orders/v1/status/NGUNL-test",
+            false,
+          ),
+        ),
+      ),
+    );
+
+    await expect(checkOrderStatus("NGUNL-test", TEST_DOKU)).resolves.toEqual({
+      invoiceNumber: "NGUNL-test",
+      amount: 49_000,
+      currency: undefined,
+      status: "REFUNDED",
+      refund: { id: "refund-1", amount: 49_000 },
     });
   });
 

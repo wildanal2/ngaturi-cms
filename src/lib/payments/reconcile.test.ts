@@ -30,6 +30,7 @@ function applied(
     status,
     transitioned: status !== "pending",
     fulfilled: status === "paid",
+    reviewRequired: false,
   };
 }
 
@@ -58,7 +59,8 @@ describe("reconcilePendingDokuPayments", () => {
       checked: 0,
       transitioned: 0,
       fulfilled: 0,
-      statuses: { paid: 0, expired: 0, failed: 0, pending: 0 },
+      reviewRequired: 0,
+      statuses: { paid: 0, expired: 0, failed: 0, pending: 0, refunded: 0 },
       errors: 0,
       truncated: false,
     });
@@ -105,7 +107,8 @@ describe("reconcilePendingDokuPayments", () => {
       checked: 2,
       transitioned: 1,
       fulfilled: 1,
-      statuses: { paid: 1, expired: 0, failed: 0, pending: 1 },
+      reviewRequired: 0,
+      statuses: { paid: 1, expired: 0, failed: 0, pending: 1, refunded: 0 },
       errors: 0,
       truncated: false,
     });

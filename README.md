@@ -131,6 +131,22 @@ renderer → track view via `after()`. OG card: `src/app/[slug]/opengraph-image.
   `.env.local`, bukan ditulis literal di crontab. Production nantinya memakai
   Cloudflare Cron Trigger yang memanggil helper rekonsiliasi yang sama secara
   langsung; webhook tetap jalur konfirmasi utama.
+- Refund disetujui dan dimulai manual melalui operasi merchant DOKU. Hanya
+  `REFUNDED` dengan bukti jumlah refund sebesar nilai payment yang otomatis
+  menjadi status terminal `refunded`. Entitlement, plan, akses edit/publikasi,
+  watermark, kuota, renewal, dan nilai historis `paid_at` yang sudah diberikan
+  tetap dipertahankan. Refund parsial atau bukti tanpa jumlah masuk manual
+  review dan tidak boleh membuka jalur fulfillment baru.
+- Refund notification yang terlewat direkonsiliasi per invoice dengan
+  `npm run payments:reconcile-refund -- <provider_order_id>`. Perintah ini
+  memakai signed DOKU Check Status dan sengaja terpisah dari cron payment
+  `pending`.
+- Review refund parsial/ambigu diselesaikan operator berwenang per invoice:
+  `npm run payments:resolve-refund-review -- <provider_order_id> <confirm|reject> <operator_id> <reason>`.
+  `confirm` mencatat full refund terminal tanpa mengubah entitlement. `reject`
+  mempertahankan audit review lalu langsung mengambil signed DOKU Check Status
+  baru; blokir hanya dilepas oleh hasil provider tersebut sebelum fulfillment
+  dapat dilanjutkan.
 
 ---
 

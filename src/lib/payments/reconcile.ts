@@ -48,6 +48,7 @@ export interface DokuReconciliationSummary {
   checked: number;
   transitioned: number;
   fulfilled: number;
+  reviewRequired: number;
   statuses: Record<PaymentResultStatus, number>;
   errors: number;
   truncated: boolean;
@@ -146,7 +147,8 @@ export async function reconcilePendingDokuPayments(
     checked: 0,
     transitioned: 0,
     fulfilled: 0,
-    statuses: { paid: 0, expired: 0, failed: 0, pending: 0 },
+    reviewRequired: 0,
+    statuses: { paid: 0, expired: 0, failed: 0, pending: 0, refunded: 0 },
     errors: 0,
     truncated,
   };
@@ -168,6 +170,7 @@ export async function reconcilePendingDokuPayments(
         summary.statuses[applied.status] += 1;
         if (applied.transitioned) summary.transitioned += 1;
         if (applied.fulfilled) summary.fulfilled += 1;
+        if (applied.reviewRequired) summary.reviewRequired += 1;
       } catch (error) {
         summary.errors += 1;
         console.warn(

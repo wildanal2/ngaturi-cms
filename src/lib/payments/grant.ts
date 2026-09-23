@@ -4,8 +4,16 @@ import { invitations, payments, userProfiles } from "@/lib/db/schema";
 import { PAID_PACKAGE_QUOTA_BONUS } from "@/lib/invitation/entitlement";
 import { RENEWAL_DAYS } from "./plans";
 import { mapStatus, type DokuPaymentResult, type DokuStatus } from "./doku";
+import {
+  clearRefundReconciliationRequirement,
+  recordFullRefundEvidence,
+  recordRefundReviewEvidence,
+  refundReconciliationRequired,
+  refundReviewRequired,
+} from "./refund-review";
 
-export type PaymentResultStatus = "paid" | "expired" | "failed" | "pending";
+export type PaymentResultStatus =
+  "paid" | "expired" | "failed" | "pending" | "refunded";
 
 export class PaymentResultError extends Error {
   constructor(
@@ -25,11 +33,46 @@ export interface AppliedPaymentResult {
   status: PaymentResultStatus;
   transitioned: boolean;
   fulfilled: boolean;
+  reviewRequired: boolean;
 }
 
 interface ApplyMetadata {
   requestId?: string | null;
-  source: "webhook" | "status_query" | "reconciliation";
+  source:
+    | "webhook"
+    | "status_query"
+    | "reconciliation"
+    | "refund_reconciliation"
+    | "operator_reconciliation";
+}
+
+function refundEvidence(
+  result: DokuPaymentResult,
+  paymentAmount: number,
+  metadata: ApplyMetadata,
+  receivedAt: Date,
+) {
+  const refundAmount = result.refund?.amount;
+  const evidence =
+    refundAmount === paymentAmount
+      ? "full"
+      : refundAmount !== undefined && refundAmount < paymentAmount
+        ? "partial"
+        : "ambiguous";
+
+  return {
+    evidence,
+    reviewRequired: evidence !== "full",
+    source: metadata.source,
+    requestId: metadata.requestId ?? undefined,
+    receivedAt: receivedAt.toISOString(),
+    providerStatus: result.status,
+    invoiceNumber: result.invoiceNumber,
+    orderAmount: result.amount,
+    refundAmount,
+    refundId: result.refund?.id,
+    currency: result.currency,
+  };
 }
 
 /**
@@ -54,11 +97,124 @@ export async function applyDokuResult(
     if (pay.provider !== "doku") {
       throw new PaymentResultError("wrong_provider");
     }
-    if (Number(pay.amount) !== result.amount) {
+    if (
+      (result.status !== "REFUNDED" && result.amount === undefined) ||
+      (result.amount !== undefined && Number(pay.amount) !== result.amount)
+    ) {
       throw new PaymentResultError("amount_mismatch");
     }
     if (result.currency && result.currency !== pay.currency) {
       throw new PaymentResultError("currency_mismatch");
+    }
+
+    if (pay.status === "refunded") {
+      return {
+        paymentId: pay.id,
+        status: "refunded",
+        transitioned: false,
+        fulfilled: false,
+        reviewRequired: refundReviewRequired(pay.refundMetadata),
+      };
+    }
+
+    let effectiveRefundMetadata = pay.refundMetadata;
+    if (refundReconciliationRequired(effectiveRefundMetadata)) {
+      if (metadata.source !== "operator_reconciliation") {
+        return {
+          paymentId: pay.id,
+          status: pay.status,
+          transitioned: false,
+          fulfilled: false,
+          reviewRequired: true,
+        };
+      }
+      effectiveRefundMetadata = clearRefundReconciliationRequirement(
+        effectiveRefundMetadata,
+      );
+      await tx
+        .update(payments)
+        .set({ refundMetadata: effectiveRefundMetadata })
+        .where(eq(payments.id, pay.id));
+    }
+
+    const nextStatus = mapStatus(result.status);
+    const now = new Date();
+
+    if (nextStatus === "refunded") {
+      const previousStatus = pay.status;
+      const evidence = refundEvidence(
+        result,
+        Number(pay.amount),
+        metadata,
+        now,
+      );
+
+      if (evidence.evidence !== "full") {
+        const review = recordRefundReviewEvidence(
+          effectiveRefundMetadata,
+          evidence,
+        );
+        if (review.changed) {
+          await tx
+            .update(payments)
+            .set({ refundMetadata: review.metadata })
+            .where(eq(payments.id, pay.id));
+        }
+        return {
+          paymentId: pay.id,
+          status: previousStatus,
+          transitioned: false,
+          fulfilled: false,
+          reviewRequired: review.reviewRequired,
+        };
+      }
+
+      let entitlementReviewRequired =
+        previousStatus !== "paid" && pay.paidAt !== null;
+      if (
+        previousStatus !== "paid" &&
+        pay.kind === "invitation_unlock" &&
+        pay.invitationId
+      ) {
+        const [invitation] = await tx
+          .select({ isPaid: invitations.isPaid })
+          .from(invitations)
+          .where(eq(invitations.id, pay.invitationId))
+          .limit(1);
+        entitlementReviewRequired ||= invitation?.isPaid === true;
+      }
+
+      const recordedEvidence = recordFullRefundEvidence(
+        effectiveRefundMetadata,
+        evidence,
+        entitlementReviewRequired,
+      );
+
+      await tx
+        .update(payments)
+        .set({
+          status: "refunded",
+          refundRecordedAt: now,
+          refundMetadata: recordedEvidence,
+        })
+        .where(eq(payments.id, pay.id));
+      return {
+        paymentId: pay.id,
+        status: "refunded",
+        transitioned: true,
+        fulfilled: false,
+        reviewRequired: entitlementReviewRequired,
+      };
+    }
+
+    if (refundReviewRequired(effectiveRefundMetadata)) {
+      return {
+        paymentId: pay.id,
+        status: pay.status,
+        transitioned: false,
+        fulfilled: false,
+        reviewRequired: true,
+      };
     }
 
     if (pay.status === "paid") {
@@ -67,20 +223,20 @@ export async function applyDokuResult(
         status: "paid",
         transitioned: false,
         fulfilled: false,
+        reviewRequired: false,
       };
     }
 
-    const nextStatus = mapStatus(result.status);
     if (pay.status === "expired" || pay.status === "failed") {
       return {
         paymentId: pay.id,
         status: pay.status,
         transitioned: false,
         fulfilled: false,
+        reviewRequired: false,
       };
     }
 
-    const now = new Date();
     const auditRecord = {
       source: metadata.source,
       requestId: metadata.requestId ?? undefined,
@@ -108,6 +264,7 @@ export async function applyDokuResult(
         status: nextStatus,
         transitioned: nextStatus !== pay.status,
         fulfilled: false,
+        reviewRequired: false,
       };
     }
 
@@ -141,21 +298,42 @@ export async function applyDokuResult(
             },
           });
       }
-    } else if (pay.kind === "invitation_renewal" && pay.invitationId) {
+    } else if (pay.kind === "invitation_renewal") {
+      if (!pay.invitationId) {
+        throw new Error("renewal_entitlement_target_missing");
+      }
       const [inv] = await tx
-        .select({ expiresAt: invitations.expiresAt })
+        .select({
+          expiresAt: invitations.expiresAt,
+          status: invitations.status,
+        })
         .from(invitations)
         .where(eq(invitations.id, pay.invitationId))
-        .limit(1);
-      const base = inv?.expiresAt && inv.expiresAt > now ? inv.expiresAt : now;
-      await tx
+        .limit(1)
+        .for("update");
+      if (!inv) {
+        throw new Error("renewal_entitlement_target_missing");
+      }
+      const base = inv.expiresAt && inv.expiresAt > now ? inv.expiresAt : now;
+      const resultingExpiry = new Date(
+        base.getTime() + RENEWAL_DAYS * 86_400_000,
+      );
+      const [renewed] = await tx
         .update(invitations)
         .set({
-          status: "published",
-          expiresAt: new Date(base.getTime() + RENEWAL_DAYS * 86_400_000),
+          status: inv.status === "expired" ? "published" : inv.status,
+          expiresAt: resultingExpiry,
           updatedAt: now,
         })
-        .where(eq(invitations.id, pay.invitationId));
+        .where(eq(invitations.id, pay.invitationId))
+        .returning({ expiresAt: invitations.expiresAt });
+      if (!renewed) {
+        throw new Error("renewal_entitlement_target_missing");
+      }
+      await tx
+        .update(payments)
+        .set({ grantUntil: renewed.expiresAt })
+        .where(eq(payments.id, pay.id));
     } else if (pay.kind === "business_subscription" && pay.userId) {
       await tx
         .update(userProfiles)
@@ -173,17 +351,19 @@ export async function applyDokuResult(
       status: "paid",
       transitioned: true,
       fulfilled: true,
+      reviewRequired: false,
     };
   });
 }
 
 export function dokuResult(
   invoiceNumber: string,
-  amount: number,
+  amount: number | undefined,
   status: DokuStatus,
   currency?: string,
+  refund?: DokuPaymentResult["refund"],
 ): DokuPaymentResult {
-  return { invoiceNumber, amount, currency, status };
+  return { invoiceNumber, amount, currency, status, refund };
 }
 
 export async function invitationIdForInvoice(

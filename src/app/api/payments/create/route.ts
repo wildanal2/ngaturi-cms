@@ -111,7 +111,8 @@ export async function POST(req: Request) {
           currency: "IDR",
           status: "pending",
           kind,
-          planTier: kind === "invitation_renewal" ? "renewal" : tier,
+          planTier: kind === "invitation_renewal" ? inv.plan : tier,
+          grantUntil: null,
         })
         .returning({ id: payments.id });
       return created.id;

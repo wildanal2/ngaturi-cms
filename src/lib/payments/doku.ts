@@ -240,9 +240,13 @@ export function isDokuStatus(value: unknown): value is DokuStatus {
 
 export interface DokuPaymentResult {
   invoiceNumber: string;
-  amount: number;
+  amount?: number;
   currency?: string;
   status: DokuStatus;
+  refund?: {
+    id?: string;
+    amount?: number;
+  };
 }
 
 /** Query order status (used by the return/callback page). */
@@ -291,20 +295,39 @@ export async function checkOrderStatus(
   }
 
   const invoiceNumber = data?.order?.invoice_number;
-  const amount = Number(data?.order?.amount);
+  const rawAmount = data?.order?.amount;
+  const amount = rawAmount === undefined ? undefined : Number(rawAmount);
   const status = data?.transaction?.status;
   const currency = data?.order?.currency;
+  const rawRefundAmount = data?.refund?.amount;
+  const refundAmount =
+    rawRefundAmount === undefined ? undefined : Number(rawRefundAmount);
   if (
     invoiceNumber !== gatewayOrderId ||
-    !Number.isFinite(amount) ||
-    amount <= 0 ||
     !isDokuStatus(status) ||
+    (status !== "REFUNDED" &&
+      (!Number.isFinite(amount) || (amount ?? 0) <= 0)) ||
+    (amount !== undefined && (!Number.isFinite(amount) || amount <= 0)) ||
+    (refundAmount !== undefined &&
+      (!Number.isFinite(refundAmount) || refundAmount <= 0)) ||
     (currency !== undefined && currency !== "IDR")
   ) {
     throw new Error("DOKU returned an invalid status response");
   }
 
-  return { invoiceNumber, amount, currency, status };
+  return {
+    invoiceNumber,
+    amount,
+    currency,
+    status,
+    refund:
+      data?.refund === undefined
+        ? undefined
+        : {
+            id: typeof data.refund.id === "string" ? data.refund.id : undefined,
+            amount: refundAmount,
+          },
+  };
 }
 
 /**
@@ -364,7 +387,7 @@ export function verifyNotificationSignature(
 /** DOKU transaction.status → our payments.status */
 export function mapStatus(
   s: DokuStatus,
-): "paid" | "expired" | "failed" | "pending" {
+): "paid" | "expired" | "failed" | "pending" | "refunded" {
   switch (s) {
     case "SUCCESS":
       return "paid";
@@ -377,6 +400,8 @@ export function mapStatus(
     case "REVERSED":
     case "CANCELLED":
       return "failed";
+    case "REFUNDED":
+      return "refunded";
     default:
       return "pending";
   }

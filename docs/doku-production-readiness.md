@@ -52,6 +52,84 @@ eligible pending DOKU payment → scheduled signed Check Status
 Rekonsiliasi mempertahankan minimum age 2 menit, maximum age 24 jam, batch 50,
 concurrency 5, dan urutan kandidat paling lama lebih dulu.
 
+## Refund
+
+Refund merupakan status finansial. Persetujuan dan inisiasinya tetap manual
+melalui DOKU/merchant operations untuk duplicate atau incorrect charge,
+payment/system failure yang terverifikasi, atau pengecualian yang disetujui
+operator berwenang. Tidak ada eligibility window otomatis dan aplikasi tidak
+menyediakan API untuk memulai refund.
+
+Notification atau signed Check Status `REFUNDED` baru dianggap full refund bila
+`refund.amount` tersedia dan sama dengan nilai payment internal. Transisi ini
+mengubah payment menjadi terminal `refunded`, mencatat `refund_recorded_at` dan
+`refund_metadata`, mempertahankan `raw_webhook` sukses asli serta `paid_at`, dan
+tidak mengubah invitation atau profil. Event provider berikutnya, termasuk
+`SUCCESS`, menjadi no-op.
+
+Jika full refund diterima sebelum fulfillment, entitlement dan kuota tidak
+diberikan. Bila invitation sudah tampak paid meskipun payment belum pernah
+fulfilled, metadata menandai `entitlementReviewRequired` untuk pemeriksaan
+operator. Refund parsial, refund tanpa jumlah, atau jumlah yang tidak sama
+dengan payment disimpan dengan `reviewRequired` tanpa diperlakukan sebagai full
+refund. Selama review pre-fulfillment masih terbuka, `SUCCESS` tidak boleh
+memberikan entitlement.
+
+Refund yang notification-nya terlewat dipulihkan per invoice dengan:
+
+```text
+npm run payments:reconcile-refund -- <provider_order_id>
+→ signed DOKU Check Status → applyDokuResult
+```
+
+Jalur operator ini sengaja terpisah dari cron payment `pending`. Nilai refund
+yang tampil di admin dilaporkan terpisah dan tidak dihitung sebagai pendapatan
+paid.
+
+### Runbook manual review refund
+
+Review parsial/ambigu harus diselesaikan oleh operator berwenang menggunakan
+referensi payment eksplisit. Jangan mengubah row payment secara manual.
+
+Konfirmasi bahwa bukti tersebut adalah full refund:
+
+```text
+npm run payments:resolve-refund-review -- <provider_order_id> confirm <operator_id> <reason>
+```
+
+Command mengunci row payment, mencatat operator, alasan, waktu, dan keputusan di
+`refund_metadata.reviewHistory`, lalu mengubah payment menjadi terminal
+`refunded`. Command tidak mengubah invitation, kuota, renewal, atau entitlement.
+`SUCCESS` yang datang sesudahnya tetap menjadi no-op.
+
+Jika bukti dinyatakan invalid atau bukan full refund:
+
+```text
+npm run payments:resolve-refund-review -- <provider_order_id> reject <operator_id> <reason>
+```
+
+Command mempertahankan riwayat bukti dan mencatat resolusi tanpa mengubah
+payment menjadi `paid`. Setelah transaksi resolusi commit, payment tetap
+diblokir dengan `reconciliationRequired` sementara command mengambil signed
+DOKU Check Status baru dan meneruskannya ke jalur `applyDokuResult` yang sama
+dengan webhook/callback. Hanya hasil provider yang terverifikasi itu yang
+melepas blokir dan dapat melakukan fulfillment. Jika Check Status gagal, blokir
+tetap aktif; jalankan ulang command yang sama agar resolusi duplikat menjadi
+no-op dan Check Status dicoba lagi.
+
+Arti keputusan:
+
+- `confirm`: operator telah memverifikasi full refund di merchant operations.
+- `reject`: bukti event yang direview invalid atau bukan full refund; ini bukan
+  instruksi untuk menandai payment paid.
+
+Output command berupa JSON. Exit code `0` berarti resolusi dan, untuk `reject`,
+rekonsiliasi selesai; exit code `1` berarti provider atau pemrosesan gagal;
+exit code `2` berarti argumen tidak lengkap. Keputusan berbeda terhadap review
+yang sudah diselesaikan ditolak. Bukti provider baru yang berbeda dapat membuka
+review baru, sedangkan retry bukti yang sama setelah `reject` tidak membukanya
+kembali.
+
 ## Deployment dan scheduler
 
 ### Development
@@ -150,9 +228,9 @@ Sebelum Production deploy:
 
 ## Deferred business-rule decisions
 
-Pekerjaan deployment tidak menentukan atau mengubah:
+Kebijakan refund financial-only sudah ditetapkan di bagian Refund. Pekerjaan
+deployment tetap tidak menentukan atau mengubah:
 
-- kebijakan entitlement untuk `REFUNDED`;
 - semantics renewal `planTier` / `grantUntil`;
 - kebijakan early renewal;
 - perbedaan trial 3 hari dan 7 hari;

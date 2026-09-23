@@ -121,6 +121,54 @@ describe("POST /api/payments/create", () => {
     expect(mocks.createCheckout).not.toHaveBeenCalled();
   });
 
+  it("creates a paid invitation renewal with trusted price and tier metadata", async () => {
+    const insertValues = vi.fn(() => ({
+      returning: async () => [{ id: "payment-renewal" }],
+    }));
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(
+          lockedRows([
+            {
+              id: "invitation-1",
+              userId: "user-1",
+              isPaid: true,
+              plan: "premium",
+            },
+          ]),
+        )
+        .mockReturnValueOnce(rows([])),
+      insert: () => ({ values: insertValues }),
+    };
+    mocks.transaction.mockImplementation(async (callback) => callback(tx));
+
+    const response = await POST(
+      request({
+        invitationId: "invitation-1",
+        kind: "invitation_renewal",
+        plan: "basic",
+        amount: 1,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.createCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 25_000,
+        itemName: "Perpanjangan undangan 90 hari",
+      }),
+    );
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "invitation_renewal",
+        planTier: "premium",
+        grantUntil: null,
+        amount: "25000",
+      }),
+    );
+  });
+
   it("does not create another checkout while one is pending", async () => {
     const tx = {
       select: vi

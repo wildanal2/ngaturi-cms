@@ -12,13 +12,23 @@ const Notification = z
   .object({
     order: z.object({
       invoice_number: z.string().min(1).max(255),
-      amount: z.union([z.number(), z.string()]).transform(Number),
+      amount: z.union([z.number(), z.string()]).transform(Number).optional(),
       currency: z.string().length(3).optional(),
     }),
     transaction: z.object({ status: z.string().min(1) }),
+    refund: z
+      .object({
+        id: z.string().min(1).max(255).optional(),
+        amount: z.union([z.number(), z.string()]).transform(Number).optional(),
+      })
+      .optional(),
   })
   .refine(
-    (body) => Number.isFinite(body.order.amount) && body.order.amount > 0,
+    (body) =>
+      (body.order.amount === undefined ||
+        (Number.isFinite(body.order.amount) && body.order.amount > 0)) &&
+      (body.refund?.amount === undefined ||
+        (Number.isFinite(body.refund.amount) && body.refund.amount > 0)),
   );
 
 // DOKU server-to-server notification.
@@ -48,6 +58,9 @@ export async function POST(req: Request) {
   if (!isDokuStatus(transaction.status)) {
     return NextResponse.json({ error: "bad status" }, { status: 400 });
   }
+  if (transaction.status !== "REFUNDED" && order.amount === undefined) {
+    return NextResponse.json({ error: "bad body" }, { status: 400 });
+  }
   const requestId = req.headers.get("request-id");
 
   try {
@@ -57,6 +70,7 @@ export async function POST(req: Request) {
         order.amount,
         transaction.status,
         order.currency,
+        parsed.data.refund,
       ),
       { requestId, source: "webhook" },
       db,
@@ -70,6 +84,7 @@ export async function POST(req: Request) {
         status: result.status,
         transitioned: result.transitioned,
         fulfilled: result.fulfilled,
+        reviewRequired: result.reviewRequired,
       }),
     );
   } catch (error) {

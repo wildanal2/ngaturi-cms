@@ -605,6 +605,8 @@ CREATE TABLE payments (
   raw_webhook JSONB,
   -- Timestamps
   paid_at TIMESTAMP,
+  refund_recorded_at TIMESTAMP,
+  refund_metadata JSONB,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -620,6 +622,12 @@ CREATE INDEX idx_payments_invitation ON payments(invitation_id);
 --                                    is_edit_locked=false, edit_expires_at=NULL, paid_at=now()
 --   kind='invitation_renewal'     => invitations.expires_at += 90 hari, status='published'
 --   kind='business_subscription'  => user_profiles.business_subscription_expires_at = now()+30 hari
+-- Refund policy:
+--   * refund approval/initiation tetap manual melalui operasi merchant DOKU;
+--   * hanya REFUNDED dengan bukti full refund yang menjadi status terminal 'refunded';
+--   * entitlement yang sudah dipenuhi, kuota, renewal, publication, dan paid_at tidak dibalik;
+--   * refund sebelum fulfillment tidak memberi entitlement/kuota dan memblokir SUCCESS terlambat;
+--   * refund parsial/ambigu masuk manual review, bukan dianggap full refund.
 
 -- =====================================================
 -- SYSTEM & CONFIG
@@ -2553,6 +2561,24 @@ tertua lebih dulu) melalui Check Status dan jalur fulfillment yang sama.
 Real Sandbox E2E telah memverifikasi webhook pertama, duplicate webhook sebagai
 safe no-op, callback reconciliation sebagai safe no-op setelah fulfillment,
 serta aktivasi undangan dan increment kuota tepat satu kali.
+
+Refund merupakan transisi status finansial. Persetujuan dan inisiasi refund
+tetap dilakukan manual melalui DOKU/merchant operations untuk duplicate atau
+incorrect charge, payment/system failure yang terverifikasi, atau kasus khusus
+yang disetujui operator berwenang. Tidak ada eligibility window otomatis.
+
+`REFUNDED` hanya diproses otomatis bila notification atau signed Check Status
+membawa bukti `refund.amount` yang sama dengan nilai payment. Status internal
+menjadi terminal `refunded`, bukti sukses asli dan seluruh `paid_at` historis
+dipertahankan, serta entitlement yang sudah diberikan tidak dibalik. Bila refund
+terjadi sebelum fulfillment, tidak ada entitlement atau kuota yang diberikan
+dan event `SUCCESS` berikutnya menjadi no-op. Bukti parsial atau ambigu disimpan
+untuk manual review dan tidak diperlakukan sebagai full refund. Operator
+berwenang menyelesaikan review per payment reference melalui command
+operasional yang menyimpan identitas, alasan, waktu, keputusan, dan riwayat
+bukti. Konfirmasi menjadi refund terminal tanpa fulfillment. Penolakan bukti
+hanya melepas blokir melalui signed DOKU Check Status baru; tindakan operator
+tidak pernah langsung menandai payment paid.
 
 ---
 

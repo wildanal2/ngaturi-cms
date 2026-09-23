@@ -17,6 +17,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
     "demo:showcase": "tsx --env-file=.env.local scripts/demo-showcase.ts",
+    "payments:reconcile-refund": "tsx --env-file=.env.local scripts/reconcile-doku-refund.ts",
+    "payments:resolve-refund-review": "tsx --env-file=.env.local scripts/resolve-doku-refund-review.ts",
     "auth:generate": "npx @better-auth/cli generate --config src/lib/auth/config.ts --output src/lib/db/schema.ts",
     "check:vinext": "node scripts/check-vinext.mjs",
     "cf:types": "wrangler types",
