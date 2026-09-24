@@ -12,7 +12,7 @@ export async function lockExpiredEdits(): Promise<number> {
         eq(invitations.plan, "free_trial"),
         eq(invitations.isPaid, false),
         eq(invitations.isEditLocked, false),
-        sql`${invitations.editExpiresAt} < now()`,
+        sql`${invitations.editExpiresAt} < timezone('UTC', now())`,
       ),
     )
     .returning({ id: invitations.id });
@@ -27,7 +27,7 @@ export async function archiveExpired(): Promise<number> {
     .where(
       and(
         eq(invitations.status, "published"),
-        sql`${invitations.expiresAt} < now()`,
+        sql`${invitations.expiresAt} < timezone('UTC', now())`,
       ),
     )
     .returning({ id: invitations.id });
