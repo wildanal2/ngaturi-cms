@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
+import { databaseUtcNow } from "@/lib/db/time";
 
 /** Tandai builder terkunci untuk trial yang masa editnya lewat & belum bayar. */
 export async function lockExpiredEdits(): Promise<number> {
@@ -12,7 +13,7 @@ export async function lockExpiredEdits(): Promise<number> {
         eq(invitations.plan, "free_trial"),
         eq(invitations.isPaid, false),
         eq(invitations.isEditLocked, false),
-        sql`${invitations.editExpiresAt} < timezone('UTC', now())`,
+        sql`${invitations.editExpiresAt} < ${databaseUtcNow}`,
       ),
     )
     .returning({ id: invitations.id });
@@ -27,7 +28,7 @@ export async function archiveExpired(): Promise<number> {
     .where(
       and(
         eq(invitations.status, "published"),
-        sql`${invitations.expiresAt} < timezone('UTC', now())`,
+        sql`${invitations.expiresAt} < ${databaseUtcNow}`,
       ),
     )
     .returning({ id: invitations.id });

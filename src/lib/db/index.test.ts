@@ -25,6 +25,8 @@ function workerEnv(connectionString: string): NgaturiWorkerEnv {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  globalThis.__pgClient = undefined;
+  globalThis.__nodeDatabase = undefined;
   mocks.postgres.mockImplementation((connectionString, options) => ({
     connectionString,
     options,
@@ -33,6 +35,18 @@ beforeEach(() => {
 });
 
 describe("getDb", () => {
+  it("sets UTC on the Node development database session", () => {
+    getDb();
+
+    expect(mocks.postgres).toHaveBeenCalledWith(
+      "postgres://user:pass@localhost:5432/test",
+      {
+        max: 10,
+        connection: { TimeZone: "UTC" },
+      },
+    );
+  });
+
   it("creates one max-five Hyperdrive client per Worker invocation", async () => {
     const first = await runWithInvocationContext(
       workerEnv("postgres://hyperdrive/first"),
@@ -53,12 +67,22 @@ describe("getDb", () => {
     expect(mocks.postgres).toHaveBeenNthCalledWith(
       1,
       "postgres://hyperdrive/first",
-      { max: 5, fetch_types: false, prepare: true },
+      {
+        max: 5,
+        fetch_types: false,
+        prepare: true,
+        connection: { TimeZone: "UTC" },
+      },
     );
     expect(mocks.postgres).toHaveBeenNthCalledWith(
       2,
       "postgres://hyperdrive/second",
-      { max: 5, fetch_types: false, prepare: true },
+      {
+        max: 5,
+        fetch_types: false,
+        prepare: true,
+        connection: { TimeZone: "UTC" },
+      },
     );
   });
 });

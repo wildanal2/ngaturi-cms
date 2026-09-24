@@ -19,6 +19,7 @@ function createDatabase(connectionString: string, max: number): Database {
     max,
     fetch_types: false,
     prepare: true,
+    connection: { TimeZone: "UTC" },
   });
   return drizzle(client, { schema });
 }
@@ -32,6 +33,7 @@ function getNodeDatabase(): Database {
   if (!globalThis.__pgClient) {
     globalThis.__pgClient = postgres(env.DATABASE_URL, {
       max: env.DATABASE_POOL_SIZE,
+      connection: { TimeZone: "UTC" },
     });
   }
   if (!globalThis.__nodeDatabase) {
