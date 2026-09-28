@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
+import { databaseUtcNow } from "@/lib/db/time";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
 
@@ -25,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .where(
         and(
           eq(invitations.status, "published"),
-          gt(invitations.expiresAt, sql`now()`),
+          gt(invitations.expiresAt, databaseUtcNow),
         ),
       )
       .orderBy(desc(invitations.publishedAt))

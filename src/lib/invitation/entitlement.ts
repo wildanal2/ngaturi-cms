@@ -4,7 +4,7 @@ import type { invitations } from "@/lib/db/schema";
 export type Invitation = InferSelectModel<typeof invitations>;
 
 export const FREE_TRIAL_EDIT_DAYS = 3;
-export const FREE_TRIAL_MAX_PHOTOS = 5;
+export const BASIC_MAX_GALLERY_PHOTOS = 30;
 
 /** Kuota bikin undangan untuk akun gratis. */
 export const FREE_INVITATION_QUOTA = 1;
@@ -12,39 +12,97 @@ export const FREE_INVITATION_QUOTA = 1;
 export const PAID_PACKAGE_QUOTA_BONUS = 1;
 
 /** Total undangan yang boleh dibuat user = 1 gratis + bonus dari paket. */
-export function maxInvitationsFor(quotaBonus: number | null | undefined): number {
+export function maxInvitationsFor(
+  quotaBonus: number | null | undefined,
+): number {
   return FREE_INVITATION_QUOTA + Math.max(0, quotaBonus ?? 0);
 }
 
-/** Builder terkunci: trial yang masa editnya lewat & belum dibayar. */
-export function isEditLocked(inv: Pick<Invitation, "plan" | "isPaid" | "editExpiresAt">): boolean {
+/** Builder terkunci: trial tanpa batas waktu aktif atau yang sudah kedaluwarsa. */
+export function isEditLocked(
+  inv: Pick<Invitation, "plan" | "isPaid" | "editExpiresAt">,
+  now = new Date(),
+): boolean {
   if (inv.isPaid) return false;
   if (inv.plan !== "free_trial") return false;
-  if (!inv.editExpiresAt) return false;
-  return inv.editExpiresAt.getTime() < Date.now();
+  if (!inv.editExpiresAt) return true;
+  return inv.editExpiresAt.getTime() <= now.getTime();
 }
 
-export function editExpiresAtFor(plan: Invitation["plan"], createdAt = new Date()): Date | null {
+export function editExpiresAtFor(
+  plan: Invitation["plan"],
+  createdAt = new Date(),
+): Date | null {
   if (plan !== "free_trial") return null;
   return new Date(createdAt.getTime() + FREE_TRIAL_EDIT_DAYS * 86_400_000);
 }
 
-export function hasWatermark(inv: Pick<Invitation, "plan" | "isPaid">): boolean {
+export function hasWatermark(
+  inv: Pick<Invitation, "plan" | "isPaid">,
+): boolean {
   return !inv.isPaid && inv.plan === "free_trial";
 }
 
-type EntitlementInput = Pick<
-  Invitation,
-  "plan" | "isPaid" | "editExpiresAt" | "isEditLocked"
->;
+type EntitlementInput = Pick<Invitation, "plan" | "isPaid" | "editExpiresAt">;
+
+export interface InvitationEntitlements {
+  canEdit: boolean;
+  canPublish: boolean;
+  canUsePremiumFeatures: boolean;
+  canUploadAudio: boolean;
+  galleryPhotoLimit: number | null;
+}
+
+/**
+ * Kontrak otorisasi internal untuk seluruh mutasi undangan. Cron hanya
+ * mematerialisasi `is_edit_locked`; keputusan request-time tetap memakai
+ * `edit_expires_at` sebagai batas trial yang otoritatif.
+ */
+export function invitationEntitlements(
+  inv: EntitlementInput,
+  now = new Date(),
+): InvitationEntitlements {
+  const trialActive =
+    inv.plan === "free_trial" && !inv.isPaid && !isEditLocked(inv, now);
+  const paid = inv.isPaid;
+  const canEdit = paid || trialActive;
+  const premium =
+    (paid && (inv.plan === "premium" || inv.plan === "business")) ||
+    trialActive;
+
+  return {
+    canEdit,
+    canPublish: canEdit,
+    canUsePremiumFeatures: premium,
+    canUploadAudio: canEdit && premium,
+    galleryPhotoLimit:
+      paid && inv.plan === "basic" ? BASIC_MAX_GALLERY_PHOTOS : null,
+  };
+}
+
+export function canEditInvitation(
+  inv: EntitlementInput,
+  now = new Date(),
+): boolean {
+  return invitationEntitlements(inv, now).canEdit;
+}
+
+export function canPublishInvitation(
+  inv: EntitlementInput,
+  now = new Date(),
+): boolean {
+  return invitationEntitlements(inv, now).canPublish;
+}
 
 /** Masa coba masih aktif: trial gratis yang belum dikunci / kedaluwarsa. */
-export function isTrialActive(inv: EntitlementInput): boolean {
+export function isTrialActive(
+  inv: EntitlementInput,
+  now = new Date(),
+): boolean {
   return (
     inv.plan === "free_trial" &&
     !inv.isPaid &&
-    !inv.isEditLocked &&
-    !isEditLocked(inv)
+    invitationEntitlements(inv, now).canEdit
   );
 }
 
@@ -54,10 +112,50 @@ export function isTrialActive(inv: EntitlementInput): boolean {
  * Setelah dibayar: paket Premium/Business membuka fitur ini permanen.
  */
 export function hasProFeatures(inv: EntitlementInput): boolean {
-  if (inv.isPaid && (inv.plan === "premium" || inv.plan === "business")) {
-    return true;
+  return invitationEntitlements(inv).canUsePremiumFeatures;
+}
+
+export function canChangeToTemplate(
+  inv: EntitlementInput,
+  targetTier: "free" | "basic" | "premium",
+  targetIsCurrent = false,
+  now = new Date(),
+): boolean {
+  const policy = invitationEntitlements(inv, now);
+  if (!policy.canEdit) return false;
+  return (
+    targetIsCurrent || targetTier !== "premium" || policy.canUsePremiumFeatures
+  );
+}
+
+export function canSetGalleryPhotoCount(
+  inv: EntitlementInput,
+  currentCount: number,
+  nextCount: number,
+  now = new Date(),
+): boolean {
+  const policy = invitationEntitlements(inv, now);
+  if (!policy.canEdit) return false;
+  if (policy.galleryPhotoLimit === null) return true;
+  if (currentCount > policy.galleryPhotoLimit) {
+    return nextCount <= currentCount;
   }
-  return isTrialActive(inv);
+  return nextCount <= policy.galleryPhotoLimit;
+}
+
+export function canUploadMedia(
+  inv: EntitlementInput,
+  kind: "image" | "audio",
+  currentGalleryPhotoCount = 0,
+  now = new Date(),
+): boolean {
+  const policy = invitationEntitlements(inv, now);
+  if (!policy.canEdit) return false;
+  if (kind === "audio") return policy.canUploadAudio;
+  return (
+    policy.galleryPhotoLimit === null ||
+    currentGalleryPhotoCount < policy.galleryPhotoLimit
+  );
 }
 
 export type AccountTier = "premium" | "trial" | "free";
@@ -96,20 +194,29 @@ export function planLabel(
   return inv.plan === "premium" ? "Premium" : "Basic";
 }
 
-export type InvitationStage =
-  | "draft"
-  | "published"
-  | "edit-locked"
-  | "expired";
+export type InvitationStage = "draft" | "published" | "edit-locked" | "expired";
 
 /** Satu status ringkas untuk kartu undangan + kalimat "langkah berikutnya". */
 export function invitationStage(
   inv: Pick<
     Invitation,
-    "status" | "plan" | "isPaid" | "editExpiresAt" | "isEditLocked" | "expiresAt"
+    | "status"
+    | "plan"
+    | "isPaid"
+    | "editExpiresAt"
+    | "isEditLocked"
+    | "expiresAt"
   >,
-): { stage: InvitationStage; label: string; hint: string; tone: "neutral" | "good" | "warn" } {
-  if (inv.status === "expired" || (inv.expiresAt && inv.expiresAt.getTime() < Date.now())) {
+): {
+  stage: InvitationStage;
+  label: string;
+  hint: string;
+  tone: "neutral" | "good" | "warn";
+} {
+  if (
+    inv.status === "expired" ||
+    (inv.expiresAt && inv.expiresAt.getTime() < Date.now())
+  ) {
     return {
       stage: "expired",
       label: "Kedaluwarsa",

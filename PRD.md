@@ -5,14 +5,17 @@
 > **Changelog v1.1** — direvisi sesuai rekomendasi teknis & keputusan bisnis:
 > - Framework dinaikkan ke **Next.js 16** (App Router, async request APIs, Cache Components).
 > - **Auth: Google OAuth WAJIB** (satu-satunya metode). Tidak ada email/password.
-> - **Model bisnis: one-time payment per undangan**, bukan subscription. User baru dapat **1 undangan gratis dengan masa edit 7 hari**; setelah itu builder terkunci sampai bayar (mulai Rp 49k).
+> - **Model bisnis: one-time payment per undangan**, bukan subscription. User baru dapat **1 undangan gratis dengan masa edit tepat 72 jam sejak undangan berhasil dibuat**; setelah itu builder terkunci sampai bayar (mulai Rp 49k).
 > - Tabel auth digenerate lewat Better Auth CLI (tidak ditulis manual).
 > - Revalidation halaman undangan pakai **tag-based on-demand** (bukan pre-render massal).
 > - API publik dipindah ke `app/api/public/[slug]/...` (bukan nested di `[slug]`).
 > - Middleware Edge-safe (cek cookie saja, verifikasi role di server component).
 > - Builder localStorage = draft-only; server `updated_at` tetap source of truth.
 > - Ditambah: undangan per-tamu (`?to=`), anti-spam, kebijakan retensi data & PII.
-> - BullMQ worker ditunda ke Phase 2; MVP pakai Vercel Cron + `after()`.
+> - BullMQ worker ditunda ke Phase 2; development memakai Linux cron + `after()`,
+>   sedangkan target Production memakai Cloudflare Worker Cron Triggers.
+> - Payment provider aktif adalah DOKU. Webhook, callback Check Status, dan
+>   scheduled reconciliation memakai satu jalur fulfillment atomik/idempoten.
 
 ---
 
@@ -47,7 +50,7 @@
 
 ### Must-Have (MVP)
 - [ ] User authentication (**Google OAuth wajib — satu-satunya metode**, no email/password)
-- [ ] Free trial gating: 1 undangan gratis, masa edit 7 hari sejak dibuat, lalu builder terkunci sampai bayar
+- [ ] Free trial gating: 1 trial seumur akun, masa edit 72 jam sejak undangan berhasil dibuat, lalu builder terkunci sampai bayar
 - [ ] Undangan per-tamu (personalisasi nama via `?to=` di share link)
 - [ ] Template gallery (browse, preview, select)
 - [ ] Section-based builder (edit content, ganti variant, reorder)
@@ -86,11 +89,13 @@
 **Model: one-time payment per undangan** (bukan subscription). User bayar sekali untuk meng-unlock 1 undangan; undangan aktif sampai `expires_at` (hari-H + 30 hari, bisa diperpanjang berbayar). Tier **Business** tetap subscription bulanan untuk event organizer.
 
 ### Free Trial (default semua user baru)
-- Otomatis dapat **1 undangan gratis** saat pertama login.
-- **Masa edit 7 hari** sejak undangan dibuat (`edit_expires_at = created_at + 7 hari`).
-- Selama trial: bisa publish, share, terima RSVP & ucapan, tapi **ada watermark** "Dibuat dengan [Platform]" + galeri maks 5 foto.
-- Setelah 7 hari **atau** saat mau hilangkan watermark / naik kuota: builder **read-only** sampai user upgrade undangan tsb.
-- Undangan yang sudah dipublish **tetap online** walau trial habis (tidak di-takedown) — hanya editing yang terkunci.
+- Setiap akun memperoleh **1 trial seumur akun** pada undangan pertama yang berhasil dibuat; menghapus undangan tidak mengulang trial.
+- **Masa edit tepat 72 jam (3 hari)** sejak undangan berhasil dibuat (`edit_expires_at = created_at + interval '72 hours'`).
+- Selama trial: seluruh fitur Premium dapat dicoba, termasuk semua template, bagian, musik, galeri, personalisasi tamu, RSVP, buku tamu, dan analitik yang tersedia. Watermark "Dibuat dengan Ngaturi" tetap tampil.
+- Tepat saat `edit_expires_at`, edit, publish, perubahan slug/template, dan upload baru terkunci. Cron hanya mematerialisasi status dan bukan sumber otorisasi.
+- Undangan yang sudah dipublish **tetap online** setelah masa edit habis sampai `expires_at` publiknya sendiri; RSVP, buku tamu, tautan personal, dan media tetap aktif selama masa tayang.
+- Undangan baru yang diizinkan oleh bonus kuota setelah trial pernah dipakai dibuat sebagai draf unpaid terkunci dan diarahkan ke upgrade, tanpa jendela trial baru.
+- Upgrade Premium mempertahankan seluruh isi. Upgrade Basic juga mempertahankan artefak Premium yang sudah ada, tetapi tidak boleh menambah tamu personal atau musik baru, menambah foto melewati batas 30, maupun berpindah ke template Premium lain.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -100,18 +105,22 @@
 │  Rp 0         │  Rp 49k     │  Rp 99k      │   Rp 499k / bulan        │
 ├───────────────┼─────────────┼──────────────┼─────────────────────────┤
 │ 1 undangan    │ per undangan│ per undangan │ Unlimited undangan       │
-│ Edit 7 hari   │ Edit selama │ Edit selama  │ Edit selamanya           │
+│ Edit 72 jam   │ Edit selama │ Edit selama  │ Edit selamanya           │
 │ Watermark     │ aktif       │ aktif        │ White-label              │
-│ 5 foto        │ No watermark│ No watermark │ Custom domain            │
-│ Basic RSVP    │ 30 foto     │ Foto unlimited│ Priority support        │
-│ Basic template│ RSVP+Guest  │ +Video+Music │ API access               │
-│               │ +Analytics  │ +Undangan per-tamu│ Bulk import          │
+│ Semua fitur   │ No watermark│ No watermark │ Custom domain            │
+│ Premium trial │ 30 foto     │ Foto unlimited│ Priority support        │
+│ Semua template│ RSVP+Guest  │ +Video+Music │ API access               │
+│ +watermark    │ +Analytics  │ +Undangan per-tamu│ Bulk import          │
 │               │ All basic tpl│ +Adv analytics│                        │
 │               │             │ All premium tpl│                        │
 └───────────────┴─────────────┴──────────────┴─────────────────────────┘
 ```
 
-**Perpanjangan:** setelah `expires_at`, undangan diarsipkan. User bisa bayar Rp 25k untuk memperpanjang 90 hari + akses download galeri/ucapan.
+**Perpanjangan:** undangan berbayar dapat diperpanjang sebelum atau setelah
+`expires_at` dengan harga Rp 25k untuk +90 hari. Renewal awal mempertahankan
+sisa masa aktif (`max(expires_at, waktu fulfillment) + 90 hari`); renewal
+setelah expiry menghitung dari waktu fulfillment. Status `expired` kembali
+`published`, sedangkan `draft` dan `archived` tidak diubah.
 
 ## 1.6 Success Metrics (KPIs)
 
@@ -180,9 +189,9 @@
 
 1. **Next.js Server Actions + API Routes cukup** untuk 95% use case MVP
 2. **TypeScript end-to-end** sudah terjaga tanpa perlu Eden/tRPC tambahan
-3. **Deployment lebih simple** — satu Vercel/Cloudflare project
+3. **Deployment lebih simple** — satu Cloudflare Workers project sebagai target Production
 4. **Server Actions** di Next.js 16 sudah sangat powerful untuk mutations
-5. **Background jobs MVP** cukup pakai Vercel Cron + `after()` (dari `next/server`). BullMQ worker terpisah **ditunda ke Phase 2** saat volume image processing sudah tinggi.
+5. **Background jobs MVP** cukup pakai platform scheduler + `after()` (dari `next/server`). Development memakai Linux cron; target Production memakai Cloudflare Cron Triggers. BullMQ worker terpisah **ditunda ke Phase 2** saat volume image processing sudah tinggi.
 
 **Kapan butuh ElysiaJS terpisah (Phase 3+):**
 - Real-time WebSocket untuk RSVP notifications (ElysiaJS + Bun sangat cepat untuk ini)
@@ -196,7 +205,7 @@
 |-------|-----------|--------|
 | **Framework** | Next.js 16 (App Router) | SSR/ISR, Server Actions, Cache Components, async request APIs |
 | **Language** | TypeScript (strict mode) | Type safety, better DX |
-| **Runtime** | Node.js 22 LTS (production) / Bun (dev, optional) | Stability + performance |
+| **Runtime** | Cloudflare Workers (target Production) / Node.js + PM2 (development saat ini) | Runtime Production masih memerlukan fase adapter dan compatibility migration |
 | **Database** | PostgreSQL 16 | JSONB untuk sections, relational untuk users/RSVP |
 | **ORM** | Drizzle ORM | Type-safe, lightweight, SQL-like syntax |
 | **Cache** | Redis 7 | Session, rate limiting, ISR cache, BullMQ |
@@ -206,9 +215,9 @@
 | **UI Components** | shadcn/ui (dashboard) + Custom (sections) | Consistency + flexibility |
 | **State Management** | Zustand + React Hook Form | Builder state + form handling |
 | **Validation** | Zod | Schema validation for sections, forms, API |
-| **Background Jobs** | MVP: Vercel Cron + `after()` · Phase 2: BullMQ | Image processing, emails, analytics aggregation |
+| **Background Jobs** | MVP: Linux cron (dev), Cloudflare Cron Triggers (target Production) + `after()` · Phase 2: BullMQ | Image processing, emails, analytics aggregation |
 | **Email** | Resend / AWS SES | Transactional emails |
-| **Deployment** | Vercel (app) + Railway/Fly.io (worker) + Neon/Supabase (DB) | Managed, scalable |
+| **Deployment** | Cloudflare Workers (target app runtime) + PostgreSQL melalui Hyperdrive (planned) | Worker adapter, bindings, dan database lifecycle harus diverifikasi sebelum Production |
 | **Monitoring** | Sentry + Axiom | Error tracking + logging |
 
 ---
@@ -321,7 +330,7 @@ CREATE TABLE invitations (
   plan invitation_plan DEFAULT 'free_trial',
   is_paid BOOLEAN DEFAULT false,
   has_watermark BOOLEAN DEFAULT true,           -- false setelah bayar basic/premium
-  edit_expires_at TIMESTAMP,                    -- free_trial: created_at + 7 hari; paid: NULL (edit selama aktif)
+  edit_expires_at TIMESTAMP,                    -- trial pertama: created_at + 72 jam; paid/locked draft berikutnya: NULL
   is_edit_locked BOOLEAN DEFAULT false,         -- true kalau edit_expires_at lewat & belum bayar (di-set oleh cron / saat load builder)
   paid_at TIMESTAMP,
   -- Status & Analytics
@@ -341,9 +350,9 @@ CREATE TABLE invitations (
 );
 
 -- Catatan aturan trial:
---   * User baru: undangan pertama otomatis plan='free_trial', edit_expires_at = created_at + interval '7 days'.
+--   * User baru: undangan pertama otomatis plan='free_trial', edit_expires_at = created_at + interval '72 hours'.
 --   * user_profiles.free_invitation_used di-set true saat undangan free_trial pertama dibuat.
---   * Undangan free_trial ke-2+ tidak diizinkan (harus bayar dulu undangan sebelumnya atau tier business).
+--   * Penghapusan tidak mereset flag. Undangan berikutnya yang diizinkan bonus kuota dibuat unpaid + is_edit_locked=true tanpa trial baru.
 --   * Undangan yang sudah published tetap tampil walau is_edit_locked = true.
 
 CREATE INDEX idx_invitations_slug ON invitations(slug);
@@ -354,8 +363,8 @@ CREATE INDEX idx_invitations_sections ON invitations USING GIN(sections);
 -- Untuk cron pengunci trial & pengarsip
 CREATE INDEX idx_invitations_edit_expiry ON invitations(edit_expires_at) WHERE is_edit_locked = false AND is_paid = false;
 CREATE INDEX idx_invitations_expiry ON invitations(expires_at) WHERE status = 'published';
--- Enforce: maks 1 undangan free_trial per user
-CREATE UNIQUE INDEX idx_invitations_one_free_trial ON invitations(user_id) WHERE plan = 'free_trial';
+-- Satu start trial per akun ditegakkan secara transaksional dengan mengunci
+-- user_profiles dan membaca/menulis free_invitation_used pada transaksi create.
 
 -- =====================================================
 -- SECTIONS METADATA (for analytics & marketplace)
@@ -578,7 +587,7 @@ CREATE INDEX idx_stats_invitation_date ON invitation_daily_stats(invitation_id, 
 -- =====================================================
 
 CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded', 'expired');
-CREATE TYPE payment_provider AS ENUM ('midtrans', 'xendit', 'manual');
+CREATE TYPE payment_provider AS ENUM ('midtrans', 'xendit', 'doku', 'manual');
 CREATE TYPE purchase_kind AS ENUM ('invitation_unlock', 'invitation_renewal', 'business_subscription');
 
 CREATE TABLE payments (
@@ -588,20 +597,22 @@ CREATE TABLE payments (
   -- Payment details
   provider payment_provider NOT NULL,
   provider_payment_id VARCHAR(255),  -- transaction/order ID dari provider
-  provider_order_id VARCHAR(255) UNIQUE, -- order_id yang kita generate, dikirim ke Snap
+  provider_order_id VARCHAR(255) UNIQUE, -- invoice/reference yang kita generate dan kirim ke provider
   amount DECIMAL(10,2) NOT NULL,
   currency VARCHAR(3) DEFAULT 'IDR',
   status payment_status DEFAULT 'pending',
   -- Apa yang dibeli
   kind purchase_kind NOT NULL,
-  plan_tier VARCHAR(50) NOT NULL,    -- 'basic' | 'premium' | 'business'
+  plan_tier VARCHAR(50) NOT NULL,    -- tier undangan saat checkout; legacy renewal memakai 'renewal'
   -- one-time unlock: grant_until NULL (permanen selama undangan aktif)
-  -- renewal / subscription: grant_until diisi
+  -- renewal: NULL saat pending, lalu hasil expires_at setelah fulfillment
   grant_until TIMESTAMP,
   -- Idempotensi webhook
   raw_webhook JSONB,
   -- Timestamps
   paid_at TIMESTAMP,
+  refund_recorded_at TIMESTAMP,
+  refund_metadata JSONB,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -609,13 +620,21 @@ CREATE INDEX idx_payments_user ON payments(user_id);
 CREATE INDEX idx_payments_status ON payments(status);
 CREATE INDEX idx_payments_invitation ON payments(invitation_id);
 
--- Webhook Midtrans: verifikasi signature_key = sha512(order_id + status_code + gross_amount + server_key).
--- Proses idempoten berdasarkan provider_order_id; abaikan event yang statusnya mundur.
+-- Webhook DOKU: verifikasi signature request serta invoice, amount, dan currency.
+-- Callback dan reconciliation memakai signed DOKU Check Status.
+-- Semua jalur idempoten berdasarkan provider_order_id dan memakai fulfillment atomik yang sama.
 -- Saat status -> 'paid':
 --   kind='invitation_unlock'      => invitations.is_paid=true, plan=<tier>, has_watermark=false,
 --                                    is_edit_locked=false, edit_expires_at=NULL, paid_at=now()
---   kind='invitation_renewal'     => invitations.expires_at += 90 hari, status='published'
+--   kind='invitation_renewal'     => lock invitation; expires_at=max(expires_at, paid_at)+90 hari;
+--                                    hanya status expired yang kembali published; grant_until=hasil expires_at
 --   kind='business_subscription'  => user_profiles.business_subscription_expires_at = now()+30 hari
+-- Refund policy:
+--   * refund approval/initiation tetap manual melalui operasi merchant DOKU;
+--   * hanya REFUNDED dengan bukti full refund yang menjadi status terminal 'refunded';
+--   * entitlement yang sudah dipenuhi, kuota, renewal, publication, dan paid_at tidak dibalik;
+--   * refund sebelum fulfillment tidak memberi entitlement/kuota dan memblokir SUCCESS terlambat;
+--   * refund parsial/ambigu masuk manual review, bukan dianggap full refund.
 
 -- =====================================================
 -- SYSTEM & CONFIG
@@ -987,14 +1006,16 @@ undangan-platform/
 │   │   │   │   ├── presign/route.ts # S3 presigned URL
 │   │   │   │   └── confirm/route.ts # confirm + enqueue image processing
 │   │   │   ├── payments/
-│   │   │   │   └── create/route.ts  # buat payment + Snap token
-│   │   │   ├── webhooks/
-│   │   │   │   └── payment/
-│   │   │   │       └── route.ts     # Midtrans webhook (verify signature, idempoten)
+│   │   │   │   └── create/route.ts  # buat payment + DOKU checkout URL
 │   │   │   └── cron/
-│   │   │       ├── aggregate-stats/route.ts   # Daily stats (Vercel Cron)
-│   │   │       ├── lock-expired-edits/route.ts # set is_edit_locked utk trial lewat 7 hari
+│   │   │       ├── reconcile-doku-payments/route.ts # missed-webhook recovery
+│   │   │       ├── aggregate-stats/route.ts   # Daily stats (platform scheduler)
+│   │   │       ├── lock-expired-edits/route.ts # materialisasi is_edit_locked utk trial lewat 72 jam
 │   │   │       └── archive-expired/route.ts    # status='expired' utk lewat expires_at
+│   │   │
+│   │   ├── payment/
+│   │   │   ├── callback/page.tsx     # signed Check Status fallback
+│   │   │   └── webhook/doku/route.ts # DOKU webhook (verify signature, idempoten)
 │   │   │
 │   │   ├── layout.tsx               # Root layout
 │   │   └── globals.css              # Global styles (Tailwind)
@@ -2158,9 +2179,11 @@ export const useBuilderStore = create<BuilderState>()(
 )
 
 // CATATAN GATING: sebelum mengizinkan mutasi (addSection/updateSectionProps/dst),
-// builder page harus cek `invitation.is_edit_locked`. Jika true -> render builder
-// read-only + banner "Masa edit gratis habis. Unlock mulai Rp 49k" -> /invitations/[id]/unlock.
-// Server action `saveInvitation` juga WAJIB menolak (403) bila is_edit_locked.
+// builder page harus membandingkan `edit_expires_at` dengan waktu request. Jika
+// kedaluwarsa -> render builder read-only + banner "Masa edit gratis habis.
+// Unlock mulai Rp 49k" -> /invitations/[id]/unlock. `is_edit_locked` hanya
+// materialisasi UI; server action `saveInvitation` juga WAJIB menolak berdasarkan
+// `edit_expires_at` tanpa menunggu cron.
 ```
 
 ## 6.6 RSVP API Route
@@ -2351,9 +2374,9 @@ export async function GET(
 
 > **Perubahan v1.1 pada flow di bawah:**
 > - Node "REGISTER / LOGIN" → **hanya "Login dengan Google"** (OAuth). Akun dibuat otomatis; tidak ada form register.
-> - Setelah login pertama: user diberi entitlement **1 undangan free_trial**, `edit_expires_at = now + 7 hari`.
-> - Node "PUBLISH CHECK": free_trial **boleh publish** (dengan watermark + maks 5 foto). Tidak dipaksa bayar saat publish.
-> - Builder jadi **read-only** ketika: (a) 7 hari lewat, atau (b) user klik "Hilangkan watermark / tambah foto / undangan per-tamu". Saat itu → node "UPGRADE (Payment)".
+> - Trial dimulai saat undangan pertama berhasil dibuat, bukan saat login: **1 trial seumur akun**, `edit_expires_at = created_at + 72 jam`.
+> - Node "PUBLISH CHECK": free_trial aktif **boleh publish** dengan watermark dan seluruh entitlement Premium. Tidak dipaksa bayar saat publish.
+> - Builder menjadi **read-only tepat saat 72 jam lewat**. Undangan published tetap aktif sampai `expires_at`; upgrade tetap tersedia sebelum atau sesudah edit-lock.
 > - "UPGRADE" = **one-time payment per undangan** (Basic Rp 49k / Premium Rp 99k), bukan langganan.
 
 ```
@@ -2487,44 +2510,47 @@ export async function GET(
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              PAYMENT FLOW (Midtrans)             │
+│                PAYMENT FLOW (DOKU)               │
 ├─────────────────────────────────────────────────┤
 │                                                 │
 │  User clicks "Upgrade to Premium"              │
 │       │                                         │
 │       ▼                                         │
-│  Select plan (Basic/Premium/Business)          │
+│  Select plan (Basic/Premium) or renewal        │
 │       │                                         │
 │       ▼                                         │
 │  Create payment record in DB                   │
 │  (status: 'pending')                           │
 │       │                                         │
 │       ▼                                         │
-│  Generate Midtrans Snap Token                  │
+│  Create signed DOKU Checkout request           │
 │       │                                         │
 │       ▼                                         │
-│  Show payment page (Midtrans Snap)             │
+│  Redirect browser to DOKU hosted checkout      │
 │  [VA Transfer / QRIS / E-wallet / Card]        │
 │       │                                         │
 │       ▼                                         │
 │  User completes payment                        │
 │       │                                         │
 │       ▼                                         │
-│  Midtrans sends webhook to:                    │
-│  /api/webhooks/payment                         │
+│  DOKU sends HTTP Notification to:              │
+│  /payment/webhook/doku                         │
 │       │                                         │
 │       ▼                                         │
-│  Verify webhook signature                      │
+│  Verify request signature, provider reference, │
+│  amount, currency, and provider status         │
 │       │                                         │
 │       ▼                                         │
-│  Verify signature_key (sha512), idempoten     │
-│  by provider_order_id                          │
+│  Lock payment row and atomically apply result  │
+│  idempotently by provider_order_id             │
 │  Update payment status → 'paid'                │
 │  kind=invitation_unlock:                       │
 │    invitations.is_paid=true, plan=<tier>,      │
 │    has_watermark=false, is_edit_locked=false,  │
 │    edit_expires_at=NULL                        │
-│  kind=invitation_renewal: expires_at += 90d    │
+│  kind=invitation_renewal:                      │
+│    expires_at=max(expires_at, fulfilled_at)+90d│
+│    grant_until=hasil expires_at                 │
 │  kind=business_subscription: profile +30d      │
 │       │                                         │
 │       ▼                                         │
@@ -2536,6 +2562,34 @@ export async function GET(
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
+
+Webhook adalah jalur konfirmasi utama. Callback browser tidak mempercayai status
+client: callback menjalankan signed server-to-server DOKU Check Status lalu
+memakai jalur fulfillment yang sama. Pembayaran DOKU `pending` berumur 2 menit
+sampai 24 jam juga direkonsiliasi tiap 5 menit (batch 50, concurrency 5, kandidat
+tertua lebih dulu) melalui Check Status dan jalur fulfillment yang sama.
+
+Real Sandbox E2E telah memverifikasi webhook pertama, duplicate webhook sebagai
+safe no-op, callback reconciliation sebagai safe no-op setelah fulfillment,
+serta aktivasi undangan dan increment kuota tepat satu kali.
+
+Refund merupakan transisi status finansial. Persetujuan dan inisiasi refund
+tetap dilakukan manual melalui DOKU/merchant operations untuk duplicate atau
+incorrect charge, payment/system failure yang terverifikasi, atau kasus khusus
+yang disetujui operator berwenang. Tidak ada eligibility window otomatis.
+
+`REFUNDED` hanya diproses otomatis bila notification atau signed Check Status
+membawa bukti `refund.amount` yang sama dengan nilai payment. Status internal
+menjadi terminal `refunded`, bukti sukses asli dan seluruh `paid_at` historis
+dipertahankan, serta entitlement yang sudah diberikan tidak dibalik. Bila refund
+terjadi sebelum fulfillment, tidak ada entitlement atau kuota yang diberikan
+dan event `SUCCESS` berikutnya menjadi no-op. Bukti parsial atau ambigu disimpan
+untuk manual review dan tidak diperlakukan sebagai full refund. Operator
+berwenang menyelesaikan review per payment reference melalui command
+operasional yang menyimpan identitas, alasan, waktu, keputusan, dan riwayat
+bukti. Konfirmasi menjadi refund terminal tanpa fulfillment. Penolakan bukti
+hanya melepas blokir melalui signed DOKU Check Status baru; tindakan operator
+tidak pernah langsung menandai payment paid.
 
 ---
 
@@ -2655,7 +2709,8 @@ export async function GET(
 □ Create Docker Compose for local dev (postgres + redis + minio)
 □ Setup Sentry for error tracking
 □ Create base folder structure (as defined above)
-□ (BullMQ / worker TIDAK di phase ini — pakai Vercel Cron + after())
+□ (BullMQ / worker TIDAK di phase ini — pakai Linux cron saat development,
+  Cloudflare Cron Triggers pada target Production, dan after())
 ```
 
 ### Environment Variables:
@@ -2688,17 +2743,18 @@ GOOGLE_CLIENT_SECRET=
 TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
 
-# Cron (Vercel Cron memanggil /api/cron/* dengan header ini)
+# Cron (autentikasi endpoint HTTP /api/cron/*; native Worker Cron tidak memerlukannya)
 CRON_SECRET=
 
 # Email (Resend)
 RESEND_API_KEY=
 EMAIL_FROM="Undangan Platform <noreply@undangan.com>"
 
-# Payment (Midtrans)
-MIDTRANS_SERVER_KEY=
-MIDTRANS_CLIENT_KEY=
-MIDTRANS_WEBHOOK_SECRET=
+# Payment (DOKU; Notification URL dikonfigurasi di DOKU Back Office)
+DOKU_CLIENT_ID=
+DOKU_SECRET_KEY=
+DOKU_BASE_URL=https://api-sandbox.doku.com
+DOKU_CALLBACK_URL=http://localhost:3000/payment/callback
 
 # Analytics
 SENTRY_DSN=
@@ -2745,11 +2801,12 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ Build template gallery page
 □ Build template preview page (live render)
 □ Implement "Use This Template" flow (server action, transaksi DB):
-  - Cek: user_profiles.free_invitation_used === false → izinkan; else arahkan ke /pricing
-  - Clone composition ke invitation baru: plan='free_trial', edit_expires_at = now()+7d, has_watermark=true
-  - Set user_profiles.free_invitation_used = true
-  - Redirect ke builder
-□ Guard unique index idx_invitations_one_free_trial (race condition)
+  - Kunci row user_profiles dan cek kuota aktif dalam transaksi yang sama
+  - Jika free_invitation_used=false: clone composition dengan plan='free_trial', edit_expires_at=now()+72h, has_watermark=true
+  - Set free_invitation_used=true pada transaksi yang sama; deletion tidak pernah meresetnya
+  - Jika trial sudah dipakai tetapi bonus kuota tersedia: buat draf unpaid terkunci tanpa edit_expires_at lalu redirect ke upgrade
+  - Redirect trial pertama ke builder
+□ Guard row user_profiles dengan SELECT FOR UPDATE (race condition)
 ```
 
 ### Sprint 1.4: Basic Builder
@@ -2759,8 +2816,8 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ Load flow: fetch server → offer restore hanya jika draft lebih baru
 □ Add / remove / reorder (up-down dulu) / edit props (form dari propsSchema)
 □ Basic live preview (render sections in canvas)
-□ Trial lock: jika invitation.is_edit_locked → builder read-only + banner ke /invitations/[id]/unlock
-□ Server action saveInvitation: tolak 403 bila is_edit_locked; validasi composition via SectionSchema.superRefine
+□ Trial lock: cek edit_expires_at pada setiap request; is_edit_locked hanya state materialized untuk UI → builder read-only + banner ke /invitations/[id]/unlock
+□ Server action saveInvitation: tolak bila edit_expires_at sudah lewat; validasi composition via SectionSchema.superRefine
 □ Setelah save sukses: revalidateTag(`invitation:${id}`)
 ```
 
@@ -2769,10 +2826,10 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ Implement [slug] dynamic route (public invitation page, Cache Components + cacheTag)
 □ On-demand revalidation: revalidateTag pada publish/unpublish/edit
 □ Generate slug dari input user (unik, lowercase-dash, cek tabrakan)
-□ Publish/unpublish (free_trial boleh publish — render watermark bila has_watermark)
+□ Publish/unpublish (free_trial aktif boleh publish; setelah 72 jam publish ditolak, unpublish tetap tersedia — render watermark bila has_watermark)
 □ Share link (copy to clipboard) + WhatsApp share
 □ SEO metadata + opengraph-image (nama + tanggal)
-□ Cron /api/cron/lock-expired-edits (harian): set is_edit_locked=true utk trial lewat 7 hari
+□ Cron /api/cron/lock-expired-edits: materialisasi is_edit_locked=true untuk trial lewat 72 jam; semua request tetap cek edit_expires_at langsung
 □ Cron /api/cron/archive-expired (harian): status='expired' utk lewat expires_at
 ```
 
@@ -2842,12 +2899,14 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 ## Phase 3: Monetization & Polish
 
 ### Sprint 3.1: Payment Integration  ⚠️ NAIKKAN KE PHASE 1 (Sprint 1.7)
-> Karena free_trial terkunci setelah 7 hari, monetisasi adalah jalur kritis MVP — bukan Phase 3.
+> Karena free_trial terkunci setelah 72 jam, monetisasi adalah jalur kritis MVP — bukan Phase 3.
 ```
-□ Integrate Midtrans Snap (server: create transaction, client: snap.js)
-□ /api/payments/create → buat row payments (kind, plan_tier, provider_order_id), return snapToken
+□ Integrate DOKU hosted Checkout (signed server-to-server create request)
+□ /api/payments/create → buat row payments (kind, plan_tier, provider_order_id), return redirectUrl
 □ Pricing page + /invitations/[id]/unlock page
-□ Webhook /api/webhooks/payment: verify signature_key (sha512), idempoten by provider_order_id
+□ Webhook /payment/webhook/doku: verify signature, invoice, amount, currency, dan status; idempoten by provider_order_id
+□ Callback /payment/callback: signed DOKU Check Status, tidak mempercayai status browser
+□ Scheduled reconciliation: eligible pending DOKU payment → signed Check Status → fulfillment path yang sama
 □ On 'paid': terapkan efek per `kind` (unlock / renewal / business) — lihat komentar schema payments
 □ Feature gating helper: canRemoveWatermark(inv), maxPhotos(inv), canUseGuestInvites(inv)
 □ Email konfirmasi pembayaran (Resend)
@@ -2862,7 +2921,9 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ QR code generation (for sharing)
 □ WhatsApp share integration (bulk dari daftar guest_invites)
 □ Custom domain (per user, business feature)
-□ Renewal flow (Rp 25k / 90 hari) + download galeri & ucapan
+☑ Renewal flow inti (Rp 25k / +90 hari, early renewal menumpuk,
+  expiry publik/submission ditegakkan saat request)
+□ Download galeri & ucapan
 ```
 
 ### Sprint 3.3: Admin Panel
@@ -2881,7 +2942,7 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 □ Sitemap generation
 □ robots.txt
 □ Structured data (JSON-LD)
-□ Performance monitoring (Vercel Analytics)
+□ Performance monitoring dan Workers observability
 ```
 
 ## Phase 4: Production Launch
@@ -2901,14 +2962,14 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 
 ### Sprint 4.2: Deployment
 ```
-□ Deploy to Vercel (app)
+□ Migrate dan deploy app ke Cloudflare Workers setelah adapter compatibility lulus
 □ Setup Neon/Supabase (PostgreSQL)
 □ Setup Upstash (Redis)
 □ Setup Cloudflare R2 (S3 storage)
 □ Setup Railway/Fly.io (BullMQ workers)
 □ Configure custom domains
 □ Setup monitoring (Sentry + Axiom)
-□ Configure Vercel Cron (stats aggregation)
+□ Configure Cloudflare Cron Triggers (reconciliation dan scheduled jobs)
 ```
 
 ### Sprint 4.3: Launch Preparation
@@ -2981,11 +3042,15 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 │                                                             │
 │  PAYMENTS                                                   │
 │  ├── POST /api/payments/create                              │
-│  │   Body: { kind, planTier, invitationId? }              │
-│  │   kind: invitation_unlock|invitation_renewal|business   │
-│  │   Returns: { snapToken, orderId }                       │
-│  └── POST /api/webhooks/payment                             │
-│      (Midtrans webhook — verify sha512 signature_key)      │
+│  │   Body: { invitationId, kind, plan? }                  │
+│  │   kind: invitation_unlock|invitation_renewal           │
+│  │   Returns: { redirectUrl }                              │
+│  ├── POST /payment/webhook/doku                             │
+│  │   (DOKU notification — verify signature/reference/value)│
+│  ├── GET  /payment/callback                                 │
+│  │   (signed Check Status fallback, then safe redirect)    │
+│  └── GET  /api/cron/reconcile-doku-payments                 │
+│      (authenticated missed-webhook recovery)               │
 │                                                             │
 │  GUEST INVITES (requires auth, premium)                     │
 │  ├── GET    /api/invitations/:id/guests                     │
@@ -3014,7 +3079,7 @@ NEXT_PUBLIC_INVITATION_DOMAINS=undangan.com,invitation.com,ngaturi.com
 │                CACHING LAYERS                        │
 ├─────────────────────────────────────────────────────┤
 │                                                     │
-│  Layer 1: CDN (Vercel Edge / Cloudflare)           │
+│  Layer 1: Cloudflare CDN                           │
 │  ├── Static assets (images, CSS, JS)               │
 │  └── ISR pages (invitation pages)                  │
 │                                                     │
@@ -3101,13 +3166,12 @@ Dokumen ini mencakup seluruh spesifikasi untuk membangun platform undangan digit
 - Redis (cache + rate limit + session); BullMQ hanya Phase 2
 - S3-compatible (Cloudflare R2 untuk production, MinIO untuk dev)
 - Better Auth — Google OAuth only
-- Midtrans Snap — one-time payment per undangan
+- DOKU hosted Checkout — one-time payment per undangan
 - TIDAK PERLU ElysiaJS terpisah untuk MVP (Next.js Server Actions cukup)
 
 **Keputusan produk kunci (v1.1):**
-- Login wajib Google. 1 undangan gratis / akun, masa edit 7 hari, lalu builder terkunci sampai bayar (Basic Rp 49k / Premium Rp 99k, sekali bayar per undangan).
-- Undangan yang sudah publish tetap online walau trial habis — hanya editing yang dikunci.
+- Login wajib Google. Satu trial seumur akun dimulai saat undangan pertama berhasil dibuat, dengan masa edit tepat 72 jam; deletion tidak mengulang trial. Setelah itu builder terkunci sampai bayar (Basic Rp 49k / Premium Rp 99k, sekali bayar per undangan).
+- Trial setara Premium dengan watermark. Undangan yang sudah publish tetap online setelah masa edit habis sampai `expires_at` publiknya — hanya mutasi edit/publish/upload yang dikunci.
 - Monetisasi = jalur kritis MVP → Sprint payment dinaikkan ke Phase 1 (1.7).
 
 **Estimasi Waktu Build secepatnya:**
-

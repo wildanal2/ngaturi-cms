@@ -6,14 +6,15 @@ Spesifikasi lengkap di `PRD.md`.
 ## Stack
 
 - **Next.js 16** (App Router, Turbopack) · TypeScript strict
-- **PostgreSQL 16** + **Drizzle ORM**
-- **Redis 7** (ioredis) — session store & rate limiting
+- **PostgreSQL 16** + **Drizzle ORM** (Hyperdrive on Workers)
+- **Redis REST** (`@upstash/redis`) — session store & atomic rate limiting
 - **Better Auth** — Google OAuth only, sesi di Redis
-- **Tigris** (S3-compatible) — object storage, upload diproses `sharp` (resize 1920 + WebP)
+- **Cloudflare R2 + Images** — storage and image processing (resize 1920 + WebP)
 - **Tailwind CSS 4** + CSS Modules (isolasi gaya per-section)
 - **dnd-kit** (reorder), **zundo** (undo/redo), **sonner** (toast), **react-easy-crop**
 - **DOKU** Jokul Checkout — pembayaran (sandbox default)
-- **Vercel** — hosting, Speed Insights, Analytics, Cron
+- **Development:** cloud-lab VM + PM2 + Linux cron
+- **Production target:** Cloudflare Workers + vinext + Cron Triggers (staging migration)
 - **Vitest** — unit test (`npm test`): integritas registry, entitlement, hydrate, DOKU
 
 ## Setup
@@ -57,11 +58,11 @@ Bentuk satu section (`src/sections/types.ts`):
 ```ts
 interface SectionData {
   id: string;
-  type: string;      // "hero" | "countdown" | ...
-  variant: string;   // "botanical" | "flip" | ...  ← komponen tampilan
+  type: string; // "hero" | "countdown" | ...
+  variant: string; // "botanical" | "flip" | ...  ← komponen tampilan
   order: number;
   visible: boolean;
-  props: Record<string, unknown>;   // isi konten + s_* (gaya) + dummy
+  props: Record<string, unknown>; // isi konten + s_* (gaya) + dummy
 }
 ```
 
@@ -114,14 +115,62 @@ renderer → track view via `after()`. OG card: `src/app/[slug]/opengraph-image.
 
 ### 5. Kuota, trial & pembayaran
 
-- Akun gratis: **1 undangan**, `plan=free_trial`, `edit_expires_at = +3 hari`.
-  Kuota dicek atomik (transaksi + `SELECT … FOR UPDATE` di `user_profiles`).
+- Setiap akun mendapat **1 trial seumur akun** yang dimulai ketika undangan
+  pertama berhasil dibuat: `plan=free_trial`, `edit_expires_at = +72 jam`,
+  Premium-equivalent, dan tetap ber-watermark. Kuota serta konsumsi trial dicek
+  atomik (transaksi + `SELECT … FOR UPDATE` di `user_profiles`). Menghapus
+  undangan tidak mereset `free_invitation_used`.
+- Jika trial sudah pernah dipakai, undangan baru yang diizinkan bonus kuota
+  dibuat sebagai draf unpaid terkunci dan langsung diarahkan ke upgrade; tidak
+  memperoleh 72 jam baru.
 - Beli paket Basic/Premium → `+1` kuota (`user_profiles.invitation_quota_bonus`).
-- Cron `lock-expired-edits` → `is_edit_locked=true`; undangan tetap online.
+- `edit_expires_at` dicek langsung oleh setiap mutasi edit, publish, slug,
+  template, dan upload. Cron `lock-expired-edits` hanya mematerialisasi
+  `is_edit_locked=true` dan bukan mekanisme otorisasi.
+- Habisnya masa edit tidak menghapus isi atau menutup undangan published.
+  Halaman publik, RSVP, buku tamu, tautan personal, dan media tetap aktif sampai
+  `expires_at` publik yang terpisah.
+- Upgrade Premium mempertahankan semua artefak. Upgrade Basic juga
+  mempertahankannya, tetapi menolak tamu personal atau musik baru, penambahan
+  foto galeri melewati batas 30, serta perpindahan ke template Premium lain.
 - `/invitations/[id]/unlock` → `POST /api/payments/create` → DOKU hosted checkout.
+- Undangan berbayar memakai halaman yang sama untuk renewal Rp25.000. Renewal
+  boleh dilakukan sebelum expiry; sisa waktu aktif dipertahankan dan setiap
+  payment berbeda yang berhasil menambah tepat 90 hari. `grant_until` mencatat
+  expiry hasil fulfillment, sedangkan `plan_tier` menangkap tier undangan saat
+  checkout. Row legacy `plan_tier=renewal` tetap didukung tanpa menebak tier.
 - Balik: `GET /payment/callback` (re-check status) + S2S `POST /payment/webhook/doku`
   (verifikasi signature, idempoten via `applyDokuResult`) → `is_paid=true`,
   hapus watermark, buka edit, tambah kuota.
+- Cron `GET /api/cron/reconcile-doku-payments` berjalan tiap 5 menit untuk
+  mengecek ulang pembayaran DOKU `pending` berumur 2 menit–24 jam. Check Status
+  tetap diverifikasi dan hasilnya masuk ke jalur fulfillment atomik yang sama.
+  Deployment cloud-lab/PM2 menjalankannya dari Linux cron melalui
+  `scripts/reconcile-doku-cron.mjs` ke `127.0.0.1:3009`; secret dibaca dari
+  `.env.local`, bukan ditulis literal di crontab. Production nantinya memakai
+  Cloudflare Cron Trigger yang memanggil helper rekonsiliasi yang sama secara
+  langsung; webhook tetap jalur konfirmasi utama.
+- Refund disetujui dan dimulai manual melalui operasi merchant DOKU. Hanya
+  `REFUNDED` dengan bukti jumlah refund sebesar nilai payment yang otomatis
+  menjadi status terminal `refunded`. Entitlement, plan, akses edit/publikasi,
+  watermark, kuota, renewal, dan nilai historis `paid_at` yang sudah diberikan
+  tetap dipertahankan. Refund parsial atau bukti tanpa jumlah masuk manual
+  review dan tidak boleh membuka jalur fulfillment baru.
+- Refund notification yang terlewat direkonsiliasi per invoice dengan
+  `npm run payments:reconcile-refund -- <provider_order_id>`. Perintah ini
+  memakai signed DOKU Check Status dan sengaja terpisah dari cron payment
+  `pending`.
+- Review refund parsial/ambigu diselesaikan operator berwenang per invoice:
+  `npm run payments:resolve-refund-review -- <provider_order_id> <confirm|reject> <operator_id> <reason>`.
+  `confirm` mencatat full refund terminal tanpa mengubah entitlement. `reject`
+  mempertahankan audit review lalu langsung mengambil signed DOKU Check Status
+  baru; blokir hanya dilepas oleh hasil provider tersebut sebelum fulfillment
+  dapat dilanjutkan.
+- Publish menghitung expiry sebagai nilai yang lebih akhir antara expiry aktif
+  yang sudah ada dan tanggal acara +30 hari, sehingga tidak memotong hasil
+  renewal. Halaman publik, RSVP, dan guestbook menolak `expires_at` yang sudah
+  lewat walaupun cron belum mengubah status; pemilik tetap dapat membuka
+  preview dan halaman pengelolaan.
 
 ---
 
@@ -254,13 +303,19 @@ Template = preset section + palet, di `src/lib/templates/catalog.ts`:
 
 ---
 
-## Deploy (Vercel + GitHub Actions)
+## Deployment
 
-- Push ke `main` → `.github/workflows/deploy.yml`: typecheck + lint →
-  `vercel pull/build/deploy --prod`.
-- Secrets repo: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
-- `vercel.json` set `git.deploymentEnabled.main=false` — Actions = satu-satunya deployer.
-- Env produksi dikelola di Vercel (`vercel env`), bukan `.env.local`.
+- Development saat ini berjalan sebagai proses PM2 `ngaturi-dev` di port 3009,
+  diakses publik melalui Cloudflare Tunnel.
+- Rekonsiliasi DOKU development dijadwalkan Linux cron tiap 5 menit dan hanya
+  memanggil endpoint localhost yang dilindungi `CRON_SECRET`.
+- Target Production adalah Cloudflare Workers, bukan Vercel. Adapter Next.js,
+  lifecycle koneksi PostgreSQL/Hyperdrive, Worker Cron Trigger, bindings, dan
+  observability masih memerlukan fase migrasi serta uji integrasi tersendiri.
+- `vercel.json` dipertahankan untuk konfigurasi historis yang tidak terkait
+  rekonsiliasi DOKU; file tersebut bukan konfigurasi scheduler Production.
+- Rincian alur pembayaran, bukti Sandbox, strategi secret, dan batas migrasi ada
+  di [`docs/doku-production-readiness.md`](docs/doku-production-readiness.md).
 
 ## Scripts
 

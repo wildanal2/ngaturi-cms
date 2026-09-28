@@ -11,7 +11,10 @@ import {
   userProfiles,
 } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
-import { canonicalTemplateId, templateIdentityAliases } from "@/lib/templates/identity";
+import {
+  canonicalTemplateId,
+  templateIdentityAliases,
+} from "@/lib/templates/identity";
 import { getTemplate } from "@/lib/templates/catalog";
 import {
   hydrateTemplateSections,
@@ -21,12 +24,17 @@ import {
 import { isTemplateChangeCategoryCompatible } from "@/lib/templates/compatibility";
 import { makeSlug, validateCustomSlug } from "./slug";
 import { CompositionSchema } from "@/sections/schema";
-import type { SectionData } from "@/sections/types";
+import type { GlobalSettings, SectionData } from "@/sections/types";
+import { publicationExpiry } from "./publication";
 import {
+  canChangeToTemplate,
+  canEditInvitation,
+  canPublishInvitation,
+  canSetGalleryPhotoCount,
   editExpiresAtFor,
-  isEditLocked,
   maxInvitationsFor,
 } from "./entitlement";
+import { basicCompositionViolation } from "./composition-entitlement";
 
 /**
  * Buat undangan baru dari template. Kuota: 1 undangan untuk akun gratis,
@@ -51,20 +59,29 @@ export async function createInvitation(templateId: string): Promise<never> {
       .onConflictDoNothing();
 
     const [profile] = await tx
-      .select({ bonus: userProfiles.invitationQuotaBonus })
+      .select({
+        bonus: userProfiles.invitationQuotaBonus,
+        freeInvitationUsed: userProfiles.freeInvitationUsed,
+      })
       .from(userProfiles)
       .where(eq(userProfiles.userId, session.user.id))
       .for("update")
       .limit(1);
+
+    if (!profile) {
+      throw new Error("Profil pengguna tidak ditemukan");
+    }
 
     const [{ count }] = await tx
       .select({ count: sql<number>`count(*)::int` })
       .from(invitations)
       .where(eq(invitations.userId, session.user.id));
 
-    if (count >= maxInvitationsFor(profile?.bonus)) {
+    if (count >= maxInvitationsFor(profile.bonus)) {
       return { full: true as const };
     }
+
+    const startsTrial = !profile.freeInvitationUsed;
 
     // Catalog presets are code-backed. Materialize the selected row before
     // writing source_template so newly added presets satisfy the database FK
@@ -86,6 +103,7 @@ export async function createInvitation(templateId: string): Promise<never> {
       })
       .onConflictDoNothing();
 
+    const createdAt = new Date();
     const [row] = await tx
       .insert(invitations)
       .values({
@@ -96,24 +114,34 @@ export async function createInvitation(templateId: string): Promise<never> {
         globalSettings: template.global_settings,
         plan: "free_trial",
         hasWatermark: true,
-        editExpiresAt: editExpiresAtFor("free_trial"),
+        editExpiresAt: startsTrial
+          ? editExpiresAtFor("free_trial", createdAt)
+          : null,
+        isEditLocked: !startsTrial,
         eventType: template.category,
         status: "draft",
+        createdAt,
       })
       .returning({ id: invitations.id });
 
-    await tx
-      .update(userProfiles)
-      .set({ freeInvitationUsed: true, updatedAt: new Date() })
-      .where(eq(userProfiles.userId, session.user.id));
+    if (startsTrial) {
+      await tx
+        .update(userProfiles)
+        .set({ freeInvitationUsed: true, updatedAt: new Date() })
+        .where(eq(userProfiles.userId, session.user.id));
+    }
 
-    return { id: row.id };
+    return { id: row.id, startsTrial };
   });
 
   if ("full" in result) {
     redirect("/invitations?quota=full");
   }
-  redirect(`/builder/${result.id}`);
+  redirect(
+    result.startsTrial
+      ? `/builder/${result.id}`
+      : `/invitations/${result.id}/unlock`,
+  );
 }
 
 export async function applyInitialTemplate(
@@ -146,7 +174,7 @@ export async function applyInitialTemplate(
       if (!inv) {
         return { ok: false as const, error: "Undangan tidak ditemukan." };
       }
-      if (isEditLocked(inv) || inv.isEditLocked) {
+      if (!canEditInvitation(inv)) {
         return {
           ok: false as const,
           error: "Masa edit gratis sudah berakhir.",
@@ -157,6 +185,13 @@ export async function applyInitialTemplate(
       // This also makes a second concurrent request harmless.
       if (inv.sourceTemplate && getTemplate(inv.sourceTemplate)) {
         return { ok: true as const };
+      }
+
+      if (!canChangeToTemplate(inv, template.tier)) {
+        return {
+          ok: false as const,
+          error: "Template Premium memerlukan paket Premium.",
+        };
       }
 
       // source_template is an FK. Keep code-backed catalog entries usable even
@@ -237,7 +272,7 @@ export async function changeInvitationTemplate(
       if (!inv) {
         return { ok: false as const, error: "Undangan tidak ditemukan." };
       }
-      if (isEditLocked(inv) || inv.isEditLocked) {
+      if (!canEditInvitation(inv)) {
         return {
           ok: false as const,
           error: "Masa edit gratis sudah berakhir.",
@@ -245,6 +280,13 @@ export async function changeInvitationTemplate(
       }
       if (canonicalTemplateId(inv.sourceTemplate) === targetTemplate.id) {
         return { ok: true as const, slug: inv.slug };
+      }
+      if (!canChangeToTemplate(inv, targetTemplate.tier)) {
+        return {
+          ok: false as const,
+          error:
+            "Paket Basic hanya dapat beralih ke template Basic atau Gratis.",
+        };
       }
 
       const sourceTemplate = inv.sourceTemplate
@@ -358,7 +400,7 @@ export async function saveComposition(
   },
 ): Promise<{ ok: true; savedAt: string } | { ok: false; error: string }> {
   const inv = await loadOwned(invitationId);
-  if (isEditLocked(inv) || inv.isEditLocked) {
+  if (!canEditInvitation(inv)) {
     return { ok: false, error: "Masa edit gratis sudah berakhir." };
   }
   const parsed = CompositionSchema.safeParse({
@@ -368,6 +410,38 @@ export async function saveComposition(
   });
   if (!parsed.success) {
     return { ok: false, error: "Data tidak valid." };
+  }
+
+  if (inv.isPaid && inv.plan === "basic") {
+    const violation = basicCompositionViolation(
+      inv.sections as SectionData[],
+      parsed.data.sections,
+      (currentCount, nextCount) =>
+        canSetGalleryPhotoCount(inv, currentCount, nextCount),
+      inv.globalSettings as GlobalSettings,
+      parsed.data.global_settings,
+    );
+    if (violation === "gallery-photo-limit") {
+      return {
+        ok: false,
+        error:
+          "Paket Basic mendukung maksimal 30 foto galeri. Foto yang sudah ada tetap aman, tetapi foto baru tidak dapat ditambahkan sebelum jumlahnya di bawah batas.",
+      };
+    }
+    if (violation === "music-change") {
+      return {
+        ok: false,
+        error:
+          "Musik yang sudah ada tetap aktif, tetapi memilih musik baru memerlukan paket Premium.",
+      };
+    }
+    if (violation === "premium-feature-expansion") {
+      return {
+        ok: false,
+        error:
+          "Fitur Premium yang sudah ada tetap aktif, tetapi menambah atau menggantinya memerlukan paket Premium.",
+      };
+    }
   }
 
   const hero = parsed.data.sections.find((s) => s.type === "hero");
@@ -388,7 +462,10 @@ export async function saveComposition(
       and(
         eq(invitations.id, invitationId),
         eq(invitations.userId, inv.userId),
-        inArray(invitations.sourceTemplate, templateIdentityAliases(payload.source_template)),
+        inArray(
+          invitations.sourceTemplate,
+          templateIdentityAliases(payload.source_template),
+        ),
       ),
     )
     .returning({ id: invitations.id });
@@ -407,25 +484,49 @@ export async function saveComposition(
 
 export async function publishInvitation(
   invitationId: string,
-): Promise<{ ok: true; slug: string }> {
-  const inv = await loadOwned(invitationId);
-  const now = new Date();
-  const eventDate = inv.eventDate ?? now;
-  const expiresAt = new Date(eventDate.getTime() + 30 * 86_400_000);
+): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+  const session = await requireUser();
+  const result = await db.transaction(async (tx) => {
+    const [inv] = await tx
+      .select()
+      .from(invitations)
+      .where(
+        and(
+          eq(invitations.id, invitationId),
+          eq(invitations.userId, session.user.id),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!inv) throw new Error("Undangan tidak ditemukan");
+    if (!canPublishInvitation(inv)) {
+      return {
+        ok: false as const,
+        error: "Masa edit gratis sudah berakhir. Upgrade untuk menerbitkan.",
+      };
+    }
 
-  await db
-    .update(invitations)
-    .set({
-      status: "published",
-      publishedAt: inv.publishedAt ?? now,
-      expiresAt,
-      updatedAt: now,
-    })
-    .where(eq(invitations.id, invitationId));
+    const now = new Date();
+    const expiresAt = publicationExpiry(inv.eventDate, inv.expiresAt, now);
+
+    await tx
+      .update(invitations)
+      .set({
+        status: "published",
+        publishedAt: inv.publishedAt ?? now,
+        expiresAt,
+        updatedAt: now,
+      })
+      .where(eq(invitations.id, invitationId));
+
+    return { ok: true as const, slug: inv.slug };
+  });
+
+  if (!result.ok) return result;
 
   updateTag(`invitation:${invitationId}`);
-  updateTag(`invitation:slug:${inv.slug}`);
-  return { ok: true, slug: inv.slug };
+  updateTag(`invitation:slug:${result.slug}`);
+  return result;
 }
 
 /** Ganti nama tautan (slug) undangan. */
@@ -434,6 +535,9 @@ export async function updateInvitationSlug(
   rawSlug: string,
 ): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
   const inv = await loadOwned(invitationId);
+  if (!canEditInvitation(inv)) {
+    return { ok: false, error: "Masa edit gratis sudah berakhir." };
+  }
 
   const v = validateCustomSlug(rawSlug);
   if ("error" in v) return { ok: false, error: v.error };

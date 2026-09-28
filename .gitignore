@@ -16,3 +16,6 @@ dist/
 next-env.d.ts
 .vercel
 .env.docker
+.vinext/
+.wrangler/
+worker-configuration.d.ts

@@ -4,7 +4,9 @@ import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
 import { isPaymentConfigured } from "@/lib/payments/doku";
+import { isRenewalEligible } from "@/lib/payments/renewal-policy";
 import { UnlockOptions } from "@/components/dashboard/unlock-options";
+import { RenewalOption } from "@/components/dashboard/renewal-option";
 
 export default async function UnlockPage({
   params,
@@ -24,11 +26,14 @@ export default async function UnlockPage({
     )
     .limit(1);
   if (!inv) notFound();
+  const canRenew = isRenewalEligible(inv);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl">Upgrade undangan</h1>
+        <h1 className="text-2xl">
+          {canRenew ? "Perpanjang undangan" : "Upgrade undangan"}
+        </h1>
         <p className="mt-1 text-sm text-ink-soft">
           {inv.isPaid
             ? `Undangan ini sudah paket ${inv.plan}.`
@@ -36,10 +41,12 @@ export default async function UnlockPage({
         </p>
       </div>
 
-      {inv.isPaid ? (
-        <div className="rounded-xl border border-forest/30 bg-forest/5 p-4 text-sm">
-          Undangan sudah aktif penuh. Tidak ada yang perlu dibayar.
-        </div>
+      {canRenew ? (
+        <RenewalOption
+          invitationId={inv.id}
+          expiresAt={inv.expiresAt?.toISOString() ?? null}
+          configured={isPaymentConfigured()}
+        />
       ) : (
         <UnlockOptions
           invitationId={inv.id}

@@ -28,6 +28,7 @@ function TemplateCatalog({
   pendingId,
   pending,
   onSelect,
+  premiumFeatures,
 }: {
   templates: BuilderTemplateOption[];
   locked: boolean;
@@ -35,12 +36,14 @@ function TemplateCatalog({
   pendingId: string | null;
   pending: boolean;
   onSelect: (template: BuilderTemplateOption) => void;
+  premiumFeatures: boolean;
 }) {
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {templates.map((template) => {
         const isActive = template.id === activeTemplateId;
         const isApplying = pendingId === template.id;
+        const premiumBlocked = template.tier === "premium" && !premiumFeatures;
         return (
           <article
             key={template.id}
@@ -70,7 +73,13 @@ function TemplateCatalog({
               <button
                 type="button"
                 onClick={() => onSelect(template)}
-                disabled={locked || isActive || pending || pendingId !== null}
+                disabled={
+                  locked ||
+                  isActive ||
+                  premiumBlocked ||
+                  pending ||
+                  pendingId !== null
+                }
                 aria-busy={isApplying}
                 className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest py-2.5 text-sm font-medium text-cream hover:bg-forest-600 disabled:pointer-events-none disabled:opacity-60"
               >
@@ -81,6 +90,8 @@ function TemplateCatalog({
                   </>
                 ) : isActive ? (
                   "Template aktif"
+                ) : premiumBlocked ? (
+                  "Perlu Premium"
                 ) : activeTemplateId ? (
                   "Pilih template"
                 ) : (
@@ -99,10 +110,12 @@ export function TemplatePicker({
   invitationId,
   templates,
   locked,
+  premiumFeatures,
 }: {
   invitationId: string;
   templates: BuilderTemplateOption[];
   locked: boolean;
+  premiumFeatures: boolean;
 }) {
   const submitting = useRef(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -153,6 +166,7 @@ export function TemplatePicker({
           pendingId={pendingId}
           pending={pending}
           onSelect={selectTemplate}
+          premiumFeatures={premiumFeatures}
         />
       </div>
     </main>
@@ -166,6 +180,7 @@ export function ChangeTemplateDialog({
   open,
   onClose,
   beforeApply,
+  premiumFeatures,
 }: {
   invitationId: string;
   templates: BuilderTemplateOption[];
@@ -173,6 +188,7 @@ export function ChangeTemplateDialog({
   open: boolean;
   onClose: () => void;
   beforeApply: () => Promise<boolean>;
+  premiumFeatures: boolean;
 }) {
   const pickerRef = useRef<HTMLDivElement>(null);
   const confirmationRef = useRef<HTMLDivElement>(null);
@@ -329,6 +345,7 @@ export function ChangeTemplateDialog({
             pendingId={pendingId}
             pending={pending}
             onSelect={setSelected}
+            premiumFeatures={premiumFeatures}
           />
         </div>
 

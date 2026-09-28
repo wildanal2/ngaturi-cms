@@ -5,14 +5,20 @@ import { z } from "zod";
  * Never import this from Client Components or middleware (Edge).
  */
 const schema = z.object({
-  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "test", "production"])
+    .default("development"),
   NEXT_PUBLIC_APP_URL: z.url(),
   NEXT_PUBLIC_INVITATION_DOMAINS: z.string().min(1),
 
-  DATABASE_URL: z.string().min(1),
+  // Node development/migrations only. Workers use the HYPERDRIVE binding.
+  DATABASE_URL: z.string().min(1).optional(),
   DATABASE_POOL_SIZE: z.coerce.number().int().positive().default(10),
 
-  REDIS_URL: z.string().min(1),
+  // Node development/PM2 uses TCP. Workers use the REST pair below.
+  REDIS_URL: z.string().min(1).optional(),
+  REDIS_REST_URL: z.url().optional(),
+  REDIS_REST_TOKEN: z.string().min(1).optional(),
 
   AWS_ACCESS_KEY_ID: z.string().min(1),
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
@@ -35,7 +41,6 @@ const schema = z.object({
   DOKU_CLIENT_ID: z.string().optional(),
   DOKU_SECRET_KEY: z.string().optional(),
   DOKU_BASE_URL: z.string().default("https://api-sandbox.doku.com"),
-  DOKU_NOTIFICATION_URL: z.string().optional(),
   DOKU_CALLBACK_URL: z.string().optional(),
   JAMENDO_CLIENT_ID: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
@@ -43,7 +48,18 @@ const schema = z.object({
   SENTRY_DSN: z.string().optional(),
 });
 
-const parsed = schema.safeParse(process.env);
+const completeRedisRestCredentials = schema.superRefine((value, ctx) => {
+  if (Boolean(value.REDIS_REST_URL) !== Boolean(value.REDIS_REST_TOKEN)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["REDIS_REST_URL"],
+      message:
+        "Cloudflare Worker Redis requires REDIS_REST_URL and REDIS_REST_TOKEN together",
+    });
+  }
+});
+
+const parsed = completeRedisRestCredentials.safeParse(process.env);
 
 if (!parsed.success) {
   console.error(

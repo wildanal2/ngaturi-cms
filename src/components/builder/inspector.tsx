@@ -23,6 +23,7 @@ export function Inspector({
   const sections = useBuilder((s) => s.sections);
   const selectedId = useBuilder((s) => s.selectedId);
   const locked = useBuilder((s) => s.locked);
+  const premiumFeatures = useBuilder((s) => s.premiumFeatures);
   const compositionPolicy = useBuilder((s) => s.compositionPolicy);
   const setProp = useBuilder((s) => s.setProp);
   const setProps = useBuilder((s) => s.setProps);
@@ -44,11 +45,15 @@ export function Inspector({
 
   const variants = Object.entries(def.variants);
   const currentVariant = def.variants[canonicalTemplateId(section.variant)];
-  const variantEditable = canEditSectionVariant(compositionPolicy, section.type);
+  const variantEditable = canEditSectionVariant(
+    compositionPolicy,
+    section.type,
+  );
 
   const ctx: FieldContext = {
     invitationId,
     disabled: locked,
+    premiumFeatures,
     read: (path) => getDeep(section.props, path),
     write: (path, value) => {
       if (!path.includes(".")) setProp(section.id, path, value);
@@ -87,15 +92,22 @@ export function Inspector({
           <div className="grid grid-cols-2 gap-2.5">
             {variants.map(([key, v]) => {
               const active = canonicalTemplateId(section.variant) === key;
+              const premiumBlocked = !premiumFeatures && v.isPremium && !active;
               return (
                 <div
                   key={key}
                   role="button"
-                  tabIndex={locked ? -1 : 0}
+                  tabIndex={locked || premiumBlocked ? -1 : 0}
                   aria-pressed={active}
-                  onClick={() => !locked && setVariant(section.id, key)}
+                  onClick={() =>
+                    !locked && !premiumBlocked && setVariant(section.id, key)
+                  }
                   onKeyDown={(e) => {
-                    if (!locked && (e.key === "Enter" || e.key === " ")) {
+                    if (
+                      !locked &&
+                      !premiumBlocked &&
+                      (e.key === "Enter" || e.key === " ")
+                    ) {
                       e.preventDefault();
                       setVariant(section.id, key);
                     }
@@ -104,11 +116,16 @@ export function Inspector({
                     active
                       ? "border-forest ring-1 ring-forest"
                       : "border-line hover:border-forest/50"
-                  } ${locked ? "pointer-events-none opacity-60" : ""}`}
+                  } ${locked || premiumBlocked ? "pointer-events-none opacity-60" : ""}`}
                 >
                   <VariantThumb type={section.type} variantKey={key} />
                   <div className="p-2">
                     <span className="block text-sm font-medium">{v.name}</span>
+                    {premiumBlocked ? (
+                      <span className="block text-[10px] font-medium text-wine">
+                        Perlu Premium
+                      </span>
+                    ) : null}
                     {v.description ? (
                       <span className="block text-xs text-muted">
                         {v.description}

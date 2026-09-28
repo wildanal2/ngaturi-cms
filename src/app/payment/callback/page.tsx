@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getDb } from "@/lib/db";
 import { checkOrderStatus } from "@/lib/payments/doku";
 import { applyDokuResult, invitationIdForInvoice } from "@/lib/payments/grant";
 
@@ -13,6 +14,7 @@ export default async function PaymentCallbackPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const db = getDb();
   const sp = await searchParams;
   const invoice =
     (sp.invoice_number as string) ||
@@ -20,14 +22,23 @@ export default async function PaymentCallbackPage({
     (sp.invoice as string) ||
     "";
 
-  let result: "paid" | "expired" | "failed" | "pending" | "unknown" = "unknown";
+  let result:
+    "paid" | "expired" | "failed" | "pending" | "refunded" | "unknown" =
+    "unknown";
   let invitationId: string | null = null;
 
   if (invoice) {
-    invitationId = await invitationIdForInvoice(invoice);
+    invitationId = await invitationIdForInvoice(invoice, db);
     try {
-      const status = await checkOrderStatus(invoice);
-      result = await applyDokuResult(invoice, status);
+      const paymentResult = await checkOrderStatus(invoice);
+      const applied = await applyDokuResult(
+        paymentResult,
+        {
+          source: "status_query",
+        },
+        db,
+      );
+      result = applied.status;
     } catch {
       result = "pending";
     }
@@ -42,14 +53,18 @@ export default async function PaymentCallbackPage({
       <h1 className="font-display text-2xl">
         {result === "paid"
           ? "Pembayaran berhasil 🎉"
-          : result === "pending"
-            ? "Pembayaran sedang diproses"
-            : "Status pembayaran"}
+          : result === "refunded"
+            ? "Pembayaran telah direfund"
+            : result === "pending"
+              ? "Pembayaran sedang diproses"
+              : "Status pembayaran"}
       </h1>
       <p className="text-ink-soft">
         {result === "paid"
           ? "Undangan kamu sudah diaktifkan."
-          : "Kami akan memperbarui status begitu pembayaran dikonfirmasi."}
+          : result === "refunded"
+            ? "Status finansial refund sudah tercatat."
+            : "Kami akan memperbarui status begitu pembayaran dikonfirmasi."}
       </p>
       <Link href="/invitations" className="mt-2 text-forest underline">
         Ke daftar undangan

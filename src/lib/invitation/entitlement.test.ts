@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Invitation } from "./entitlement";
 import {
+  BASIC_MAX_GALLERY_PHOTOS,
   FREE_TRIAL_EDIT_DAYS,
   accountTier,
+  canChangeToTemplate,
+  canEditInvitation,
+  canPublishInvitation,
+  canSetGalleryPhotoCount,
+  canUploadMedia,
   editExpiresAtFor,
   hasProFeatures,
   hasWatermark,
@@ -48,14 +54,43 @@ describe("isEditLocked", () => {
   const future = new Date(Date.now() + 86_400_000);
 
   it("locks an expired unpaid free trial", () => {
-    expect(isEditLocked(inv({ plan: "free_trial", isPaid: false, editExpiresAt: past }))).toBe(true);
+    expect(
+      isEditLocked(
+        inv({ plan: "free_trial", isPaid: false, editExpiresAt: past }),
+      ),
+    ).toBe(true);
   });
   it("does not lock while still within the window", () => {
-    expect(isEditLocked(inv({ plan: "free_trial", isPaid: false, editExpiresAt: future }))).toBe(false);
+    expect(
+      isEditLocked(
+        inv({ plan: "free_trial", isPaid: false, editExpiresAt: future }),
+      ),
+    ).toBe(false);
   });
   it("never locks a paid invitation", () => {
-    expect(isEditLocked(inv({ plan: "free_trial", isPaid: true, editExpiresAt: past }))).toBe(false);
-    expect(isEditLocked(inv({ plan: "basic", isPaid: true, editExpiresAt: past }))).toBe(false);
+    expect(
+      isEditLocked(
+        inv({ plan: "free_trial", isPaid: true, editExpiresAt: past }),
+      ),
+    ).toBe(false);
+    expect(
+      isEditLocked(inv({ plan: "basic", isPaid: true, editExpiresAt: past })),
+    ).toBe(false);
+  });
+  it("fails closed for a trial without an expiry and at the exact boundary", () => {
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    expect(
+      isEditLocked(
+        inv({ plan: "free_trial", isPaid: false, editExpiresAt: null }),
+        now,
+      ),
+    ).toBe(true);
+    expect(
+      isEditLocked(
+        inv({ plan: "free_trial", isPaid: false, editExpiresAt: now }),
+        now,
+      ),
+    ).toBe(true);
   });
 });
 
@@ -69,7 +104,9 @@ describe("hasWatermark", () => {
 
 describe("planLabel", () => {
   it("maps to friendly names", () => {
-    expect(planLabel(inv({ plan: "free_trial", isPaid: false }))).toBe("Gratis");
+    expect(planLabel(inv({ plan: "free_trial", isPaid: false }))).toBe(
+      "Gratis",
+    );
     expect(planLabel(inv({ plan: "basic", isPaid: true }))).toBe("Basic");
     expect(planLabel(inv({ plan: "premium", isPaid: true }))).toBe("Premium");
     expect(planLabel(inv({ plan: "basic", isPaid: false }))).toBe("Gratis");
@@ -81,31 +118,121 @@ describe("trial gets pro features", () => {
   const past = new Date(Date.now() - 86_400_000);
 
   it("active trial has pro features", () => {
-    const t = inv({ plan: "free_trial", isPaid: false, isEditLocked: false, editExpiresAt: future });
+    const t = inv({
+      plan: "free_trial",
+      isPaid: false,
+      isEditLocked: false,
+      editExpiresAt: future,
+    });
     expect(isTrialActive(t)).toBe(true);
     expect(hasProFeatures(t)).toBe(true);
   });
   it("expired trial loses pro features", () => {
-    const t = inv({ plan: "free_trial", isPaid: false, isEditLocked: false, editExpiresAt: past });
+    const t = inv({
+      plan: "free_trial",
+      isPaid: false,
+      isEditLocked: false,
+      editExpiresAt: past,
+    });
     expect(isTrialActive(t)).toBe(false);
     expect(hasProFeatures(t)).toBe(false);
   });
-  it("manually locked trial loses pro features", () => {
-    const t = inv({ plan: "free_trial", isPaid: false, isEditLocked: true, editExpiresAt: future });
-    expect(hasProFeatures(t)).toBe(false);
+  it("uses edit expiry rather than the materialized lock flag", () => {
+    const t = inv({
+      plan: "free_trial",
+      isPaid: false,
+      isEditLocked: true,
+      editExpiresAt: future,
+    });
+    expect(isTrialActive(t)).toBe(true);
+    expect(hasProFeatures(t)).toBe(true);
   });
   it("paid premium always has pro features", () => {
-    expect(hasProFeatures(inv({ plan: "premium", isPaid: true, isEditLocked: false, editExpiresAt: null }))).toBe(true);
+    expect(
+      hasProFeatures(
+        inv({
+          plan: "premium",
+          isPaid: true,
+          isEditLocked: false,
+          editExpiresAt: null,
+        }),
+      ),
+    ).toBe(true);
   });
   it("paid basic does NOT get pro features", () => {
-    expect(hasProFeatures(inv({ plan: "basic", isPaid: true, isEditLocked: false, editExpiresAt: null }))).toBe(false);
+    expect(
+      hasProFeatures(
+        inv({
+          plan: "basic",
+          isPaid: true,
+          isEditLocked: false,
+          editExpiresAt: null,
+        }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("central mutation policy", () => {
+  const now = new Date("2026-01-01T00:00:00.000Z");
+  const activeTrial = inv({
+    plan: "free_trial",
+    isPaid: false,
+    isEditLocked: false,
+    editExpiresAt: new Date("2026-01-01T00:00:01.000Z"),
+  });
+  const expiredTrial = inv({
+    ...activeTrial,
+    editExpiresAt: now,
+  });
+  const basic = inv({
+    plan: "basic",
+    isPaid: true,
+    isEditLocked: false,
+    editExpiresAt: null,
+  });
+
+  it("ends edit and publish permission immediately at edit_expires_at", () => {
+    expect(canEditInvitation(activeTrial, now)).toBe(true);
+    expect(canPublishInvitation(activeTrial, now)).toBe(true);
+    expect(canEditInvitation(expiredTrial, now)).toBe(false);
+    expect(canPublishInvitation(expiredTrial, now)).toBe(false);
+  });
+
+  it("gives the trial Premium-equivalent mutations", () => {
+    expect(canChangeToTemplate(activeTrial, "premium", false, now)).toBe(true);
+    expect(canUploadMedia(activeTrial, "audio", 100, now)).toBe(true);
+    expect(canUploadMedia(activeTrial, "image", 100, now)).toBe(true);
+  });
+
+  it("applies Basic grandfathering limits only to new mutations", () => {
+    expect(BASIC_MAX_GALLERY_PHOTOS).toBe(30);
+    expect(canChangeToTemplate(basic, "premium", false, now)).toBe(false);
+    expect(canChangeToTemplate(basic, "premium", true, now)).toBe(true);
+    expect(canUploadMedia(basic, "audio", 0, now)).toBe(false);
+    expect(canUploadMedia(basic, "image", 29, now)).toBe(true);
+    expect(canUploadMedia(basic, "image", 30, now)).toBe(false);
+    expect(canSetGalleryPhotoCount(basic, 30, 31, now)).toBe(false);
+    expect(canSetGalleryPhotoCount(basic, 35, 35, now)).toBe(true);
+    expect(canSetGalleryPhotoCount(basic, 35, 34, now)).toBe(true);
+    expect(canSetGalleryPhotoCount(basic, 35, 36, now)).toBe(false);
   });
 });
 
 describe("accountTier", () => {
   const in2days = new Date(Date.now() + 2 * 86_400_000);
-  const trialInv = inv({ plan: "free_trial", isPaid: false, isEditLocked: false, editExpiresAt: in2days });
-  const premiumInv = inv({ plan: "premium", isPaid: true, isEditLocked: false, editExpiresAt: null });
+  const trialInv = inv({
+    plan: "free_trial",
+    isPaid: false,
+    isEditLocked: false,
+    editExpiresAt: in2days,
+  });
+  const premiumInv = inv({
+    plan: "premium",
+    isPaid: true,
+    isEditLocked: false,
+    editExpiresAt: null,
+  });
 
   it("no invitations → free", () => {
     expect(accountTier([]).tier).toBe("free");

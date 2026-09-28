@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/helpers";
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
 import { presignPut, publicUrl } from "@/lib/storage";
 import { env } from "@/lib/env";
+import {
+  canEditInvitation,
+  canUploadMedia,
+} from "@/lib/invitation/entitlement";
+import { countGalleryPhotos } from "@/lib/invitation/composition-entitlement";
+import type { SectionData } from "@/sections/types";
 
 const Body = z.object({
   invitationId: z.string().uuid(),
@@ -15,6 +21,7 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
+  const db = getDb();
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -34,7 +41,7 @@ export async function POST(req: Request) {
   }
 
   const [inv] = await db
-    .select({ id: invitations.id })
+    .select()
     .from(invitations)
     .where(
       and(
@@ -44,10 +51,30 @@ export async function POST(req: Request) {
     )
     .limit(1);
   if (!inv) {
-    return NextResponse.json({ error: "Undangan tidak ditemukan." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Undangan tidak ditemukan." },
+      { status: 404 },
+    );
+  }
+  if (
+    !canUploadMedia(
+      inv,
+      "image",
+      countGalleryPhotos(inv.sections as SectionData[]),
+    )
+  ) {
+    const error = !canEditInvitation(inv)
+      ? "Masa edit gratis sudah berakhir."
+      : "Paket Basic mendukung maksimal 30 foto galeri.";
+    return NextResponse.json({ error }, { status: 403 });
   }
 
-  const ext = filename.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const ext =
+    filename
+      .split(".")
+      .pop()
+      ?.toLowerCase()
+      .replace(/[^a-z0-9]/g, "") || "jpg";
   const key = `invitations/${invitationId}/${crypto.randomUUID()}.${ext}`;
   const uploadUrl = await presignPut(key, contentType);
 
