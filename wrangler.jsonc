@@ -1,6 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ngaturi-staging",
+  // Build/local compatibility config only. Phase 0 intentionally commits no
+  // staging or production resource identifiers. See docs/phase-0-production-safety.md.
+  "name": "ngaturi-worker-build",
   "compatibility_date": "2026-09-22",
   "compatibility_flags": ["nodejs_compat"],
   "main": "worker/index.ts",
@@ -11,22 +13,6 @@
   },
   "images": {
     "binding": "IMAGES",
-  },
-  // Replace this with a cache-disabled Hyperdrive configuration before deploy.
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "replace-with-hyperdrive-id",
-    },
-  ],
-  "r2_buckets": [
-    {
-      "binding": "MEDIA_BUCKET",
-      "bucket_name": "ngaturi-staging-media",
-    },
-  ],
-  "triggers": {
-    "crons": ["*/5 * * * *"],
   },
   "observability": {
     "enabled": true,

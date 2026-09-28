@@ -3,6 +3,7 @@ import { isPaymentConfigured } from "../src/lib/payments/doku";
 import { reconcilePendingDokuPayments } from "../src/lib/payments/reconcile";
 import { getDb } from "../src/lib/db";
 import {
+  assertWorkerRuntimeContract,
   runWithInvocationContext,
   type NgaturiWorkerEnv,
 } from "../src/lib/runtime/context";
@@ -41,6 +42,7 @@ const worker = {
     env: NgaturiWorkerEnv,
     ctx: WorkerExecutionContext,
   ): Promise<Response> {
+    assertWorkerRuntimeContract(env);
     return runWithInvocationContext(env, () =>
       handler.fetch(request, env, ctx),
     );
@@ -51,6 +53,7 @@ const worker = {
     env: NgaturiWorkerEnv,
     ctx: WorkerExecutionContext,
   ): void {
+    assertWorkerRuntimeContract(env);
     ctx.waitUntil(
       runWithInvocationContext(env, reconcileScheduledPayments).catch(
         (error) => {

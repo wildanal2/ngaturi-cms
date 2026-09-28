@@ -141,6 +141,51 @@ beforeEach(() => {
 });
 
 describe("applyDokuResult", () => {
+  it("fulfills a later trusted SUCCESS after an ambiguous checkout", async () => {
+    const storedPayment = payment({ status: "pending" });
+    const harness = useTransactionHarness(storedPayment);
+
+    await expect(
+      applyDokuResult(success(), { source: "reconciliation" }),
+    ).resolves.toMatchObject({
+      status: "paid",
+      transitioned: true,
+      fulfilled: true,
+    });
+    await expect(
+      applyDokuResult(success(), { source: "webhook", requestId: "retry-1" }),
+    ).resolves.toMatchObject({
+      status: "paid",
+      transitioned: false,
+      fulfilled: false,
+    });
+    expect(harness.stats()).toMatchObject({
+      invitationUpdates: 1,
+      profileInserts: 1,
+    });
+  });
+
+  it.each(["expired", "failed"] as const)(
+    "keeps the existing %s state terminal for delayed SUCCESS",
+    async (status) => {
+      const storedPayment = payment({ status });
+      const harness = useTransactionHarness(storedPayment);
+
+      await expect(
+        applyDokuResult(success(), { source: "reconciliation" }),
+      ).resolves.toMatchObject({
+        status,
+        transitioned: false,
+        fulfilled: false,
+      });
+      expect(harness.stats()).toEqual({
+        paymentUpdates: 0,
+        invitationUpdates: 0,
+        profileInserts: 0,
+      });
+    },
+  );
+
   it("rejects mismatched amount and currency before changing payment state", async () => {
     const storedPayment = payment();
     const harness = useTransactionHarness(storedPayment);

@@ -10,6 +10,33 @@ interface DokuConfiguration {
   secretKey: string;
 }
 
+export type DokuCheckoutFailureOutcome = "rejected" | "unknown";
+
+/**
+ * A checkout request can fail after DOKU has already accepted the order. Only
+ * an authenticated provider rejection is terminal; every other failure must
+ * remain reconcilable through Check Status or a signed notification.
+ */
+export class DokuCheckoutError extends Error {
+  constructor(
+    public readonly outcome: DokuCheckoutFailureOutcome,
+    message: string,
+  ) {
+    super(message);
+    this.name = "DokuCheckoutError";
+  }
+}
+
+export function isDefinitiveCheckoutRejection(error: unknown): boolean {
+  return error instanceof DokuCheckoutError && error.outcome === "rejected";
+}
+
+function isDefinitiveCheckoutHttpRejection(status: number): boolean {
+  // Conflict, timeout, throttling, and every server error can describe an
+  // outcome where the order already exists or acceptance is still uncertain.
+  return [401, 403, 404, 405, 422].includes(status);
+}
+
 export function isPaymentConfigured(): boolean {
   return Boolean(env.DOKU_CLIENT_ID && env.DOKU_SECRET_KEY);
 }
@@ -188,34 +215,74 @@ export async function createCheckout(
       includeDigest: true,
     })
   ) {
-    throw new Error("DOKU checkout response signature is invalid");
+    throw new DokuCheckoutError(
+      "unknown",
+      "DOKU checkout response signature is invalid",
+    );
   }
-  const data = JSON.parse(rawResponse);
+  let data: unknown;
+  try {
+    data = JSON.parse(rawResponse);
+  } catch {
+    throw new DokuCheckoutError(
+      "unknown",
+      "DOKU checkout response is malformed",
+    );
+  }
   if (!res.ok) {
-    throw new Error(`DOKU checkout request failed (${res.status})`);
+    throw new DokuCheckoutError(
+      isDefinitiveCheckoutHttpRejection(res.status) ? "rejected" : "unknown",
+      `DOKU checkout request failed (${res.status})`,
+    );
   }
-  const payload = data?.response ?? data;
+  const responseData = data as {
+    response?: {
+      order?: Record<string, unknown>;
+      payment?: Record<string, unknown>;
+    };
+    order?: Record<string, unknown>;
+    payment?: Record<string, unknown>;
+  };
+  const payload = responseData.response ?? responseData;
   if (
     payload?.order?.invoice_number !== p.orderId ||
     Number(payload?.order?.amount) !== Math.round(p.amount) ||
     payload?.order?.currency !== "IDR"
   ) {
-    throw new Error("DOKU checkout response did not match the payment request");
+    throw new DokuCheckoutError(
+      "unknown",
+      "DOKU checkout response did not match the payment request",
+    );
   }
-  const url: string | undefined = payload?.payment?.url;
-  if (!url) throw new Error("DOKU: URL pembayaran tidak diterima");
+  const url =
+    typeof payload?.payment?.url === "string" ? payload.payment.url : undefined;
+  if (!url) {
+    throw new DokuCheckoutError(
+      "unknown",
+      "DOKU: URL pembayaran tidak diterima",
+    );
+  }
   const checkoutUrl = new URL(url);
   if (
     checkoutUrl.protocol !== "https:" ||
     (checkoutUrl.hostname !== "doku.com" &&
       !checkoutUrl.hostname.endsWith(".doku.com"))
   ) {
-    throw new Error("DOKU returned an invalid checkout URL");
+    throw new DokuCheckoutError(
+      "unknown",
+      "DOKU returned an invalid checkout URL",
+    );
   }
   return {
     url: checkoutUrl.toString(),
-    tokenId: payload?.payment?.token_id ?? "",
-    sessionId: payload?.order?.session_id ?? null,
+    tokenId:
+      typeof payload?.payment?.token_id === "string"
+        ? payload.payment.token_id
+        : "",
+    sessionId:
+      typeof payload?.order?.session_id === "string"
+        ? payload.order.session_id
+        : null,
   };
 }
 

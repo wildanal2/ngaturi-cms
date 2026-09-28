@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/helpers";
 import { getDb } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
-import { presignPut, publicUrl } from "@/lib/storage";
+import { legacyPublicUrl, presignPut } from "@/lib/storage";
 import { env } from "@/lib/env";
 import {
   canEditInvitation,
@@ -78,5 +78,9 @@ export async function POST(req: Request) {
   const key = `invitations/${invitationId}/${crypto.randomUUID()}.${ext}`;
   const uploadUrl = await presignPut(key, contentType);
 
-  return NextResponse.json({ uploadUrl, key, publicUrl: publicUrl(key) });
+  return NextResponse.json({
+    uploadUrl,
+    key,
+    publicUrl: legacyPublicUrl(key),
+  });
 }

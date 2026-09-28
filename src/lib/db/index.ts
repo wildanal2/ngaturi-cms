@@ -50,9 +50,15 @@ function getNodeDatabase(): Database {
  */
 export function getDb(): Database {
   const workerEnv = getWorkerEnv();
-  if (workerEnv?.HYPERDRIVE?.connectionString) {
+  if (workerEnv) {
+    const hyperdriveConnectionString = workerEnv.HYPERDRIVE?.connectionString;
+    if (!hyperdriveConnectionString) {
+      throw new Error(
+        "HYPERDRIVE binding is required in the Cloudflare Worker runtime",
+      );
+    }
     return getInvocationValue(INVOCATION_DATABASE, () =>
-      createDatabase(workerEnv.HYPERDRIVE.connectionString, 5),
+      createDatabase(hyperdriveConnectionString, 5),
     )!;
   }
   return getNodeDatabase();
@@ -65,6 +71,11 @@ export function getDb(): Database {
  */
 export const db = new Proxy({} as Database, {
   get(_target, property) {
+    // Adapter factories (including Better Auth's Drizzle adapter) probe this
+    // metadata property during module initialization. The schema is already
+    // supplied explicitly to those adapters, so resolving a live database here
+    // would incorrectly create the Node client before a Worker invocation.
+    if (property === "_") return undefined;
     const database = getDb();
     const value = Reflect.get(database, property, database) as unknown;
     return typeof value === "function" ? value.bind(database) : value;

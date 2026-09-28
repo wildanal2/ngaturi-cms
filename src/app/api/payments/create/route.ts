@@ -8,6 +8,7 @@ import { PLANS, RENEWAL_PRICE, type PaidPlan } from "@/lib/payments/plans";
 import {
   createCheckout,
   DOKU_CHECKOUT_DUE_MINUTES,
+  isDefinitiveCheckoutRejection,
   isPaymentConfigured,
 } from "@/lib/payments/doku";
 import { env } from "@/lib/env";
@@ -159,17 +160,22 @@ export async function POST(req: Request) {
       customer: { name: session.user.name, email: session.user.email },
       callbackUrl: callbackUrl.toString(),
     });
-  } catch {
-    await db
-      .update(payments)
-      .set({ status: "failed" })
-      .where(and(eq(payments.id, paymentId), eq(payments.status, "pending")));
+  } catch (error) {
+    const definitiveRejection = isDefinitiveCheckoutRejection(error);
+    if (definitiveRejection) {
+      await db
+        .update(payments)
+        .set({ status: "failed" })
+        .where(and(eq(payments.id, paymentId), eq(payments.status, "pending")));
+    }
     console.error(
       "DOKU checkout creation failed",
       JSON.stringify({
         paymentId,
         providerOrderId: orderId,
-        category: "provider_request_failed",
+        category: definitiveRejection
+          ? "provider_rejected"
+          : "provider_outcome_unknown",
       }),
     );
     return NextResponse.json(

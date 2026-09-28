@@ -171,4 +171,43 @@ describe("reconcilePendingDokuPayments", () => {
     expect(summary.truncated).toBe(true);
     expect(checkStatus).toHaveBeenCalledTimes(DOKU_RECONCILIATION_BATCH_SIZE);
   });
+
+  it("never runs more than five provider checks concurrently", async () => {
+    const candidates = Array.from({ length: 10 }, (_, index) =>
+      candidate(index),
+    );
+    const releases: Array<() => void> = [];
+    let active = 0;
+    let maximumActive = 0;
+    const checkStatus = vi.fn(async (invoiceNumber: string) => {
+      active += 1;
+      maximumActive = Math.max(maximumActive, active);
+      await new Promise<void>((resolve) => releases.push(resolve));
+      active -= 1;
+      return result(invoiceNumber, "PENDING");
+    });
+    const applyResult = vi.fn(async (paymentResult: DokuPaymentResult) =>
+      applied(paymentResult.invoiceNumber, "pending"),
+    );
+
+    const reconciliation = reconcilePendingDokuPayments({
+      loadCandidates: async () => candidates,
+      checkStatus,
+      applyResult,
+    });
+
+    await vi.waitFor(() => expect(checkStatus).toHaveBeenCalledTimes(5));
+    expect(maximumActive).toBe(5);
+    releases.splice(0).forEach((release) => release());
+
+    await vi.waitFor(() => expect(checkStatus).toHaveBeenCalledTimes(10));
+    expect(maximumActive).toBe(5);
+    releases.splice(0).forEach((release) => release());
+
+    await expect(reconciliation).resolves.toMatchObject({
+      selected: 10,
+      checked: 10,
+      errors: 0,
+    });
+  });
 });

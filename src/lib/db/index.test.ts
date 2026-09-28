@@ -11,7 +11,7 @@ vi.mock("drizzle-orm/postgres-js", async (importOriginal) => ({
   drizzle: mocks.drizzle,
 }));
 
-import { getDb } from "./index";
+import { db, getDb } from "./index";
 import {
   runWithInvocationContext,
   type NgaturiWorkerEnv,
@@ -35,6 +35,12 @@ beforeEach(() => {
 });
 
 describe("getDb", () => {
+  it("keeps adapter metadata probes lazy outside an invocation", () => {
+    expect((db as unknown as { _: unknown })._).toBeUndefined();
+    expect(mocks.postgres).not.toHaveBeenCalled();
+    expect(mocks.drizzle).not.toHaveBeenCalled();
+  });
+
   it("sets UTC on the Node development database session", () => {
     getDb();
 
@@ -84,5 +90,12 @@ describe("getDb", () => {
         connection: { TimeZone: "UTC" },
       },
     );
+  });
+
+  it("never falls back to DATABASE_URL inside a Worker invocation", () => {
+    expect(() => runWithInvocationContext({}, getDb)).toThrow(
+      "HYPERDRIVE binding is required in the Cloudflare Worker runtime",
+    );
+    expect(mocks.postgres).not.toHaveBeenCalled();
   });
 });

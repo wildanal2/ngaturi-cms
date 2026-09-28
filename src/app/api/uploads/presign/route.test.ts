@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getDb: vi.fn(),
   getSession: vi.fn(),
+  legacyPublicUrl: vi.fn(),
   presignPut: vi.fn(),
 }));
 
@@ -10,7 +11,7 @@ vi.mock("@/lib/db", () => ({ getDb: mocks.getDb }));
 vi.mock("@/lib/auth/helpers", () => ({ getSession: mocks.getSession }));
 vi.mock("@/lib/storage", () => ({
   presignPut: mocks.presignPut,
-  publicUrl: vi.fn((key: string) => `https://cdn.example/${key}`),
+  legacyPublicUrl: mocks.legacyPublicUrl,
 }));
 
 import { POST } from "./route";
@@ -42,6 +43,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.getSession.mockResolvedValue({ user: { id: "user-1" } });
   mocks.presignPut.mockResolvedValue("https://upload.example/signed");
+  mocks.legacyPublicUrl.mockImplementation(
+    (key: string) => `https://cdn.example/${key}`,
+  );
 });
 
 describe("presign entitlement enforcement", () => {
@@ -110,5 +114,9 @@ describe("presign entitlement enforcement", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.presignPut).toHaveBeenCalledOnce();
+    expect(mocks.legacyPublicUrl).toHaveBeenCalledOnce();
+    await expect(response.json()).resolves.toMatchObject({
+      publicUrl: expect.stringMatching(/^https:\/\/cdn\.example\//),
+    });
   });
 });

@@ -121,7 +121,13 @@ export default async function InvitationPage({
         .where(eq(invitations.id, inv.id));
       if (guest) await markGuestOpened(guest.id);
     } catch {
-      /* noop */
+      console.warn(
+        "Public invitation analytics failed",
+        JSON.stringify({
+          invitationId: inv.id,
+          category: "background_write_failed",
+        }),
+      );
     }
   });
 

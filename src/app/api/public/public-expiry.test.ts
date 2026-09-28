@@ -184,6 +184,44 @@ describe("public submission expiry enforcement", () => {
     await expect(response.json()).resolves.toEqual({ ok: true });
   });
 
+  it("uses Cloudflare's client IP for guestbook rate limiting", async () => {
+    mocks.headers.mockResolvedValue(
+      new Headers({
+        "cf-connecting-ip": "203.0.113.10",
+        "x-forwarded-for": "198.51.100.1",
+      }),
+    );
+    mocks.rateLimit.mockResolvedValue(false);
+
+    const response = await postGuestbook(
+      new Request("http://localhost/api/public/invitation-1/guestbook", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      }),
+      context(),
+    );
+
+    expect(response.status).toBe(429);
+    expect(mocks.rateLimit).toHaveBeenCalledWith("gb:203.0.113.10", 5, 60);
+  });
+
+  it("does not bypass RSVP rate limiting when Redis fails", async () => {
+    mocks.rateLimit.mockRejectedValue(new Error("redis unavailable"));
+
+    await expect(
+      postRsvp(
+        new Request("http://localhost/api/public/invitation-1/rsvp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        }),
+        context(),
+      ),
+    ).rejects.toThrow("redis unavailable");
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
   it("rejects guestbook submission for an expired published invitation", async () => {
     selectedInvitation({
       status: "published",

@@ -26,6 +26,7 @@ const schema = z.object({
   AWS_REGION: z.string().default("auto"),
   S3_BUCKET: z.string().min(1),
   S3_PUBLIC_URL: z.url(),
+  R2_PUBLIC_URL: z.url().optional(),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(10),
 
   BETTER_AUTH_SECRET: z.string().min(1),
@@ -40,15 +41,15 @@ const schema = z.object({
   TURNSTILE_SECRET_KEY: z.string().optional(),
   DOKU_CLIENT_ID: z.string().optional(),
   DOKU_SECRET_KEY: z.string().optional(),
-  DOKU_BASE_URL: z.string().default("https://api-sandbox.doku.com"),
-  DOKU_CALLBACK_URL: z.string().optional(),
+  DOKU_BASE_URL: z.url().default("https://api-sandbox.doku.com"),
+  DOKU_CALLBACK_URL: z.url().optional(),
   JAMENDO_CLIENT_ID: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
 });
 
-const completeRedisRestCredentials = schema.superRefine((value, ctx) => {
+const validatedConfiguration = schema.superRefine((value, ctx) => {
   if (Boolean(value.REDIS_REST_URL) !== Boolean(value.REDIS_REST_TOKEN)) {
     ctx.addIssue({
       code: "custom",
@@ -57,9 +58,19 @@ const completeRedisRestCredentials = schema.superRefine((value, ctx) => {
         "Cloudflare Worker Redis requires REDIS_REST_URL and REDIS_REST_TOKEN together",
     });
   }
+  if (value.R2_PUBLIC_URL) {
+    const hostname = new URL(value.R2_PUBLIC_URL).hostname.toLowerCase();
+    if (hostname === "r2.dev" || hostname.endsWith(".r2.dev")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["R2_PUBLIC_URL"],
+        message: "R2_PUBLIC_URL must use an R2 custom domain, not r2.dev",
+      });
+    }
+  }
 });
 
-const parsed = completeRedisRestCredentials.safeParse(process.env);
+const parsed = validatedConfiguration.safeParse(process.env);
 
 if (!parsed.success) {
   console.error(

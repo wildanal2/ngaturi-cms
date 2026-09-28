@@ -30,18 +30,27 @@ this document passes.
 Application/data caches are intentionally not configured. Create Hyperdrive
 with query caching disabled for the first staging cycle.
 
-## Provision staging
+## Phase 0 configuration boundary
 
-1. Create a non-production R2 bucket named `ngaturi-staging-media` (or update
-   `wrangler.jsonc` to the chosen staging bucket).
-2. Create a Hyperdrive configuration against the staging PostgreSQL database
-   with caching disabled and replace `replace-with-hyperdrive-id` in
-   `wrangler.jsonc`.
-3. Configure the applicable Worker text bindings/secrets from `.env.example`.
+`wrangler.jsonc` is intentionally a build/local compatibility configuration.
+It contains no staging or production Hyperdrive ID, R2 bucket, Cron Trigger, or
+external resource identifier and must not be deployed as a production config.
+The Worker entry fails closed when a required binding or Redis REST setting is
+missing.
+
+Resource provisioning belongs to a later phase. Once real resources exist:
+
+1. Keep staging and production in separate Wrangler configurations and Workers.
+   Do not copy a staging resource identifier into production.
+2. Add the real `HYPERDRIVE` and `MEDIA_BUCKET` bindings to the applicable
+   environment-specific configuration. Do not commit a placeholder ID.
+3. Configure the applicable Worker variables/secrets from `.env.example`.
    `DATABASE_URL` is only for Node development/migrations; Workers use the
    Hyperdrive binding. Provide `REDIS_REST_URL` and `REDIS_REST_TOKEN`; do not
-   use the former TCP `REDIS_URL`.
-4. Configure the R2 S3 endpoint, bucket, public URL, and scoped R2 API token.
+   use the former TCP `REDIS_URL`. Set `R2_PUBLIC_URL` to the staging R2 Custom
+   Domain while retaining `S3_PUBLIC_URL` for legacy media.
+4. Configure the R2 S3 endpoint, bucket, public URL, and scoped R2 API token
+   only if presigned uploads remain enabled.
    These credentials are used only to sign direct browser uploads; Worker-side
    uploads use the R2 binding.
 5. Set Google OAuth's authorized redirect URI and Better Auth URLs to the
@@ -54,13 +63,18 @@ with query caching disabled for the first staging cycle.
    npm run build:vinext
    ```
 
-For local Wrangler, keep credentials outside source control and map a local
-database to Hyperdrive:
+The complete environment ownership and rollback rules are in
+`docs/phase-0-production-safety.md`.
 
-```sh
-export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE='postgres://...'
-npm run start:vinext
-```
+The locally validated Node/Worker behavior matrix, background-work limits, and
+bundle baseline are in `docs/phase-1-worker-runtime-equivalence.md`.
+
+The Neon direct-endpoint contract, cache-disabled Hyperdrive requirement,
+controlled migration procedure, and transaction staging gates are in
+`docs/phase-2-neon-hyperdrive.md`.
+
+The R2 binding, custom-domain origin, legacy URL coexistence, and media-copy
+verification procedure are in `docs/phase-3-r2-migration.md`.
 
 ## Required staging gates
 

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   checkOrderStatus,
   createCheckout,
+  isDefinitiveCheckoutRejection,
   mapStatus,
   sanitizeText,
   verifyNotificationSignature,
@@ -19,12 +20,13 @@ const TEST_DOKU = {
 };
 
 function signedDokuResponse(
-  payload: object,
+  payload: object | string,
   init: RequestInit,
   target: string,
   includeDigest: boolean,
+  status = 200,
 ) {
-  const raw = JSON.stringify(payload);
+  const raw = typeof payload === "string" ? payload : JSON.stringify(payload);
   const requestHeaders = init.headers as Record<string, string>;
   const responseTimestamp = "2026-09-21T07:00:00Z";
   const parts = [
@@ -40,6 +42,7 @@ function signedDokuResponse(
     .update(parts.join("\n"))
     .digest("base64")}`;
   return new Response(raw, {
+    status,
     headers: {
       "Client-Id": TEST_DOKU.clientId,
       "Request-Id": requestHeaders["Request-Id"],
@@ -169,7 +172,91 @@ describe("DOKU protocol validation", () => {
       ),
     );
 
-    await expect(
+    const result = createCheckout(
+      {
+        orderId: "NGUNL-test",
+        amount: 49_000,
+        itemName: "Basic",
+        customer: {},
+        callbackUrl: "https://example.com/payment/callback",
+      },
+      TEST_DOKU,
+    );
+    await expect(result).rejects.toThrow("did not match");
+    await expect(result).rejects.toMatchObject({ outcome: "unknown" });
+  });
+
+  it("classifies an authenticated provider rejection as definitive", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((_url, init: RequestInit) =>
+          Promise.resolve(
+            signedDokuResponse(
+              { error: { code: "ORDER_REJECTED" } },
+              init,
+              "/checkout/v1/payment",
+              true,
+              422,
+            ),
+          ),
+        ),
+    );
+
+    const result = createCheckout(
+      {
+        orderId: "NGUNL-test",
+        amount: 49_000,
+        itemName: "Basic",
+        customer: {},
+        callbackUrl: "https://example.com/payment/callback",
+      },
+      TEST_DOKU,
+    );
+    await expect(result).rejects.toMatchObject({ outcome: "rejected" });
+    await result.catch((error) => {
+      expect(isDefinitiveCheckoutRejection(error)).toBe(true);
+    });
+  });
+
+  it.each([409, 429, 503])(
+    "keeps an authenticated HTTP %s response ambiguous",
+    async (status) => {
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockImplementation((_url, init: RequestInit) =>
+            Promise.resolve(
+              signedDokuResponse(
+                { error: { code: "INTERNAL_ERROR" } },
+                init,
+                "/checkout/v1/payment",
+                true,
+                status,
+              ),
+            ),
+          ),
+      );
+
+      await expect(
+        createCheckout(
+          {
+            orderId: "NGUNL-test",
+            amount: 49_000,
+            itemName: "Basic",
+            customer: {},
+            callbackUrl: "https://example.com/payment/callback",
+          },
+          TEST_DOKU,
+        ),
+      ).rejects.toMatchObject({ outcome: "unknown" });
+    },
+  );
+
+  it("keeps network, malformed, and untrusted checkout outcomes ambiguous", async () => {
+    const checkout = () =>
       createCheckout(
         {
           orderId: "NGUNL-test",
@@ -179,8 +266,39 @@ describe("DOKU protocol validation", () => {
           callbackUrl: "https://example.com/payment/callback",
         },
         TEST_DOKU,
-      ),
-    ).rejects.toThrow("did not match");
+      );
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("timeout")));
+    await checkout().catch((error) => {
+      expect(isDefinitiveCheckoutRejection(error)).toBe(false);
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockImplementation((_url, init: RequestInit) =>
+          Promise.resolve(
+            signedDokuResponse("not-json", init, "/checkout/v1/payment", true),
+          ),
+        ),
+    );
+    await expect(checkout()).rejects.toMatchObject({ outcome: "unknown" });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((_url, init: RequestInit) => {
+        const response = signedDokuResponse(
+          { response: {} },
+          init,
+          "/checkout/v1/payment",
+          true,
+        );
+        response.headers.set("Signature", "HMACSHA256=untrusted");
+        return Promise.resolve(response);
+      }),
+    );
+    await expect(checkout()).rejects.toMatchObject({ outcome: "unknown" });
   });
 
   it("validates invoice and amount in status-query responses", async () => {

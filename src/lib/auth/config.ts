@@ -26,7 +26,7 @@ export const auth = betterAuth({
     set: (key, value, ttl) => redis.set(key, value, ttl),
     delete: (key) => redis.delete(key),
     getAndDelete: (key) => redis.getAndDelete(key),
-    increment: (key) => redis.increment(key),
+    increment: (key, ttl) => redis.incrementWithTtl(key, ttl),
   },
 
   emailAndPassword: { enabled: false },
@@ -60,8 +60,21 @@ export const auth = betterAuth({
     },
   },
 
+  rateLimit: {
+    enabled: env.NODE_ENV === "production",
+    storage: "secondary-storage",
+  },
+
   advanced: {
     useSecureCookies: env.NODE_ENV === "production",
+    // OAuth/callback URLs come from the canonical static baseURL. Do not let
+    // client-controlled forwarded headers redefine the authentication origin.
+    trustedProxyHeaders: false,
+    ipAddress: {
+      // Cloudflare supplies CF-Connecting-IP at the Worker boundary. Keep the
+      // standard header as the Node/local fallback.
+      ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
+    },
     defaultCookieAttributes: {
       sameSite: "lax",
       path: "/",

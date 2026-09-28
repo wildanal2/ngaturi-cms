@@ -39,9 +39,13 @@ export interface ImagesTransform {
 }
 
 export interface NgaturiWorkerEnv {
-  HYPERDRIVE: HyperdriveBinding;
-  MEDIA_BUCKET: R2BucketBinding;
-  IMAGES: ImagesBinding;
+  HYPERDRIVE?: HyperdriveBinding;
+  MEDIA_BUCKET?: R2BucketBinding;
+  IMAGES?: ImagesBinding;
+  ASSETS?: { fetch(request: Request): Promise<Response> };
+  R2_PUBLIC_URL?: string;
+  REDIS_REST_URL?: string;
+  REDIS_REST_TOKEN?: string;
   [key: string]: unknown;
 }
 
@@ -51,6 +55,44 @@ interface InvocationContext {
 }
 
 const invocationStorage = new AsyncLocalStorage<InvocationContext>();
+
+function isR2CustomDomain(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+    return (
+      url.protocol === "https:" &&
+      hostname !== "r2.dev" &&
+      !hostname.endsWith(".r2.dev")
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Fail closed before application code runs with an incomplete Worker setup. */
+export function assertWorkerRuntimeContract(env: NgaturiWorkerEnv): void {
+  const missing: string[] = [];
+  if (!env.HYPERDRIVE?.connectionString) missing.push("HYPERDRIVE");
+  if (!env.MEDIA_BUCKET) missing.push("MEDIA_BUCKET");
+  if (!env.R2_PUBLIC_URL) missing.push("R2_PUBLIC_URL");
+  if (!env.IMAGES) missing.push("IMAGES");
+  if (!env.ASSETS) missing.push("ASSETS");
+  if (!env.REDIS_REST_URL) missing.push("REDIS_REST_URL");
+  if (!env.REDIS_REST_TOKEN) missing.push("REDIS_REST_TOKEN");
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Worker runtime configuration is incomplete; missing: ${missing.join(", ")}`,
+    );
+  }
+
+  if (!isR2CustomDomain(env.R2_PUBLIC_URL!)) {
+    throw new Error(
+      "Worker runtime configuration is invalid; R2_PUBLIC_URL must be an HTTPS R2 custom domain",
+    );
+  }
+}
 
 /** Run application work with bindings that belong to one Worker invocation. */
 export function runWithInvocationContext<T>(

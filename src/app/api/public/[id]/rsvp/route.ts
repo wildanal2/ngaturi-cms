@@ -24,7 +24,10 @@ export async function POST(
 ) {
   const { id } = await params;
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const ip =
+    h.get("cf-connecting-ip")?.trim() ||
+    (h.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
+    "unknown";
 
   if (!(await rateLimit(`rsvp:${ip}`, 5, 60))) {
     return NextResponse.json(

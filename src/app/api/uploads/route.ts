@@ -117,6 +117,17 @@ export async function POST(req: Request) {
     }
   }
 
+  const images = getWorkerEnv()?.IMAGES;
+  if (!images) {
+    return NextResponse.json(
+      {
+        error: "Pemrosesan gambar hanya tersedia di runtime Cloudflare Worker.",
+        code: "image_processing_unavailable",
+      },
+      { status: 503 },
+    );
+  }
+
   let crop: { x: number; y: number; width: number; height: number } | null =
     null;
   if (typeof cropRaw === "string" && cropRaw) {
@@ -148,9 +159,6 @@ export async function POST(req: Request) {
       if (!r.ok) throw new Error("source fetch failed");
       input = await r.arrayBuffer();
     }
-
-    const images = getWorkerEnv()?.IMAGES;
-    if (!images) throw new Error("Cloudflare Images binding is unavailable");
 
     const original = await images.info(imageStream(input));
     let pipeline = images.input(imageStream(input));

@@ -28,8 +28,12 @@ npm run demo:showcase          # (opsional) undangan contoh utk landing
 npm run dev
 ```
 
+`db:migrate` hanya boleh dijalankan oleh satu proses/operator terkontrol.
+`db:push` hanya untuk database lokal disposable, bukan staging atau Production.
+
 Google Console → Authorized redirect URI:
-`http://localhost:3000/api/auth/callback/google` (+ URL produksi)
+`http://localhost:3030/api/auth/callback/google` (+ exact staging/production
+URLs in `docs/phase-4-integration-readiness.md`)
 
 ---
 
@@ -316,11 +320,25 @@ Template = preset section + palet, di `src/lib/templates/catalog.ts`:
   rekonsiliasi DOKU; file tersebut bukan konfigurasi scheduler Production.
 - Rincian alur pembayaran, bukti Sandbox, strategi secret, dan batas migrasi ada
   di [`docs/doku-production-readiness.md`](docs/doku-production-readiness.md).
+- Kontrak Phase 0 untuk environment, Node rollback, migrasi, storage, dan backup
+  ada di [`docs/phase-0-production-safety.md`](docs/phase-0-production-safety.md).
+- Bukti lokal Phase 1 untuk equivalence Node/Worker, background work, scheduled
+  reconciliation, dan baseline bundle ada di
+  [`docs/phase-1-worker-runtime-equivalence.md`](docs/phase-1-worker-runtime-equivalence.md).
+- Kontrak Phase 2 untuk Neon direct endpoint, Hyperdrive tanpa query cache,
+  migrasi terkontrol, dan verifikasi transaksi staging ada di
+  [`docs/phase-2-neon-hyperdrive.md`](docs/phase-2-neon-hyperdrive.md).
+- Kontrak Phase 3 untuk R2, coexistence URL media lama/baru, dan verifikasi
+  integritas migrasi ada di
+  [`docs/phase-3-r2-migration.md`](docs/phase-3-r2-migration.md).
+- Kontrak Phase 4 untuk account-state authorization, OAuth/cookie origins,
+  Redis REST, DOKU Worker behavior, dan checklist staging ada di
+  [`docs/phase-4-integration-readiness.md`](docs/phase-4-integration-readiness.md).
 
 ## Scripts
 
 `dev` · `build` · `start` · `typecheck` · `lint` · `format`
-`db:generate` · `db:migrate` · `db:push` · `db:seed` · `db:studio` · `demo:showcase`
+`db:check` · `db:generate` · `db:migrate` · `db:push` · `db:seed` · `db:studio` · `demo:showcase`
 
 ## Struktur
 

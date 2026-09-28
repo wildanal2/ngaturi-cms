@@ -56,10 +56,26 @@ const SATORI_PNG_ASSETS: Record<string, string> = {
 export function cardImageUrl(
   value: string | undefined,
   origin: string,
-  trustedExternalPrefix?: string,
+  trustedExternalPrefixes: string | readonly string[] = [],
 ): string | undefined {
   if (!value) return undefined;
   const source = SATORI_PNG_ASSETS[value] ?? value;
   if (source.startsWith("/")) return new URL(source, origin).toString();
-  return trustedExternalPrefix && source.startsWith(trustedExternalPrefix) ? source : undefined;
+  const prefixes =
+    typeof trustedExternalPrefixes === "string"
+      ? [trustedExternalPrefixes]
+      : trustedExternalPrefixes;
+  try {
+    const candidate = new URL(source);
+    const trusted = prefixes.some((prefix) => {
+      const base = new URL(`${prefix.replace(/\/$/, "")}/`);
+      return (
+        candidate.origin === base.origin &&
+        candidate.pathname.startsWith(base.pathname)
+      );
+    });
+    return trusted ? source : undefined;
+  } catch {
+    return undefined;
+  }
 }

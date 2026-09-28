@@ -5,7 +5,7 @@ import {
   invitationSummary,
 } from "@/lib/invitation/query";
 import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
-import { env } from "@/lib/env";
+import { trustedPublicMediaPrefixes } from "@/lib/storage";
 import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
 
 export const alt = "Undangan";
@@ -61,17 +61,29 @@ export default async function OgImage({
         year: "numeric",
       })
     : "";
-  const cdn = env.S3_PUBLIC_URL.replace(/\/$/, "");
+  const mediaPrefixes = trustedPublicMediaPrefixes();
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
   const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
   const origin = host ? `${protocol}://${host}` : SITE_URL;
   const visual = getCardVisual(inv?.sections ?? []);
-  const photo = cardImageUrl(visual.background ?? summary?.photo ?? undefined, origin, cdn);
-  const foreground = cardImageUrl(visual.foreground, origin, cdn);
-  const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin, cdn);
-  const ornamentRight = cardImageUrl(visual.ornamentRight, origin, cdn);
-  const seal = cardImageUrl(visual.seal, origin, cdn);
+  const photo = cardImageUrl(
+    visual.background ?? summary?.photo ?? undefined,
+    origin,
+    mediaPrefixes,
+  );
+  const foreground = cardImageUrl(visual.foreground, origin, mediaPrefixes);
+  const ornamentLeft = cardImageUrl(
+    visual.ornamentLeft,
+    origin,
+    mediaPrefixes,
+  );
+  const ornamentRight = cardImageUrl(
+    visual.ornamentRight,
+    origin,
+    mediaPrefixes,
+  );
+  const seal = cardImageUrl(visual.seal, origin, mediaPrefixes);
 
   try {
     return new ImageResponse(

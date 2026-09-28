@@ -29,19 +29,69 @@ function signingClient(): AwsClient {
   });
 }
 
-/** Public URL for an object key (the bucket/custom domain must be public). */
+function joinPublicUrl(base: string, key: string): string {
+  return `${base.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
+}
+
+function r2PublicUrl(): string | undefined {
+  const workerEnv = getWorkerEnv();
+  return workerEnv ? workerEnv.R2_PUBLIC_URL : env.R2_PUBLIC_URL;
+}
+
+function requireR2PublicUrl(): string {
+  const base = r2PublicUrl();
+  if (!base) {
+    throw new Error(
+      "R2_PUBLIC_URL is required in the Cloudflare Worker runtime",
+    );
+  }
+  let url: URL;
+  try {
+    url = new URL(base);
+  } catch {
+    throw new Error("R2_PUBLIC_URL must use an HTTPS R2 custom domain");
+  }
+  const hostname = url.hostname.toLowerCase();
+  if (
+    url.protocol !== "https:" ||
+    hostname === "r2.dev" ||
+    hostname.endsWith(".r2.dev")
+  ) {
+    throw new Error("R2_PUBLIC_URL must use an HTTPS R2 custom domain");
+  }
+  return base;
+}
+
+/** Public URL matching the storage target used by the current runtime. */
 export function publicUrl(key: string): string {
-  return `${env.S3_PUBLIC_URL.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
+  if (getWorkerEnv()) {
+    return joinPublicUrl(requireR2PublicUrl(), key);
+  }
+  return legacyPublicUrl(key);
+}
+
+/** Public URL for an object written through the legacy S3-compatible path. */
+export function legacyPublicUrl(key: string): string {
+  return joinPublicUrl(env.S3_PUBLIC_URL, key);
+}
+
+/** Configured media prefixes that remain readable during the migration. */
+export function trustedPublicMediaPrefixes(): string[] {
+  return [
+    ...new Set([env.S3_PUBLIC_URL, r2PublicUrl()].filter(Boolean)),
+  ] as string[];
 }
 
 export function isTrustedPublicUrl(value: string): boolean {
   try {
     const candidate = new URL(value);
-    const base = new URL(`${env.S3_PUBLIC_URL.replace(/\/$/, "")}/`);
-    return (
-      candidate.origin === base.origin &&
-      candidate.pathname.startsWith(base.pathname)
-    );
+    return trustedPublicMediaPrefixes().some((prefix) => {
+      const base = new URL(`${prefix.replace(/\/$/, "")}/`);
+      return (
+        candidate.origin === base.origin &&
+        candidate.pathname.startsWith(base.pathname)
+      );
+    });
   } catch {
     return false;
   }
@@ -54,8 +104,14 @@ export async function putObject({
   contentType,
   cacheControl,
 }: PutObjectInput): Promise<void> {
-  const bucket = getWorkerEnv()?.MEDIA_BUCKET;
-  if (bucket) {
+  const workerEnv = getWorkerEnv();
+  if (workerEnv) {
+    const bucket = workerEnv.MEDIA_BUCKET;
+    if (!bucket) {
+      throw new Error(
+        "MEDIA_BUCKET binding is required in the Cloudflare Worker runtime",
+      );
+    }
     await bucket.put(key, body, {
       httpMetadata: { contentType, cacheControl },
     });
