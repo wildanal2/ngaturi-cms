@@ -1,8 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // Build/local compatibility config only. Phase 0 intentionally commits no
-  // staging or production resource identifiers. See docs/phase-0-production-safety.md.
-  "name": "ngaturi-worker-build",
+  // Isolated DEV Worker. Keep production resources in a separate configuration.
+  "name": "ngaturi-dev",
+  "workers_dev": true,
   "compatibility_date": "2026-09-22",
   "compatibility_flags": ["nodejs_compat"],
   "main": "worker/index.ts",
@@ -14,6 +14,18 @@
   "images": {
     "binding": "IMAGES",
   },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "183f3bd040ee44c4bb966feb0801644d",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "ngaturi-media-dev",
+    },
+  ],
   "observability": {
     "enabled": true,
   },
