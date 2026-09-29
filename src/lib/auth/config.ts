@@ -6,6 +6,10 @@ import * as schema from "@/lib/db/schema";
 import { redis } from "@/lib/redis";
 import { env } from "@/lib/env";
 
+const secureAuthOrigin =
+  env.NODE_ENV === "production" ||
+  new URL(env.BETTER_AUTH_URL).protocol === "https:";
+
 /**
  * Better Auth — Google OAuth ONLY (no email/password).
  * Sessions disimpan di Redis (secondaryStorage).
@@ -61,12 +65,12 @@ export const auth = betterAuth({
   },
 
   rateLimit: {
-    enabled: env.NODE_ENV === "production",
+    enabled: secureAuthOrigin,
     storage: "secondary-storage",
   },
 
   advanced: {
-    useSecureCookies: env.NODE_ENV === "production",
+    useSecureCookies: secureAuthOrigin,
     // OAuth/callback URLs come from the canonical static baseURL. Do not let
     // client-controlled forwarded headers redefine the authentication origin.
     trustedProxyHeaders: false,

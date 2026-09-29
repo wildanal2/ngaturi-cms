@@ -58,6 +58,7 @@ describe("Better Auth runtime initialization", () => {
       };
       rateLimit: { enabled: boolean; storage: string };
       advanced: {
+        useSecureCookies: boolean;
         trustedProxyHeaders: boolean;
         ipAddress: { ipAddressHeaders: string[] };
         defaultCookieAttributes: { sameSite: string; path: string };
@@ -75,11 +76,42 @@ describe("Better Auth runtime initialization", () => {
     expect(options.baseURL).toBe("http://localhost:3030");
     expect(options.trustedOrigins).toEqual(["http://localhost:3030"]);
     expect(options.advanced).toMatchObject({
+      useSecureCookies: false,
       trustedProxyHeaders: false,
       ipAddress: {
         ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
       },
       defaultCookieAttributes: { sameSite: "lax", path: "/" },
     });
+  });
+
+  it("secures cookies and enables Redis rate limiting on the HTTPS DEV origin", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/env", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@/lib/env")>();
+      return {
+        env: {
+          ...actual.env,
+          NODE_ENV: "development",
+          BETTER_AUTH_URL: "https://ngaturi-dev.kulongaturi.workers.dev",
+          NEXT_PUBLIC_APP_URL: "https://ngaturi-dev.kulongaturi.workers.dev",
+        },
+      };
+    });
+
+    try {
+      await import("./config");
+      const options = mocks.betterAuth.mock.calls[0]?.[0] as {
+        rateLimit: { enabled: boolean; storage: string };
+        advanced: { useSecureCookies: boolean };
+      };
+      expect(options.rateLimit).toEqual({
+        enabled: true,
+        storage: "secondary-storage",
+      });
+      expect(options.advanced.useSecureCookies).toBe(true);
+    } finally {
+      vi.doUnmock("@/lib/env");
+    }
   });
 });
