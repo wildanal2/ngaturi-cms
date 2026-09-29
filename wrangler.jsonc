@@ -2,7 +2,14 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // Isolated DEV Worker. Keep production resources in a separate configuration.
   "name": "ngaturi-dev",
-  "workers_dev": true,
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "dev.ngaturi.com",
+      "custom_domain": true,
+      "zone_name": "ngaturi.com",
+    },
+  ],
   "compatibility_date": "2026-09-22",
   "compatibility_flags": ["nodejs_compat"],
   "main": "worker/index.ts",

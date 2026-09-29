@@ -93,8 +93,8 @@ describe("Better Auth runtime initialization", () => {
         env: {
           ...actual.env,
           NODE_ENV: "development",
-          BETTER_AUTH_URL: "https://ngaturi-dev.kulongaturi.workers.dev",
-          NEXT_PUBLIC_APP_URL: "https://ngaturi-dev.kulongaturi.workers.dev",
+          BETTER_AUTH_URL: "https://dev.ngaturi.com",
+          NEXT_PUBLIC_APP_URL: "https://dev.ngaturi.com",
         },
       };
     });
@@ -110,6 +110,9 @@ describe("Better Auth runtime initialization", () => {
         storage: "secondary-storage",
       });
       expect(options.advanced.useSecureCookies).toBe(true);
+      expect(mocks.betterAuth.mock.calls[0]?.[0].trustedOrigins).toEqual([
+        "https://dev.ngaturi.com",
+      ]);
     } finally {
       vi.doUnmock("@/lib/env");
     }

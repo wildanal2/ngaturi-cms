@@ -85,9 +85,7 @@ export const auth = betterAuth({
     },
   },
 
-  trustedOrigins: [env.BETTER_AUTH_URL, env.NEXT_PUBLIC_APP_URL].filter(
-    (v, i, a) => v && a.indexOf(v) === i,
-  ),
+  trustedOrigins: [new URL(env.BETTER_AUTH_URL).origin],
 
   databaseHooks: {
     user: {
