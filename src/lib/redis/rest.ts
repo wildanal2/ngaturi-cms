@@ -13,7 +13,7 @@ export function createRedisRestAdapter(config: RedisRestConfig): RedisStore {
   function client(): Redis {
     if (!config.url || !config.token) {
       throw new Error(
-        "Redis REST is not configured for the Cloudflare Worker runtime; set REDIS_REST_URL and REDIS_REST_TOKEN",
+        "Redis REST is not configured; set REDIS_REST_URL and REDIS_REST_TOKEN",
       );
     }
 

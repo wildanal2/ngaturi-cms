@@ -70,7 +70,9 @@ export function publicUrl(key: string): string {
   return legacyPublicUrl(key);
 }
 
-/** Public URL for an object written through the legacy S3-compatible path. */
+/** Public URL for signed S3 writes (R2 in the primary Node configuration).
+ * Kept as an alias for the existing presign route.
+ */
 export function legacyPublicUrl(key: string): string {
   return joinPublicUrl(env.S3_PUBLIC_URL, key);
 }
@@ -78,7 +80,13 @@ export function legacyPublicUrl(key: string): string {
 /** Configured media prefixes that remain readable during the migration. */
 export function trustedPublicMediaPrefixes(): string[] {
   return [
-    ...new Set([env.S3_PUBLIC_URL, r2PublicUrl()].filter(Boolean)),
+    ...new Set(
+      [
+        env.S3_PUBLIC_URL,
+        r2PublicUrl(),
+        ...env.LEGACY_MEDIA_PUBLIC_URLS,
+      ].filter(Boolean),
+    ),
   ] as string[];
 }
 

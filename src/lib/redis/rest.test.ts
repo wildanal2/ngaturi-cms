@@ -32,11 +32,11 @@ beforeEach(() => {
 });
 
 describe("Redis REST adapter", () => {
-  it("requires the Worker REST configuration without falling back", () => {
+  it("requires the REST configuration without falling back", () => {
     const redis = createRedisRestAdapter({});
 
     expect(() => redis.get("key")).toThrow(
-      "Redis REST is not configured for the Cloudflare Worker runtime; set REDIS_REST_URL and REDIS_REST_TOKEN",
+      "Redis REST is not configured; set REDIS_REST_URL and REDIS_REST_TOKEN",
     );
   });
 

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runWithInvocationContext } from "@/lib/runtime/context";
+import { env } from "@/lib/env";
 import {
   isTrustedPublicUrl,
   legacyPublicUrl,
@@ -12,7 +13,56 @@ afterEach(() => {
 });
 
 describe("public media origins", () => {
+  it("targets R2 using the existing signed Node transport and configured public domain", async () => {
+    const original = {
+      AWS_ENDPOINT_URL_S3: env.AWS_ENDPOINT_URL_S3,
+      S3_BUCKET: env.S3_BUCKET,
+      S3_PUBLIC_URL: env.S3_PUBLIC_URL,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    Object.assign(env, {
+      AWS_ENDPOINT_URL_S3: "https://example.r2.cloudflarestorage.com",
+      S3_BUCKET: "dev-fixture",
+      S3_PUBLIC_URL: "https://media.example.com",
+    });
+    try {
+      const key = "invitations/test/audio/fixture.wav";
+      await putObject({
+        key,
+        body: new Uint8Array([1, 2]),
+        contentType: "audio/wav",
+      });
+      const request = fetchMock.mock.calls[0][0] as Request;
+      expect(request.url).toBe(
+        `https://example.r2.cloudflarestorage.com/dev-fixture/${key}`,
+      );
+      expect(request.headers.get("authorization")).toMatch(
+        /^AWS4-HMAC-SHA256 /,
+      );
+      expect(publicUrl(key)).toBe(`https://media.example.com/${key}`);
+      expect(
+        isTrustedPublicUrl("https://legacy.example.com/media/old.webp"),
+      ).toBe(true);
+    } finally {
+      Object.assign(env, original);
+    }
+  });
+
   it("accepts the legacy and R2 custom-domain origins", () => {
+    expect(
+      isTrustedPublicUrl("https://legacy.example.com/media/photo.webp"),
+    ).toBe(true);
+    expect(
+      isTrustedPublicUrl("https://legacy.example.com/media-other/photo.webp"),
+    ).toBe(false);
+    expect(
+      isTrustedPublicUrl(
+        "https://legacy.example.com.evil.test/media/photo.webp",
+      ),
+    ).toBe(false);
     expect(isTrustedPublicUrl("https://cdn.example.com/photo.webp")).toBe(true);
     expect(isTrustedPublicUrl("https://media.example.com/photo.webp")).toBe(
       true,
@@ -25,7 +75,7 @@ describe("public media origins", () => {
     ).toBe(false);
   });
 
-  it("keeps Node URLs on the legacy origin", () => {
+  it("uses the configured S3 public origin for Node and presigned writes", () => {
     expect(publicUrl("invitations/test/audio.mp3")).toBe(
       "https://cdn.example.com/invitations/test/audio.mp3",
     );

@@ -33,6 +33,12 @@ function getNodeDatabase(): Database {
   if (!globalThis.__pgClient) {
     globalThis.__pgClient = postgres(env.DATABASE_URL, {
       max: env.DATABASE_POOL_SIZE,
+      // Explicit options override sslmode=require, which disables certificate
+      // verification in Postgres.js. Keep Node's default hostname verification.
+      ssl: { rejectUnauthorized: true },
+      connect_timeout: 10,
+      idle_timeout: 20,
+      max_lifetime: 300,
       connection: { TimeZone: "UTC" },
     });
   }
@@ -46,7 +52,7 @@ function getNodeDatabase(): Database {
  * Resolve the database for the current runtime.
  *
  * Workers get one Postgres.js/Drizzle instance per invocation through
- * Hyperdrive. Node development and scripts retain their process-local pool.
+ * Hyperdrive. Node and scripts retain their verified-TLS process-local pool.
  */
 export function getDb(): Database {
   const workerEnv = getWorkerEnv();

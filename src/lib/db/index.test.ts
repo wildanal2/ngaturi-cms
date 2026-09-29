@@ -41,16 +41,36 @@ describe("getDb", () => {
     expect(mocks.drizzle).not.toHaveBeenCalled();
   });
 
-  it("sets UTC on the Node development database session", () => {
+  it("uses a bounded process-wide Node pool with verified TLS and UTC", () => {
     getDb();
+    getDb();
+    expect(mocks.postgres).toHaveBeenCalledOnce();
 
     expect(mocks.postgres).toHaveBeenCalledWith(
       "postgres://user:pass@localhost:5432/test",
       {
-        max: 10,
+        max: 5,
+        ssl: { rejectUnauthorized: true },
+        connect_timeout: 10,
+        idle_timeout: 20,
+        max_lifetime: 300,
         connection: { TimeZone: "UTC" },
       },
     );
+  });
+
+  it("overrides a URL that disables TLS verification in the real driver", async () => {
+    getDb();
+    const { default: postgres } = await vi.importActual<{
+      default: typeof import("postgres");
+    }>("postgres");
+    const client = postgres(
+      "postgres://user:pass@localhost/test?sslmode=require",
+      mocks.postgres.mock.calls[0][1],
+    );
+    expect(client.options.ssl).toEqual({ rejectUnauthorized: true });
+    expect(client.options.max).toBe(5);
+    await client.end();
   });
 
   it("creates one max-five Hyperdrive client per Worker invocation", async () => {
