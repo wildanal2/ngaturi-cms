@@ -60,6 +60,23 @@ describe("Better Auth route wiring", () => {
     await expect(forwarded.json()).resolves.toEqual({ provider: "google" });
   });
 
+  it("accepts a wrapped Next request without copying its private state", async () => {
+    mocks.post.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    const source = new Request(
+      "https://dev.ngaturi.com/api/auth/sign-in/social",
+      { method: "POST", body: JSON.stringify({ provider: "google" }) },
+    );
+    const wrapped = new Proxy(source, {
+      get(target, key) {
+        return Reflect.get(target, key, target);
+      },
+    });
+
+    await POST(wrapped);
+    const forwarded = mocks.post.mock.calls.at(-1)?.[0] as Request;
+    await expect(forwarded.json()).resolves.toEqual({ provider: "google" });
+  });
+
   it("passes the verified Cloudflare IP to Better Auth in a Worker invocation", async () => {
     mocks.get.mockResolvedValueOnce(new Response(null, { status: 200 }));
     const req = new Request("https://dev.ngaturi.com/api/auth/get-session", {
