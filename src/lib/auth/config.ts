@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { redis } from "@/lib/redis";
 import { env } from "@/lib/env";
+import { TRUSTED_CLIENT_IP_HEADER } from "@/lib/security/request-metadata";
 
 const secureAuthOrigin =
   env.NODE_ENV === "production" ||
@@ -75,9 +76,7 @@ export const auth = betterAuth({
     // client-controlled forwarded headers redefine the authentication origin.
     trustedProxyHeaders: false,
     ipAddress: {
-      // Cloudflare supplies CF-Connecting-IP at the Worker boundary. Keep the
-      // standard header as the Node/local fallback.
-      ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
+      ipAddressHeaders: [TRUSTED_CLIENT_IP_HEADER],
     },
     defaultCookieAttributes: {
       sameSite: "lax",

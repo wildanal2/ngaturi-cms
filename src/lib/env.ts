@@ -60,6 +60,10 @@ const schema = z.object({
       return [...new Set(prefixes)];
     }),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(10),
+  TRUST_CLOUDFLARE_INGRESS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 
   BETTER_AUTH_SECRET: z.string().min(1),
   BETTER_AUTH_URL: z.url(),

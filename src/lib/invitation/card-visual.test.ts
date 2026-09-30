@@ -49,4 +49,30 @@ describe("cardImageUrl", () => {
       ),
     ).toBeUndefined();
   });
+
+  it("keeps ordinary local paths on the configured application origin", () => {
+    expect(
+      cardImageUrl("/valid-local-path", "https://dev.ngaturi.com", trusted),
+    ).toBe("https://dev.ngaturi.com/valid-local-path");
+  });
+
+  it.each([
+    "//evil.example/path",
+    "/\\evil.example/path",
+    "\\evil.example/path",
+    "/%2f%2fevil.example/path",
+    "/%252f%252fevil.example/path",
+    "/%25252f%25252fevil.example/path",
+    "/%5cevil.example/path",
+    "/%2e%2e/private",
+    "/%ZZbad",
+    "javascript:alert(1)",
+    "file:///etc/passwd",
+    "https://user:pass@media.example.com/x.png",
+    "https://evil.example/x.png",
+  ])("rejects unsafe URL %s", (value) => {
+    expect(
+      cardImageUrl(value, "https://dev.ngaturi.com", trusted),
+    ).toBeUndefined();
+  });
 });

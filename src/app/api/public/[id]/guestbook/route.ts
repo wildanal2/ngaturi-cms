@@ -11,6 +11,7 @@ import {
   isInvitationPubliclyActive,
 } from "@/lib/invitation/visibility";
 import { getSession } from "@/lib/auth/helpers";
+import { trustedClientIp } from "@/lib/security/request-metadata";
 
 export async function GET(
   _req: Request,
@@ -75,10 +76,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const h = await headers();
-  const ip =
-    h.get("cf-connecting-ip")?.trim() ||
-    (h.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
-    "unknown";
+  const ip = trustedClientIp(h) ?? "unknown";
 
   if (!(await rateLimit(`gb:${ip}`, 5, 60))) {
     return NextResponse.json(

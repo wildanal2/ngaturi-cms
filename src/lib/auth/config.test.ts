@@ -79,7 +79,7 @@ describe("Better Auth runtime initialization", () => {
       useSecureCookies: false,
       trustedProxyHeaders: false,
       ipAddress: {
-        ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
+        ipAddressHeaders: ["x-ngaturi-trusted-client-ip"],
       },
       defaultCookieAttributes: { sameSite: "lax", path: "/" },
     });

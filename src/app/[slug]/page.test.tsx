@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   afterTasks: [] as Array<() => Promise<void>>,
   getGuestByToken: vi.fn(),
   getPublicInvitation: vi.fn(),
+  invitationSummary: vi.fn(),
   getSession: vi.fn(),
   headers: vi.fn(),
   insertValues: vi.fn(),
@@ -26,13 +27,7 @@ vi.mock("@/lib/invitation/query", () => ({
   getPublicInvitation: mocks.getPublicInvitation,
   getGuestByToken: mocks.getGuestByToken,
   markGuestOpened: mocks.markGuestOpened,
-  invitationSummary: () => ({
-    eventLabel: "Pernikahan",
-    names: "Alya & Bima",
-    photo: null,
-    venueName: null,
-    venueAddress: null,
-  }),
+  invitationSummary: mocks.invitationSummary,
 }));
 vi.mock("@/lib/db", () => ({
   db: {
@@ -53,6 +48,7 @@ vi.mock("@/components/invitation/cover", () => ({
 }));
 
 import InvitationPage from "./page";
+import { runWithInvocationContext } from "@/lib/runtime/context";
 
 function invitation(overrides: Record<string, unknown> = {}) {
   return {
@@ -76,6 +72,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.afterTasks.length = 0;
   mocks.getPublicInvitation.mockResolvedValue(invitation());
+  mocks.invitationSummary.mockReturnValue({
+    eventLabel: "Pernikahan",
+    names: "Alya & Bima",
+    photo: null,
+    venueName: null,
+    venueAddress: null,
+  });
   mocks.getGuestByToken.mockResolvedValue(null);
   mocks.getSession.mockResolvedValue(null);
   mocks.headers.mockResolvedValue(
@@ -120,8 +123,8 @@ describe("public invitation runtime flow", () => {
     expect(mocks.insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         invitationId: "invitation-1",
-        visitorId: "203.0.113.10",
-        ipAddress: "203.0.113.10",
+        visitorId: "anon",
+        ipAddress: null,
         userAgent: "runtime-test",
         referrer: "https://example.test/source",
       }),
@@ -129,6 +132,48 @@ describe("public invitation runtime flow", () => {
     expect(mocks.updateWhere).toHaveBeenCalledOnce();
     expect(mocks.markGuestOpened).toHaveBeenCalledOnce();
     expect(mocks.markGuestOpened).toHaveBeenCalledWith("guest-1");
+  });
+
+  it("uses Cloudflare identity only inside a trusted Worker invocation", async () => {
+    mocks.headers.mockResolvedValue(
+      new Headers({
+        "cf-connecting-ip": "203.0.113.10",
+        "x-forwarded-for": "198.51.100.1",
+      }),
+    );
+    await runWithInvocationContext({}, () =>
+      InvitationPage({
+        params: Promise.resolve({ slug: "alya-bima" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+    await mocks.afterTasks[0]();
+    expect(mocks.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        visitorId: "203.0.113.10",
+        ipAddress: "203.0.113.10",
+      }),
+    );
+  });
+
+  it("serializes hostile invitation names as valid JSON-LD inside one script", async () => {
+    const payload = "</script><script>alert(1)</script><!--";
+    mocks.invitationSummary.mockReturnValue({
+      eventLabel: "Pernikahan",
+      names: payload,
+      photo: null,
+      venueName: "<script>venue</script>",
+      venueAddress: "</script>",
+    });
+    const rendered = await InvitationPage({
+      params: Promise.resolve({ slug: "alya-bima" }),
+      searchParams: Promise.resolve({}),
+    });
+    const script = rendered.props.children[0];
+    const json = script.props.dangerouslySetInnerHTML.__html as string;
+    expect(json).not.toContain("<");
+    expect(JSON.parse(json)).toMatchObject({ name: `Pernikahan ${payload}` });
+    expect(script.props.type).toBe("application/ld+json");
   });
 
   it("keeps inactive invitations available only to their owner preview", async () => {

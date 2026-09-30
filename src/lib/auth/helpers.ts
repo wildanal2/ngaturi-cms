@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { auth, type Session } from "./config";
+import { sanitizedAuthHeaders } from "@/lib/security/request-metadata";
 
 /**
  * Ambil sesi saat ini (atau null). `cache()` men-dedup panggilan dalam satu
@@ -12,7 +13,9 @@ import { auth, type Session } from "./config";
  */
 export const getSession = cache(
   async function getSession(): Promise<Session | null> {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await auth.api.getSession({
+      headers: sanitizedAuthHeaders(await headers()),
+    });
     if (!session) return null;
 
     // Better Auth may serve a short-lived signed cookie cache. Re-read the

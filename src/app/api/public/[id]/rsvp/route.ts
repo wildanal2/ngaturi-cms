@@ -7,6 +7,7 @@ import { invitations, rsvpResponses } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
+import { trustedClientIp } from "@/lib/security/request-metadata";
 
 const Body = z.object({
   _hp: z.string().optional(),
@@ -24,10 +25,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const h = await headers();
-  const ip =
-    h.get("cf-connecting-ip")?.trim() ||
-    (h.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
-    "unknown";
+  const ip = trustedClientIp(h) ?? "unknown";
 
   if (!(await rateLimit(`rsvp:${ip}`, 5, 60))) {
     return NextResponse.json(

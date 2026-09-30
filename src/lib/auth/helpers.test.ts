@@ -49,6 +49,24 @@ describe("auth server helpers", () => {
     expect(mocks.limit).toHaveBeenCalledWith(1);
   });
 
+  it("removes spoofed proxy IPs from internal session checks", async () => {
+    mocks.headers.mockResolvedValue(
+      new Headers({
+        cookie: "session=test",
+        "cf-connecting-ip": "203.0.113.10",
+        "x-forwarded-for": "198.51.100.1",
+        "x-ngaturi-trusted-client-ip": "192.0.2.99",
+      }),
+    );
+    mocks.getSession.mockResolvedValue(null);
+    await getSession();
+    const passed = mocks.getSession.mock.calls[0][0].headers as Headers;
+    expect(passed.get("cf-connecting-ip")).toBeNull();
+    expect(passed.get("x-forwarded-for")).toBeNull();
+    expect(passed.get("x-ngaturi-trusted-client-ip")).toBeNull();
+    expect(passed.get("cookie")).toBe("session=test");
+  });
+
   it("redirects a missing session instead of granting protected access", async () => {
     mocks.getSession.mockResolvedValue(null);
 

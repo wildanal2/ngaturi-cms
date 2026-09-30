@@ -42,6 +42,12 @@ tepercaya, tanpa redirect, dengan timeout 8 detik dan batas sumber yang sama.
 Endpoint `/api/uploads/presign` dinonaktifkan sampai alur upload langsung dapat
 memverifikasi ukuran, isi, kepemilikan, dan penyelesaian upload.
 
+`BETTER_AUTH_URL` adalah origin kanonis untuk fetch kartu OG dan redirect login;
+origin DEV/deployed harus HTTPS. Node mengabaikan header IP dari proxy secara
+default. Set `TRUST_CLOUDFLARE_INGRESS=true` hanya setelah origin Node menerima
+trafik semata-mata melalui Cloudflare Tunnel tepercaya. Worker memakai konteks
+Cloudflare yang sudah terikat pada invocation.
+
 Google Console → Authorized redirect URI:
 `http://localhost:3030/api/auth/callback/google` (+ exact staging/production
 URLs in `docs/phase-4-integration-readiness.md`)

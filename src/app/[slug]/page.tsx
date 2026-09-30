@@ -14,6 +14,8 @@ import {
   invitationSummary,
 } from "@/lib/invitation/query";
 import { InvitationCover } from "@/components/invitation/cover";
+import { serializeJsonLd } from "@/lib/security/json-ld";
+import { trustedClientIp } from "@/lib/security/request-metadata";
 import { resolveTemplateComposition } from "@/lib/templates/catalog";
 import {
   canViewInvitation,
@@ -104,7 +106,7 @@ export default async function InvitationPage({
 
   // track view setelah response
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || null;
+  const ip = trustedClientIp(h);
   const ua = h.get("user-agent") ?? null;
   after(async () => {
     try {
@@ -159,7 +161,7 @@ export default async function InvitationPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(eventJsonLd) }}
       />
       {/* crawler-visible heading (behind the cover overlay) */}
       <h1 className="sr-only">

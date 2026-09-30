@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { canonicalApplicationOrigin } from "@/lib/security/origin";
 
 /**
  * Edge-safe proxy (dulu `middleware`). Hanya cek keberadaan cookie sesi —
  * verifikasi role/entitlement dilakukan di Server Component / Route Handler.
  */
-const PROTECTED = ["/dashboard", "/invitations", "/builder", "/media", "/billing", "/settings", "/admin"];
+const PROTECTED = [
+  "/dashboard",
+  "/invitations",
+  "/builder",
+  "/media",
+  "/billing",
+  "/settings",
+  "/admin",
+];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,7 +26,7 @@ export function proxy(request: NextRequest) {
 
   const sessionCookie = getSessionCookie(request);
   if (!sessionCookie) {
-    const url = new URL("/login", request.url);
+    const url = new URL("/login", canonicalApplicationOrigin());
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
@@ -25,5 +34,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

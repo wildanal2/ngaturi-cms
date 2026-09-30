@@ -23,6 +23,17 @@ describe("runtime provider environment", () => {
     });
   });
 
+  it("requires an explicit value before Node trusts Cloudflare ingress", async () => {
+    vi.stubEnv("TRUST_CLOUDFLARE_INGRESS", undefined);
+    expect((await readEnv()).TRUST_CLOUDFLARE_INGRESS).toBe(false);
+    vi.resetModules();
+    vi.stubEnv("TRUST_CLOUDFLARE_INGRESS", "true");
+    expect((await readEnv()).TRUST_CLOUDFLARE_INGRESS).toBe(true);
+    vi.resetModules();
+    vi.stubEnv("TRUST_CLOUDFLARE_INGRESS", "maybe");
+    await expect(readEnv()).rejects.toThrow("Invalid environment variables");
+  });
+
   it("accepts an explicit pool bound", async () => {
     vi.stubEnv("DATABASE_POOL_SIZE", "3");
     expect((await readEnv()).DATABASE_POOL_SIZE).toBe(3);

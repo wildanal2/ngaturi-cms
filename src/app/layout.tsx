@@ -9,6 +9,7 @@ import {
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
+import { serializeJsonLd } from "@/lib/security/json-ld";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -154,7 +155,7 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([orgJsonLd, siteJsonLd]),
+            __html: serializeJsonLd([orgJsonLd, siteJsonLd]),
           }}
         />
         {children}
