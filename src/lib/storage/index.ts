@@ -93,6 +93,13 @@ export function trustedPublicMediaPrefixes(): string[] {
 export function isTrustedPublicUrl(value: string): boolean {
   try {
     const candidate = new URL(value);
+    if (
+      !["http:", "https:"].includes(candidate.protocol) ||
+      candidate.username ||
+      candidate.password
+    ) {
+      return false;
+    }
     return trustedPublicMediaPrefixes().some((prefix) => {
       const base = new URL(`${prefix.replace(/\/$/, "")}/`);
       return (

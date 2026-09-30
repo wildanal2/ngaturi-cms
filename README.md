@@ -31,6 +31,17 @@ npm run dev
 `db:migrate` hanya boleh dijalankan oleh satu proses/operator terkontrol.
 `db:push` hanya untuk database lokal disposable, bukan staging atau Production.
 
+Upload media Builder memakai `/api/uploads`. Node memproses JPEG, PNG, WebP,
+dan AVIF statis dengan Sharp; Worker tetap memakai Cloudflare Images. Hasil
+gambar diorientasikan dari EXIF, di-crop bila diminta, dibatasi 1920 × 1920
+tanpa pembesaran, lalu disimpan sebagai WebP tanpa metadata. GIF dan gambar
+animasi ditolak. Batas gambar adalah nilai terendah dari `MAX_UPLOAD_MB` dan
+10 MiB, audio 15 MiB, decode gambar 24 megapiksel, dan maksimal dua upload
+Node serta dua transformasi gambar per proses. Recrop hanya mengambil URL media
+tepercaya, tanpa redirect, dengan timeout 8 detik dan batas sumber yang sama.
+Endpoint `/api/uploads/presign` dinonaktifkan sampai alur upload langsung dapat
+memverifikasi ukuran, isi, kepemilikan, dan penyelesaian upload.
+
 Google Console → Authorized redirect URI:
 `http://localhost:3030/api/auth/callback/google` (+ exact staging/production
 URLs in `docs/phase-4-integration-readiness.md`)

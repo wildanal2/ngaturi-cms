@@ -71,6 +71,9 @@ describe("public media origins", () => {
       isTrustedPublicUrl("https://cdn.example.com.evil.test/photo.webp"),
     ).toBe(false);
     expect(
+      isTrustedPublicUrl("https://user:pass@cdn.example.com/photo.webp"),
+    ).toBe(false);
+    expect(
       isTrustedPublicUrl("https://evil.test/https://cdn.example.com/x"),
     ).toBe(false);
   });

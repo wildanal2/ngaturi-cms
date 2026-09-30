@@ -54,6 +54,7 @@
     "react-easy-crop": "^6.2.3",
     "react-hook-form": "^7.86.0",
     "react-server-dom-webpack": "^19.2.8",
+    "sharp": "0.35.4",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "three": "^0.186.0",
