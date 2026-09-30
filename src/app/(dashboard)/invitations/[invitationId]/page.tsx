@@ -69,7 +69,7 @@ export default async function InvitationDetailPage({
   const attending = rsvps
     .filter((r) => r.status === "attending")
     .reduce((n, r) => n + r.guestCount, 0);
-  const url = `${env.NEXT_PUBLIC_APP_URL}/${inv.slug}`;
+  const url = `${env.BETTER_AUTH_URL}/${inv.slug}`;
 
   const days = last14Days(
     new Map(viewRows.map((r) => [r.day, r.count])),
@@ -132,7 +132,7 @@ export default async function InvitationDetailPage({
       <InvitationLink
         invitationId={inv.id}
         slug={inv.slug}
-        appUrl={env.NEXT_PUBLIC_APP_URL}
+        appUrl={env.BETTER_AUTH_URL}
       />
 
       {inv.status === "published" ? <ShareBox url={url} /> : null}

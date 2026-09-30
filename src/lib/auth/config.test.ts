@@ -37,7 +37,10 @@ describe("Better Auth runtime initialization", () => {
   it("builds its adapter without eagerly creating the Node database", async () => {
     vi.resetModules();
 
-    await expect(import("./config")).resolves.toBeTruthy();
+    const { auth } = await import("./config");
+
+    expect(mocks.betterAuth).not.toHaveBeenCalled();
+    expect(auth.api).toBeTruthy();
 
     expect(mocks.betterAuth).toHaveBeenCalledOnce();
     expect(globalThis.__pgClient).toBeUndefined();
@@ -48,7 +51,8 @@ describe("Better Auth runtime initialization", () => {
     vi.resetModules();
     mocks.incrementWithTtl.mockResolvedValue(2);
 
-    await import("./config");
+    const { auth } = await import("./config");
+    expect(auth.api).toBeTruthy();
 
     const options = mocks.betterAuth.mock.calls[0]?.[0] as {
       baseURL: string;
@@ -100,7 +104,8 @@ describe("Better Auth runtime initialization", () => {
     });
 
     try {
-      await import("./config");
+      const { auth } = await import("./config");
+      expect(auth.api).toBeTruthy();
       const options = mocks.betterAuth.mock.calls[0]?.[0] as {
         rateLimit: { enabled: boolean; storage: string };
         advanced: { useSecureCookies: boolean };

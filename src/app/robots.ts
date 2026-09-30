@@ -1,15 +1,16 @@
 import type { MetadataRoute } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
+export const dynamic = "force-dynamic";
 
 export default function robots(): MetadataRoute.Robots {
+  const siteUrl = process.env.BETTER_AUTH_URL!;
   return {
     rules: {
       userAgent: "*",
       allow: "/",
       disallow: ["/dashboard", "/builder", "/admin", "/api", "/invitations"],
     },
-    sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
+    sitemap: `${siteUrl}/sitemap.xml`,
+    host: siteUrl,
   };
 }

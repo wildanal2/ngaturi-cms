@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 async function readEnv() {
-  return (await import("./env")).env;
+  return (await import("./env")).getValidatedEnv();
 }
 
 describe("runtime provider environment", () => {

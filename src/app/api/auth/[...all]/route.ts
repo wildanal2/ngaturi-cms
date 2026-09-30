@@ -1,8 +1,12 @@
 import { toNextJsHandler } from "better-auth/next-js";
-import { auth } from "@/lib/auth/config";
 import { sanitizedAuthHeaders } from "@/lib/security/request-metadata";
 
-const handlers = toNextJsHandler(auth.handler);
+export const dynamic = "force-dynamic";
+
+async function getHandlers() {
+  const { auth } = await import("@/lib/auth/config");
+  return toNextJsHandler(auth.handler);
+}
 
 function withTrustedRequestMetadata(request: Request): Request {
   // Next can wrap Request objects whose private state cannot be copied directly.
@@ -15,10 +19,12 @@ function withTrustedRequestMetadata(request: Request): Request {
   });
 }
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
+  const handlers = await getHandlers();
   return handlers.GET(withTrustedRequestMetadata(request));
 }
 
-export function POST(request: Request) {
+export async function POST(request: Request) {
+  const handlers = await getHandlers();
   return handlers.POST(withTrustedRequestMetadata(request));
 }

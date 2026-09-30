@@ -23,5 +23,3 @@ export async function verifyTurnstile(
   const data = (await res.json().catch(() => ({}))) as { success?: boolean };
   return data.success === true;
 }
-
-export const turnstileSiteKey = env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";

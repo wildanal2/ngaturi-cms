@@ -21,8 +21,8 @@ import { GET, POST } from "./route";
 import { runWithInvocationContext } from "@/lib/runtime/context";
 
 describe("Better Auth route wiring", () => {
-  it("initializes both HTTP handlers without provider access", () => {
-    expect(mocks.toNextJsHandler).toHaveBeenCalledWith(mocks.handler);
+  it("defers both HTTP handlers until request time", () => {
+    expect(mocks.toNextJsHandler).not.toHaveBeenCalled();
     expect(GET).toBeTypeOf("function");
     expect(POST).toBeTypeOf("function");
   });

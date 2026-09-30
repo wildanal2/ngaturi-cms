@@ -150,7 +150,7 @@ export async function POST(req: Request) {
   let checkout: Awaited<ReturnType<typeof createCheckout>>;
   try {
     const callbackUrl = new URL(
-      env.DOKU_CALLBACK_URL || `${env.NEXT_PUBLIC_APP_URL}/payment/callback`,
+      env.DOKU_CALLBACK_URL || `${env.BETTER_AUTH_URL}/payment/callback`,
     );
     callbackUrl.searchParams.set("invoice", orderId);
     checkout = await createCheckout({

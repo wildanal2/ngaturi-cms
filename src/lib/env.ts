@@ -8,7 +8,7 @@ const schema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
-  NEXT_PUBLIC_APP_URL: z.url(),
+  NEXT_PUBLIC_APP_URL: z.url().optional(),
   NEXT_PUBLIC_INVITATION_DOMAINS: z.string().min(1),
 
   // Node uses verified TLS directly. Workers use the HYPERDRIVE binding.
@@ -183,18 +183,34 @@ const validatedConfiguration = schema.superRefine((value, ctx) => {
   }
 });
 
-const parsed = validatedConfiguration.safeParse(process.env);
+type ValidatedEnv = z.infer<typeof validatedConfiguration>;
+let parsedEnv: ValidatedEnv | undefined;
 
-if (!parsed.success) {
-  console.error(
-    "❌ Invalid environment variables:",
-    JSON.stringify(z.treeifyError(parsed.error), null, 2),
-  );
-  throw new Error("Invalid environment variables");
+export function getValidatedEnv(): ValidatedEnv {
+  if (parsedEnv) return parsedEnv;
+  const parsed = validatedConfiguration.safeParse(process.env);
+  if (!parsed.success) {
+    // Next may probe dynamic routes during prerender without runtime config.
+    // The build still throws, but only real runtime failures need log detail.
+    if (process.env.NGATURI_IMAGE_BUILD !== "1") {
+      console.error(
+        "❌ Invalid environment variables:",
+        JSON.stringify(z.treeifyError(parsed.error), null, 2),
+      );
+    }
+    throw new Error("Invalid environment variables");
+  }
+  parsedEnv = parsed.data;
+  return parsedEnv;
 }
 
-export const env = parsed.data;
-
-export const invitationDomains = env.NEXT_PUBLIC_INVITATION_DOMAINS.split(",")
-  .map((d) => d.trim())
-  .filter(Boolean);
+// Next collects route modules during build. Validate only when request-time
+// code needs configuration so OCI builds never require provider credentials.
+export const env = new Proxy({} as ValidatedEnv, {
+  get(_target, property) {
+    return Reflect.get(getValidatedEnv(), property);
+  },
+  set(_target, property, value) {
+    return Reflect.set(getValidatedEnv(), property, value);
+  },
+});

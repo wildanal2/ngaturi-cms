@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { MarketingPage, PageHeading } from "@/components/marketing/page-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { ShowcaseGrid } from "@/components/marketing/showcase-grid";
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function UndanganTerbaruPage() {
+  await connection();
   const items = await getRecentInvitations(60);
 
   return (

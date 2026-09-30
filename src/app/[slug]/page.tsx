@@ -22,7 +22,7 @@ import {
   isInvitationPubliclyActive,
 } from "@/lib/invitation/visibility";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
+const SITE_URL = process.env.BETTER_AUTH_URL!;
 
 export async function generateMetadata({
   params,
