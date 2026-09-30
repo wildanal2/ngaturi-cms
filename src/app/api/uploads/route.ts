@@ -206,11 +206,19 @@ export async function POST(req: Request) {
       }
     }
 
+    const workerEnv = getWorkerEnv();
+    if (workerEnv && !workerEnv.IMAGES) {
+      return NextResponse.json(
+        { error: "Pemrosesan gambar Worker tidak tersedia." },
+        { status: 503 },
+      );
+    }
+
     let out: ArrayBuffer;
     let width: number;
     let height: number;
     try {
-      const workerImages = getWorkerEnv()?.IMAGES;
+      const workerImages = workerEnv?.IMAGES;
       const processor = workerImages
         ? workerImageProcessor(workerImages)
         : (await import("@/lib/image-processing/node")).nodeImageProcessor;

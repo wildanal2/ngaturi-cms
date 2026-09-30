@@ -387,11 +387,9 @@ describe("upload entitlement enforcement", () => {
     premiumInvitation();
     const pipeline = {
       transform: vi.fn(),
-      output: vi
-        .fn()
-        .mockResolvedValue({
-          response: () => new Response(new Uint8Array([1, 2, 3])),
-        }),
+      output: vi.fn().mockResolvedValue({
+        response: () => new Response(new Uint8Array([1, 2, 3])),
+      }),
     };
     pipeline.transform.mockReturnValue(pipeline);
     const images = {
@@ -450,5 +448,13 @@ describe("upload entitlement enforcement", () => {
       error: "Gambar animasi tidak didukung.",
     });
     expect(images.info).not.toHaveBeenCalled();
+  });
+
+  it("fails closed if a Worker invocation lacks IMAGES", async () => {
+    premiumInvitation();
+    mocks.getWorkerEnv.mockReturnValue({});
+    const response = await POST(uploadRequest("image"));
+    expect(response.status).toBe(503);
+    expect(mocks.putObject).not.toHaveBeenCalled();
   });
 });
