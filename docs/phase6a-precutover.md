@@ -166,11 +166,14 @@ No DEV hostname appeared in the checked pages.
 
 `SITE_INDEXING_ENABLED=false` selects review mode at server runtime: page
 responses include `X-Robots-Tag: noindex, nofollow`, root and invitation
-metadata prohibit indexing/following, robots disallows crawling, and the sitemap
+metadata prohibit indexing/following, robots permits public-page crawling so
+crawlers can observe the noindex directive, and the sitemap
 omits review URLs without querying invitations. Unset or `true` preserves
 commercial indexing. For commercial launch, set `true` in the one external
 runtime env and recreate the container with the same image digest; no rebuild
 is required. This server flag is not a `NEXT_PUBLIC_*` build value.
+Blocking all crawling would prevent crawlers from seeing noindex; see
+[Google's noindex guidance](https://developers.google.com/search/docs/crawling-indexing/block-indexing).
 
 ## Legacy inventory: evidence and outstanding checks
 

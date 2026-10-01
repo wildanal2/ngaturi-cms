@@ -28,6 +28,8 @@ jobs:
       - run: npm run typecheck
       - name: Focused runtime tests
         run: npm test -- src/app/api/ready/route.test.ts src/lib/env.test.ts src/lib/storage/index.test.ts src/lib/site-indexing.test.ts src/proxy.test.ts src/app/sitemap.test.ts src/lib/payments/doku.test.ts
+      - name: Boot recovery checks
+        run: bash scripts/test-start-prod-runtime.sh
 
   pr-image:
     if: github.event_name == 'pull_request'

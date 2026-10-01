@@ -10,7 +10,8 @@ describe("runtime site indexing", () => {
     expect(siteIndexingEnabled()).toBe(true);
     vi.stubEnv("SITE_INDEXING_ENABLED", "false");
     expect(siteIndexingEnabled()).toBe(false);
-    expect(robots()).toEqual({ rules: { userAgent: "*", disallow: "/" } });
+    expect(robots().rules).toMatchObject({ userAgent: "*", allow: "/" });
+    expect(robots().sitemap).toBeUndefined();
     vi.stubEnv("SITE_INDEXING_ENABLED", "true");
     expect(siteIndexingEnabled()).toBe(true);
     expect(robots().sitemap).toContain("/sitemap.xml");
