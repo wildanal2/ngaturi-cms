@@ -4,6 +4,7 @@
 .env.*.local
 .envtmp
 .dev.vars*
+ops/production/deploy.env
 
 # node / next
 node_modules/

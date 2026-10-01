@@ -1,17 +1,16 @@
 [Unit]
-Description=Recover the exact Ngaturi digest after host networking is ready
+Description=Recover Ngaturi Compose after the configured host address is ready
 Wants=network-online.target
 Requires=docker.service ngaturi-ingress.service
 After=network-online.target docker.service ngaturi-ingress.service
-StartLimitIntervalSec=300
+StartLimitIntervalSec=600
 StartLimitBurst=3
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-EnvironmentFile=/etc/ngaturi/scheduler.conf
-ExecStart=/opt/ngaturi-release/scripts/start-prod-runtime.sh
-TimeoutStartSec=180
+ExecStart=/opt/ngaturi/deploy.sh --recover
+TimeoutStartSec=900
 Restart=on-failure
 RestartSec=10
 UMask=0077

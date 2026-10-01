@@ -1,5 +1,7 @@
 # Phase 6A: PROD VM pre-cutover validation
 
+Historical phase record: runtime/scheduler commands below are superseded by [ops/production/README.md](../ops/production/README.md). Recorded acceptance evidence and unresolved Phase 6B gates remain historical references.
+
 Phase 6A keeps production traffic and legacy schedulers on their existing
 targets. The replacement review candidate now runs privately on the PROD host.
 This is not a production traffic cutover. Provider-side scheduler ownership
