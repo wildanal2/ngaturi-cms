@@ -3,10 +3,12 @@ import { and, desc, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
 import { databaseUtcNow } from "@/lib/db/time";
+import { siteIndexingEnabled } from "@/lib/site-indexing";
 
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (!siteIndexingEnabled()) return [];
   const SITE_URL = process.env.BETTER_AUTH_URL!;
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },

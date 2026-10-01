@@ -27,7 +27,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - name: Focused runtime tests
-        run: npm test -- src/app/api/ready/route.test.ts src/lib/env.test.ts src/lib/storage/index.test.ts
+        run: npm test -- src/app/api/ready/route.test.ts src/lib/env.test.ts src/lib/storage/index.test.ts src/lib/site-indexing.test.ts src/proxy.test.ts src/app/sitemap.test.ts src/lib/payments/doku.test.ts
 
   pr-image:
     if: github.event_name == 'pull_request'

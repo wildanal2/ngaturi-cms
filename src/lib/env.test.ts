@@ -14,6 +14,13 @@ async function readEnv() {
 }
 
 describe("runtime provider environment", () => {
+  it("validates the runtime indexing switch", async () => {
+    vi.stubEnv("SITE_INDEXING_ENABLED", "false");
+    expect((await readEnv()).SITE_INDEXING_ENABLED).toBe("false");
+    vi.resetModules();
+    vi.stubEnv("SITE_INDEXING_ENABLED", "yes");
+    await expect(readEnv()).rejects.toThrow("Invalid environment variables");
+  });
   it("does not require unused invitation domains or disabled Turnstile", async () => {
     vi.stubEnv("NEXT_PUBLIC_INVITATION_DOMAINS", undefined);
     vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", undefined);

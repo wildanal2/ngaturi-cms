@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 import { canonicalApplicationOrigin } from "@/lib/security/origin";
+import { siteIndexingEnabled } from "@/lib/site-indexing";
 
 /**
  * Edge-safe proxy (dulu `middleware`). Hanya cek keberadaan cookie sesi —
@@ -22,15 +23,16 @@ export function proxy(request: NextRequest) {
   const needsAuth = PROTECTED.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
-  if (!needsAuth) return NextResponse.next();
-
-  const sessionCookie = getSessionCookie(request);
-  if (!sessionCookie) {
+  let response = NextResponse.next();
+  if (needsAuth && !getSessionCookie(request)) {
     const url = new URL("/login", canonicalApplicationOrigin());
     url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    response = NextResponse.redirect(url);
   }
-  return NextResponse.next();
+  if (!siteIndexingEnabled()) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+  return response;
 }
 
 export const config = {

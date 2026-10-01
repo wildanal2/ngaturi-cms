@@ -150,10 +150,13 @@ contain those fixes and must remain private. No replacement application image
 was built or published. A future authorized artifact must prove the visible
 notice before public review traffic is enabled.
 
-Current source has no runtime review/noindex switch; site metadata permits
-indexing. Before a public review cutover, choose and verify a separately
-controlled ingress `X-Robots-Tag: noindex, nofollow` policy or a future artifact
-change. Do not treat private candidate validation as public-review acceptance.
+`SITE_INDEXING_ENABLED=false` selects review mode at server runtime: page
+responses include `X-Robots-Tag: noindex, nofollow`, root and invitation
+metadata prohibit indexing/following, robots disallows crawling, and the sitemap
+omits review URLs without querying invitations. Unset or `true` preserves
+commercial indexing. For commercial launch, set `true` in the one external
+runtime env and recreate the container with the same image digest; no rebuild
+is required. This server flag is not a `NEXT_PUBLIC_*` build value.
 
 ## Legacy inventory: evidence and outstanding checks
 

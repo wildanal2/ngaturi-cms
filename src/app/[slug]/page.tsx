@@ -17,6 +17,7 @@ import { InvitationCover } from "@/components/invitation/cover";
 import { serializeJsonLd } from "@/lib/security/json-ld";
 import { trustedClientIp } from "@/lib/security/request-metadata";
 import { resolveTemplateComposition } from "@/lib/templates/catalog";
+import { siteIndexingEnabled } from "@/lib/site-indexing";
 import {
   canViewInvitation,
   isInvitationPubliclyActive,
@@ -78,7 +79,11 @@ export async function generateMetadata({
       description,
       images: [`/${inv.slug}/opengraph-image`],
     },
-    robots: { index: true, follow: true, "max-image-preview": "large" },
+    robots: {
+      index: siteIndexingEnabled(),
+      follow: siteIndexingEnabled(),
+      "max-image-preview": "large",
+    },
   };
 }
 

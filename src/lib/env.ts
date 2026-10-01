@@ -10,6 +10,7 @@ const schema = z.object({
     .default("development"),
   NEXT_PUBLIC_APP_URL: z.url().optional(),
   NEXT_PUBLIC_INVITATION_DOMAINS: z.string().min(1).optional(),
+  SITE_INDEXING_ENABLED: z.enum(["true", "false"]).default("true"),
 
   // Node uses verified TLS directly. Workers use the HYPERDRIVE binding.
   DATABASE_URL: z.string().min(1).optional(),

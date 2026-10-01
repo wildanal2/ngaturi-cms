@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { serializeJsonLd } from "@/lib/security/json-ld";
+import { siteIndexingEnabled } from "@/lib/site-indexing";
 
 const inter = localFont({
   src: "../assets/fonts/inter-latin.woff2",
@@ -50,6 +51,7 @@ const DESCRIPTION =
 export async function generateMetadata(): Promise<Metadata> {
   await connection();
   const SITE_URL = process.env.BETTER_AUTH_URL!;
+  const indexing = siteIndexingEnabled();
   return {
     metadataBase: new URL(SITE_URL),
     title: {
@@ -100,11 +102,11 @@ export async function generateMetadata(): Promise<Metadata> {
       images: ["/og-image.png"],
     },
     robots: {
-      index: true,
-      follow: true,
+      index: indexing,
+      follow: indexing,
       googleBot: {
-        index: true,
-        follow: true,
+        index: indexing,
+        follow: indexing,
         "max-image-preview": "large",
         "max-snippet": -1,
       },
