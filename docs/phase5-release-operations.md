@@ -1,5 +1,7 @@
 # Phase 5 release operations
 
+Historical phase record: production commands below are superseded by [ops/production/README.md](../ops/production/README.md). Use only that guide for new installations/releases.
+
 The `container-release` workflow validates pull requests without publishing. A
 manual dispatch and future pushes to `main` publish one
 `linux/amd64` image to `ghcr.io/<repository owner>/<repository name>`, tagged

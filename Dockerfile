@@ -19,6 +19,7 @@ COPY --from=builder --chown=ngaturi:ngaturi /app/.next/standalone ./
 COPY --from=builder --chown=ngaturi:ngaturi /app/.next/static ./.next/static
 COPY --from=builder --chown=ngaturi:ngaturi /app/public ./public
 COPY --from=builder --chown=ngaturi:ngaturi /app/src/assets/fonts/licenses ./licenses/fonts
+COPY --chown=ngaturi:ngaturi ops/production/scheduler.mjs ops/production/scheduler.crontab ./ops/production/
 USER ngaturi
 EXPOSE 8080
 ENTRYPOINT ["node"]
