@@ -12,7 +12,7 @@ race; the recovery helper is corrected but has not had a second reboot test.
 Use only:
 
 ```text
-ghcr.io/wildanal2/ngaturi-cms@sha256:2231d9cda0ee2e6f6409967e8c980e9eaae65a01355180063d24dc9702fbd5ee
+ghcr.io/wildanal2/ngaturi-cms@sha256:e989f1dd89152b4283751d097fc4ab40281f5bd5d944249fd29cd1e4bf3c982f
 ```
 
 Copy the Phase 5 release bundle (production Compose and deployment/scheduler
@@ -99,7 +99,7 @@ Run as an administrator, with the one explicit production env source:
 
 ```sh
 export RUNTIME_ENV_FILE=/etc/ngaturi/ngaturi.env
-export NGATURI_IMAGE='ghcr.io/wildanal2/ngaturi-cms@sha256:2231d9cda0ee2e6f6409967e8c980e9eaae65a01355180063d24dc9702fbd5ee'
+export NGATURI_IMAGE='ghcr.io/wildanal2/ngaturi-cms@sha256:e989f1dd89152b4283751d097fc4ab40281f5bd5d944249fd29cd1e4bf3c982f'
 docker compose --env-file /dev/null -f /opt/ngaturi-migration-job/compose.migrate.yml \
   -p ngaturi-migration run --rm -T migrate --require-empty
 # Check the direct Neon target against the independently confirmed PROD resource.
@@ -152,8 +152,8 @@ Do not install the cron example alongside these timers.
 ## Review safety and artifact boundary
 
 The replacement image was published by the existing Container release workflow
-from source commit `ab133aa5250f0a2339cf591cf078b7e3204600d8`, run
-`36818818173`. Registry metadata verified `linux/amd64` and the exact revision.
+from source commit `d17c99cffc9024db1bec6c18a3902cb52d44b60f`, run
+`36821916811`. Registry metadata verified `linux/amd64` and the exact revision.
 The PROD deployment pulled its exact digest and recorded the earlier private
 candidate as `previous`; no application build ran on PROD.
 
@@ -297,11 +297,11 @@ passed. Firewall persistence itself is verified by the completed reboot.
 
 ## Rollback and deployment state
 
-The new private candidate is `current`; the earlier private digest
-`sha256:5adb39ed37c30358df4d8e5f009e543255e4f960f690b53a0b2ba2bde5a8f6bc`
+The final private candidate is `current`; the intermediate review digest
+`sha256:2231d9cda0ee2e6f6409967e8c980e9eaae65a01355180063d24dc9702fbd5ee`
 is now `previous`. This establishes an artifact rollback option without
 claiming that either private candidate was the legacy public origin.
-The earlier image lacks the review notice/noindex controls and must not be
+The original Phase 5 image lacks the review notice/noindex controls and must not be
 promoted to public review traffic as a substitute for ingress rollback.
 
 The Phase 5 deployer stores only full image references in `current` and
