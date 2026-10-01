@@ -39,6 +39,7 @@ cat > "$fixture/bin/docker" <<'MOCK'
 #!/usr/bin/env bash
 printf '%s %s\n' "${NGATURI_IMAGE:-}" "$*" >> "$TEST_LOG"
 if [[ $1 == buildx ]]; then
+  printf '%s\n' "$4" > "$TEST_RESOLVED_REF"
   [[ ${FAIL_RESOLVE:-false} != true ]] || exit 1
   printf '%s\n' "$RESOLVED_DIGEST"
 elif [[ $1 == pull ]]; then
@@ -69,13 +70,13 @@ exit 0
 MOCK
 chmod +x "$fixture/bin/"*
 export PATH="$fixture/bin:$PATH" TEST_LOG="$fixture/calls.log"
-export TEST_ADDRESS_CHECK="$fixture/address-checked" RESOLVED_DIGEST=${image_a#*@}
+export TEST_ADDRESS_CHECK="$fixture/address-checked" TEST_RESOLVED_REF="$fixture/resolved-ref" RESOLVED_DIGEST=${image_a#*@}
 deploy="$repo_dir/ops/production/deploy.sh"
 rollback="$repo_dir/ops/production/rollback.sh"
 reject() { if "$@" >/dev/null 2>&1; then printf 'unexpected success: %s\n' "$*" >&2; exit 1; fi; }
 state() { sed -n "s/^$1=//p" "$DEPLOY_STATE_DIR/releases.env"; }
 
-for target in latest stable v01.2.3 1.2.3 v1.2 v1.2.3-beta 'v1.2.3;false' "$package:latest" ghcr.io/other/image@sha256:$(printf 'a%.0s' {1..64}); do reject "$deploy" "$target"; done
+for target in latest stable sha-a1b2c3d sha-invalid sha-$(printf 'A%.0s' {1..40}) "${image_a}" v01.2.3 1.2.3 v1.2 v1.2.3-beta 'v1.2.3;false' "$package:latest" ghcr.io/other/image@sha256:$(printf 'a%.0s' {1..64}); do reject "$deploy" "$target"; done
 [[ ! -s $TEST_LOG ]]
 reject "$rollback"
 reject "$rollback" v1.0.0
@@ -101,12 +102,12 @@ unset FAIL_READY_IMAGE
 grep -Fq "NGATURI_IMAGE=$image_a" "$DEPLOY_STATE_DIR/compose.env"
 
 export FAIL_READY_IMAGE=$image_b
-reject "$deploy" "$image_b"
+reject "$deploy" "${image_b#*@}"
 [[ $(state CURRENT_IMAGE) == "$image_a" && -z $(state PREVIOUS_IMAGE) ]]
 grep -Fq "NGATURI_IMAGE=$image_a" "$DEPLOY_STATE_DIR/compose.env"
 unset FAIL_READY_IMAGE
 export FAIL_START_IMAGE=$image_b
-reject "$deploy" "$image_b"
+reject "$deploy" "${image_b#*@}"
 [[ $(state CURRENT_IMAGE) == "$image_a" ]]
 unset FAIL_START_IMAGE
 
@@ -125,18 +126,18 @@ unset FAIL_READY_IMAGE
 # Pull failure and failure to drain scheduler leave the running app/state alone.
 : > "$TEST_LOG"
 export FAIL_PULL_IMAGE=$image_c
-reject "$deploy" "$image_c"
+reject "$deploy" "${image_c#*@}"
 unset FAIL_PULL_IMAGE
 [[ $(state CURRENT_IMAGE) == "$image_a" ]]
 ! grep -Fq -- '--force-recreate app' "$TEST_LOG"
 : > "$TEST_LOG"
 export FAIL_DRAIN=true
-reject "$deploy" "$image_c"
+reject "$deploy" "${image_c#*@}"
 unset FAIL_DRAIN
 ! grep -Fq -- '--force-recreate app' "$TEST_LOG"
 
 # A concurrent operator cannot change state or the runtime.
-( flock -n 9; reject "$deploy" "$image_c" ) 9>"$DEPLOY_STATE_DIR/deploy.lock"
+( flock -n 9; reject "$deploy" "${image_c#*@}" ) 9>"$DEPLOY_STATE_DIR/deploy.lock"
 
 # Recovery waits for DHCP, recreates the recorded image, and never pulls.
 : > "$TEST_LOG"
@@ -150,11 +151,11 @@ unset FAIL_READY_IMAGE
 
 # Scheduler is opt-in; failed startup restores current, success drains first.
 export SCHEDULER_ENABLED=true TEST_SCHEDULER_STATUS=restarting
-reject "$deploy" "$image_b"
+reject "$deploy" "${image_b#*@}"
 [[ $(state CURRENT_IMAGE) == "$image_a" ]]
 export TEST_SCHEDULER_STATUS=running
 : > "$TEST_LOG"
-"$deploy" "$image_b"
+"$deploy" "${image_b#*@}"
 [[ $(state CURRENT_IMAGE) == "$image_b" ]]
 [[ $(state CURRENT_SCHEDULER_ENABLED) == true && $(state PREVIOUS_SCHEDULER_ENABLED) == false ]]
 "$rollback"
@@ -170,13 +171,29 @@ assert(calls.findIndex(x=>x.includes('--force-recreate app'))<calls.findIndex(x=
 assert(calls.filter(x=>x.includes(' pull ')).every(x=>/pull ghcr\.io\/wildanal2\/ngaturi-cms@sha256:[a-f0-9]{64}$/.test(x)));
 JS
 
+# A full Staging SHA resolves to a digest, records candidate identity, and rolls back.
+export SCHEDULER_ENABLED=false RESOLVED_DIGEST=${image_c#*@}
+candidate_tag="sha-$(printf 'c%.0s' {1..40})"
+"$deploy" --dry-run "$candidate_tag" > "$fixture/candidate-dry-run"
+[[ $(cat "$TEST_RESOLVED_REF") == "$package:$candidate_tag" ]]
+grep -Fq "image=$image_c" "$fixture/candidate-dry-run"
+"$deploy" "$candidate_tag"
+[[ $(state CURRENT_VERSION) == "$candidate_tag" && $(state CURRENT_IMAGE) == "$image_c" ]]
+[[ $(state PREVIOUS_IMAGE) == "$image_a" ]]
+"$deploy" "${image_c#*@}"
+[[ $(state CURRENT_VERSION) == "$candidate_tag" ]]
+"$rollback"
+[[ $(state CURRENT_IMAGE) == "$image_a" && $(state PREVIOUS_VERSION) == "$candidate_tag" ]]
+"$rollback"
+[[ $(state CURRENT_IMAGE) == "$image_c" && $(state CURRENT_VERSION) == "$candidate_tag" ]]
+
 # Import existing candidate records without losing rollback identity.
 rm "$DEPLOY_STATE_DIR/releases.env"
 printf '%s\n' "$image_a" > "$DEPLOY_STATE_DIR/current"
 printf '%s\n' "$image_b" > "$DEPLOY_STATE_DIR/previous"
-"$deploy" "$image_a"
+"$deploy" "${image_a#*@}"
 [[ $(state CURRENT_IMAGE) == "$image_a" && $(state PREVIOUS_IMAGE) == "$image_b" ]]
 printf 'CURRENT_IMAGE=%s:latest\n' "$package" > "$DEPLOY_STATE_DIR/releases.env"
 reject "$rollback"
-reject "$deploy" "$image_c"
+reject "$deploy" "${image_c#*@}"
 printf 'production Compose, version/digest, deploy, rollback, recovery and state checks passed\n'

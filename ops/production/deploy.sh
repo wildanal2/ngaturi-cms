@@ -11,7 +11,7 @@ if [[ ${1:-} == --rollback || ${1:-} == --recover ]]; then
   [[ $mode == deploy && $# -eq 1 ]] || die 'invalid arguments'
   mode=${1#--}; shift
 else
-  [[ $# -eq 1 ]] || die 'usage: ./deploy.sh [--dry-run] vX.Y.Z | sha256:<digest> | configured-package@sha256:<digest>'
+  [[ $# -eq 1 ]] || die 'usage: ./deploy.sh [--dry-run] vX.Y.Z | sha-<full 40-hex commit> | sha256:<digest>'
 fi
 target=${1:-}
 
@@ -49,7 +49,7 @@ for octet in "${octets[@]}"; do (( 10#$octet <= 255 )) || die 'invalid bind IP';
 [[ $RUNTIME_ENV_FILE = /* && -f $RUNTIME_ENV_FILE ]] || die 'external runtime env file is missing'
 [[ $DEPLOY_STATE_DIR = /* && $DEPLOY_STATE_DIR != / && $DEPLOY_STATE_DIR != *$'\n'* ]] || die 'state directory must be an absolute path'
 
-version_ok() { [[ $1 == unknown || $1 =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; }
+version_ok() { [[ $1 == unknown || $1 =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || $1 =~ ^sha-[0-9a-f]{40}$ ]]; }
 image_ok() { [[ $1 == "$NGATURI_PACKAGE"@sha256:* && ${1#*@} =~ ^sha256:[0-9a-f]{64}$ ]]; }
 compose() { timeout --signal=TERM --kill-after=10s 300s docker compose --env-file /dev/null -f "$script_dir/compose.yml" -p "$NGATURI_PROJECT_NAME" "$@"; }
 pull() { timeout --signal=TERM --kill-after=10s 180s docker pull "$1"; }
@@ -99,14 +99,13 @@ case $mode in
     candidate_image=$CURRENT_IMAGE; candidate_version=$CURRENT_VERSION
     export SCHEDULER_ENABLED=$CURRENT_SCHEDULER_ENABLED ;;
   *)
-    if [[ $target =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+    if [[ $target =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || $target =~ ^sha-[0-9a-f]{40}$ ]]; then
       candidate_version=$target
-      digest=$(timeout --signal=TERM --kill-after=5s 30s docker buildx imagetools inspect "$NGATURI_PACKAGE:$target" --format '{{.Manifest.Digest}}') || die 'version resolution failed'
+      digest=$(timeout --signal=TERM --kill-after=5s 30s docker buildx imagetools inspect "$NGATURI_PACKAGE:$target" --format '{{.Manifest.Digest}}') || die 'version/candidate resolution failed'
       [[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || die 'registry returned an invalid digest'
       candidate_image="$NGATURI_PACKAGE@$digest"
     elif [[ $target =~ ^sha256:[0-9a-f]{64}$ ]]; then candidate_image="$NGATURI_PACKAGE@$target"
-    elif image_ok "$target"; then candidate_image=$target
-    else die 'expected vX.Y.Z or an exact digest of the configured package; mutable tags are rejected'; fi ;;
+    else die 'expected vX.Y.Z, sha-<full 40-hex commit>, or sha256:<digest>; direct stable/latest and image names are rejected'; fi ;;
 esac
 export NGATURI_IMAGE=$candidate_image
 compose config --quiet || die 'invalid production Compose configuration'
