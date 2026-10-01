@@ -1,0 +1,17 @@
+# Separate operator job; never part of application startup or deployment.
+services:
+  migrate:
+    image: ${NGATURI_IMAGE:?Set the exact application image digest}
+    init: true
+    restart: "no"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    env_file:
+      - ${RUNTIME_ENV_FILE:?Set one absolute external runtime env file}
+    environment:
+      MIGRATION_TARGET_SHA256: ${MIGRATION_TARGET_SHA256:-}
+    volumes:
+      - ./:/migration:ro
+    entrypoint: ["node", "/migration/migrate.mjs"]
+    command: []

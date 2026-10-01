@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Inactive until the Phase 6 scheduler cutover. Invoke from a host crontab.
+# Inactive until the Phase 6B scheduler cutover. Invoke from a host scheduler.
 set -euo pipefail
 umask 077
 

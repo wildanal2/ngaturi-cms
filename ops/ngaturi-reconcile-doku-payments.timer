@@ -1,0 +1,10 @@
+[Unit]
+Description=Ngaturi DOKU reconciliation (inactive until cutover)
+
+[Timer]
+OnCalendar=*-*-* *:0/5:00 UTC
+Unit=ngaturi-cron@reconcile-doku-payments.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

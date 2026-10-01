@@ -1,9 +1,10 @@
 # Phase 6A: PROD VM pre-cutover validation
 
 Phase 6A keeps production traffic and legacy schedulers on their existing
-targets. This document is a preparation record, not evidence of a completed
-PROD deployment. PROD VM access, provider identities, and ingress placement
-must be supplied and verified before proceeding.
+targets. The pinned candidate now runs privately on the PROD host. This is
+not a production traffic cutover. The current image has no visible Sandbox
+payment notice; the source fixes below require a separately authorized future
+artifact before it can safely receive external review traffic.
 
 ## Artifact and access contract
 
@@ -23,11 +24,18 @@ Use one absolute external `RUNTIME_ENV_FILE`, readable only by the operator
 (`0600` recommended). No project-local env source is used. Confirm production
 resource identities and separation from DEV before any provider probe. Do not
 print values. Missing required configuration blocks candidate startup; do not
-substitute DEV credentials. Leave optional DOKU payments unconfigured if their
-production configuration is unavailable, and record that limitation explicitly.
+substitute DEV credentials. The configured Upstash instance is intentionally
+PROD; DEV now uses local Redis. DOKU Sandbox is intentional for this review
+environment, with the explicit Sandbox endpoint and canonical callbacks.
+Turnstile is disabled when both site key and secret are absent. Invitation
+domains are unused by application features: the source validator now makes
+that variable optional. For the pinned image's older validator only, the sole
+production env file contains a compatibility entry derived from its actual
+trusted canonical hostname, rather than an invented domain.
 
-Initially bind the candidate to loopback on an unused host port. Use the
-deployment script with that host port and the exact reference above. Confirm
+Bind to the confirmed private host address and isolate the port before
+starting the candidate. Use the deployment script with that host port and the
+exact reference above. Confirm
 that the Compose project will not replace any existing application. Do not
 attach the production hostname during Phase 6A.
 
@@ -38,7 +46,8 @@ attach the production hostname during Phase 6A.
   against the image's source commit. A healthy `select 1` is insufficient to
   establish schema compatibility. Do not use the repository's Drizzle command
   for this inspection: its config loads `.env.local`. Record any exact missing
-  migration and stop until a separate operator step is authorized.
+  migration and stop until a separate operator step is authorized. Initial
+  provisioning was separately authorized and completed as described below.
 - Verify Upstash PROD identity, then use a unique temporary key with a short
   TTL for bounded write/read/delete checks. Confirm cleanup.
 - Verify the R2 PROD bucket and public origin. Write one unique temporary
@@ -60,11 +69,91 @@ attach the production hostname during Phase 6A.
   Docker forwarding path. For local cloudflared, retain loopback binding.
   Preserve admin access; persist rules and verify they survive reload/reboot
   before marking ingress secure. UFW configuration alone is insufficient.
-- Stage the scheduler example outside active cron/systemd locations. Check
-  host UTC scheduling, log destination/rotation, route authorization, `flock`,
+- Install scheduler units but leave timers disabled and inactive. Check
+  explicit UTC scheduling, journal logging/retention, route authorization, `flock`,
   and timeout behavior without executing production maintenance. The helper
   calls localhost inside the production container using that container's
   `CRON_SECRET`. Do not install active cron entries in Phase 6A.
+
+## Separate operator migration job
+
+`db:migrate` remains the development Drizzle command; its config loads
+`.env.local`. Production initial provisioning uses a separate bundled operator
+job. Application startup and `deploy-prod.sh` never run migrations.
+
+On the operator checkout, with locked dependencies already installed:
+
+```sh
+npm run db:operator-bundle -- /tmp/ngaturi-migration-job
+```
+
+The bundle reads SQL and journal from committed Git artifacts, includes an
+official Drizzle migrator and a schema inventory, and records SQL hashes plus
+source commit in a non-secret manifest. Copy only that bundle to the host,
+for example `/opt/ngaturi-migration-job`; application source is not required
+on the runtime host. The pinned image supplies Node for this separate job,
+with a read-only operator-bundle mount. The application itself has no mounts.
+
+Run as an administrator, with the one explicit production env source:
+
+```sh
+export RUNTIME_ENV_FILE=/etc/ngaturi/ngaturi.env
+export NGATURI_IMAGE='ghcr.io/wildanal2/ngaturi-cms@sha256:5adb39ed37c30358df4d8e5f009e543255e4f960f690b53a0b2ba2bde5a8f6bc'
+docker compose --env-file /dev/null -f /opt/ngaturi-migration-job/compose.migrate.yml \
+  -p ngaturi-migration run --rm -T migrate --require-empty
+# Check the direct Neon target against the independently confirmed PROD resource.
+# Copy the non-secret target fingerprint reported by inspection:
+export MIGRATION_TARGET_SHA256='<confirmed fingerprint>'
+docker compose --env-file /dev/null -f /opt/ngaturi-migration-job/compose.migrate.yml \
+  -p ngaturi-migration run --rm -T migrate --apply --require-empty
+```
+
+The operator checks verified TLS, acquires an advisory lock, rejects unmanaged
+nonempty schemas and mismatched migration history, and uses only committed
+migrations. Initial `0000`–`0007` application succeeded: eight journal entries
+with exact SQL hashes/order and 14 application tables. A subsequent `--apply`
+without `--require-empty` verified an idempotent no-op. No seeds or business
+fixtures were created. Future schema changes remain separately authorized
+operator steps; do not use `--require-empty` against an initialized database.
+
+## Persistent ingress and inactive scheduler
+
+Install `scripts/install-prod-ingress.sh` as root with explicitly supplied
+`NGATURI_BIND_IP`, `NGATURI_HOST_PORT`, and `NGATURI_INGRESS_SOURCE`. It validates
+IPv4/port inputs, checks nft syntax, and owns only `inet ngaturi_ingress`.
+Its prerouting chain at priority `-110` permits the trusted LXC and drops other
+sources before Docker DNAT (`-100`), including paths that bypass DOCKER-USER.
+It preserves SSH and unrelated firewall tables. The enabled oneshot unit and
+Docker `Requires`/`After` drop-in load the rules before Docker on boot.
+An active firewall unit is reloaded, not restarted, to avoid restarting Docker.
+The global nftables service is not enabled: its flush-all configuration would
+destroy existing Docker and host rules.
+
+LXC health/readiness and unrelated-LAN rejection were verified. Rule reload
+was verified; a full host reboot was not performed. Cloudflare ingress trust
+remains false, and `trustedProxyHeaders: false` is unchanged.
+
+`ops/ngaturi-cron@.service` uses `/etc/ngaturi/scheduler.conf` for non-secret
+host settings only (env-file path and port/bind configuration). Application
+credentials remain solely in the runtime file/container. Install the three
+`ops/ngaturi-*.timer` units without enabling or starting them. Their schedules
+explicitly use UTC regardless of the host timezone. `Persistent=false` avoids
+catch-up runs during eventual activation. The helper retains per-task `flock`,
+bounded execution, protected container-local requests, and journal logging.
+Do not install the cron example alongside these timers.
+
+## Review safety and artifact boundary
+
+Minimal source fixes add a runtime-derived Sandbox notice to upgrade/renewal,
+payment callback, and invitation detail pages. The pinned container does not
+contain those fixes and must remain private. No replacement application image
+was built or published. A future authorized artifact must prove the visible
+notice before public review traffic is enabled.
+
+Current source has no runtime review/noindex switch; site metadata permits
+indexing. Before a public review cutover, choose and verify a separately
+controlled ingress `X-Robots-Tag: noindex, nofollow` policy or a future artifact
+change. Do not treat private candidate validation as public-review acceptance.
 
 ## Legacy inventory: evidence and outstanding checks
 
@@ -82,6 +171,13 @@ account's deployed Workers and schedules before selecting anything to retire.
 Also inspect legacy-host crontabs, systemd timers, PM2 jobs, and external
 schedulers. Record each job's production resource identity and current owner.
 Do not disable a DEV job as part of production cutover.
+
+The PROD VM has no preexisting Ngaturi cron entries. Its prepared timers are
+disabled/inactive. The tunnel LXC process inventory confirms cloudflared, but
+its privileged Docker/configuration and root scheduler inventory are not
+available to the supplied non-root account. Vercel deployed cron ownership and
+any deployed production Worker schedules still need provider-console evidence;
+checked-in declarations alone cannot establish the complete active inventory.
 
 ## Phase 6B switch order (not executed in Phase 6A)
 
@@ -103,8 +199,9 @@ Do not disable a DEV job as part of production cutover.
    media, and readiness before enabling scheduled work.
 5. Enable one VM scheduler owner for each production task only after the old
    owner is confirmed stopped. Confirm the host schedule uses UTC and observe
-   protected invocation and logs. Keep DOKU reconciliation disabled if production
-   payment configuration is incomplete.
+   protected invocation and logs. DOKU Sandbox reconciliation is appropriate for
+   this review environment only when its configuration is complete and every
+   old owner targeting the same resources is stopped.
 6. Retain the legacy runtime and ingress rollback information through the
    agreed observation window. Retire it only after cutover acceptance.
 

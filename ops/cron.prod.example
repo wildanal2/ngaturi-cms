@@ -1,5 +1,6 @@
 # Example only. Do not install or activate until Phase 6, after the old schedulers are disabled.
-# Schedule is UTC, matching the existing Vercel/Worker schedules.
+# Schedule requires a UTC cron daemon. Prefer the explicit UTC systemd timers
+# on hosts whose local timezone is not UTC; never install both mechanisms.
 # Install as the operator who can access Docker and /var/lib/ngaturi-deploy.
 RUNTIME_ENV_FILE=/etc/ngaturi/ngaturi.env
 

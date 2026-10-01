@@ -1,0 +1,13 @@
+[Unit]
+Description=Restrict Ngaturi ingress before Docker port translation
+Before=docker.service
+After=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/ngaturi/ingress.nft
+ExecReload=/usr/sbin/nft -f /etc/ngaturi/ingress.nft
+
+[Install]
+WantedBy=multi-user.target
