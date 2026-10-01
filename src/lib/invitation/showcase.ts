@@ -1,6 +1,7 @@
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
+import { databaseUtcNow } from "@/lib/db/time";
 
 export interface ShowcaseItem {
   slug: string;
@@ -25,7 +26,7 @@ export async function getRecentInvitations(limit = 12): Promise<ShowcaseItem[]> 
     .where(
       and(
         eq(invitations.status, "published"),
-        gt(invitations.expiresAt, sql`now()`),
+        gt(invitations.expiresAt, databaseUtcNow),
       ),
     )
     .orderBy(desc(invitations.publishedAt))

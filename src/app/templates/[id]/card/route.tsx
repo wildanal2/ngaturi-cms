@@ -1,8 +1,14 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { ImageResponse } from "next/og";
-import { getTemplate } from "@/lib/templates/catalog";
-import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
+import {
+  getTemplate,
+  resolveTemplateComposition,
+} from "@/lib/templates/catalog";
+import { hydrateTemplateSections } from "@/lib/templates/hydrate";
+import { getCardVisual } from "@/lib/invitation/card-visual";
+import { canonicalApplicationOrigin } from "@/lib/security/origin";
+import { fetchOgImageData } from "@/lib/security/og-image";
 
 export const runtime = "nodejs";
 // Templates are defined in code — the card only changes on deploy.
@@ -10,6 +16,11 @@ export const revalidate = 86400;
 
 const W = 600;
 const H = 800;
+
+const compositionCardBackground: Partial<Record<string, string>> = {
+  "cinematic-vintage": "/themes/cinematic-vintage/cards/template-card.jpg",
+  "sekar-jawa-3d": "/themes/sekar-jawa-3d/cards/template-card.jpg",
+};
 
 /** Satori only shapes Latin reliably — strip the rest. */
 function safe(text: string, fallback: string): string {
@@ -21,7 +32,7 @@ function safe(text: string, fallback: string): string {
 }
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -29,8 +40,13 @@ export async function GET(
   if (!t) return new Response("not found", { status: 404 });
 
   const g = t.global_settings;
-  const cover = t.sections.find((s) => s.type === "cover");
-  const hero = t.sections.find((s) => s.type === "hero");
+  // This preset intentionally keeps its content in registered variant defaults.
+  const sections =
+    resolveTemplateComposition(t.id) === "cinematic-vintage"
+      ? hydrateTemplateSections(t)
+      : t.sections;
+  const cover = sections.find((s) => s.type === "cover");
+  const hero = sections.find((s) => s.type === "hero");
   const names = safe(
     (cover?.props?.names as string) ??
       (hero?.props?.couple_names as string) ??
@@ -43,13 +59,82 @@ export async function GET(
       "",
     "The Wedding Of",
   );
-  const origin = new URL(req.url).origin;
-  const visual = getCardVisual(t.sections);
-  const background = cardImageUrl(visual.background, origin);
-  const foreground = cardImageUrl(visual.foreground, origin);
-  const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin);
-  const ornamentRight = cardImageUrl(visual.ornamentRight, origin);
-  const seal = cardImageUrl(visual.seal, origin);
+  const origin = canonicalApplicationOrigin();
+  const visual = getCardVisual(sections);
+  const cardBackground = compositionCardBackground[t.id];
+  const [background, foreground, ornamentLeft, ornamentRight, seal] = await Promise.all([
+    fetchOgImageData(cardBackground ?? visual.background, origin),
+    fetchOgImageData(visual.foreground, origin),
+    fetchOgImageData(visual.ornamentLeft, origin),
+    fetchOgImageData(visual.ornamentRight, origin),
+    fetchOgImageData(visual.seal, origin),
+  ]);
+
+  // Match the existing picker crop so the split gate is visible in full.
+  if (t.id === "sekar-jawa-3d" && background) {
+    return new ImageResponse(
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          position: "relative",
+          background: "#25291f",
+        }}
+      >
+        <img
+          src={background}
+          alt=""
+          width={600}
+          height={450}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, transparent 60%, rgba(20,24,18,.88))",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: 22,
+            left: 0,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            color: "#fff4df",
+          }}
+        >
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 36 }}>
+            {t.name}
+          </div>
+          <div
+            style={{
+              marginTop: 5,
+              fontSize: 11,
+              letterSpacing: 3,
+              color: "#dec99e",
+            }}
+          >
+            PREMIUM JAVANESE WEDDING
+          </div>
+        </div>
+      </div>,
+      {
+        width: 600,
+        height: 450,
+        headers: {
+          "Cache-Control":
+            "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800",
+        },
+      },
+    );
+  }
+
 
   return new ImageResponse(
     (
@@ -78,7 +163,16 @@ export async function GET(
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              opacity: 0.72,
+              opacity: cardBackground ? 1 : 0.72,
+            }}
+          />
+        ) : null}
+        {cardBackground ? (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(180deg, rgb(8 5 3 / 18%), rgb(8 5 3 / 42%))",
             }}
           />
         ) : null}
@@ -132,13 +226,14 @@ export async function GET(
             fontSize: 22,
             letterSpacing: 7,
             textTransform: "uppercase",
-            color: g.color_secondary,
+            color: cardBackground ? "#ead6a5" : g.color_secondary,
+            textShadow: cardBackground ? "0 2px 14px #000" : "none",
           }}
         >
           {tagline}
         </div>
 
-        {foreground ? (
+        {foreground && !cardBackground ? (
           <div
             style={{
               width: 270,
@@ -157,6 +252,8 @@ export async function GET(
               style={{ width: 270, height: 270, objectFit: "contain" }}
             />
           </div>
+        ) : cardBackground ? (
+          <div style={{ width: 1, height: 190, margin: "24px 0" }} />
         ) : (
           <div
             style={{
@@ -181,9 +278,10 @@ export async function GET(
           style={{
             fontSize: 58,
             lineHeight: 1.05,
-            color: g.color_primary,
+            color: cardBackground ? "#fff8e8" : g.color_primary,
             textAlign: "center",
             padding: "0 40px",
+            textShadow: cardBackground ? "0 3px 18px #000" : "none",
           }}
         >
           {names}
@@ -197,7 +295,14 @@ export async function GET(
             margin: "26px 0",
           }}
         />
-        <div style={{ fontSize: 22, color: g.color_primary, opacity: 0.85 }}>
+        <div
+          style={{
+            fontSize: 22,
+            color: cardBackground ? "#ead6a5" : g.color_primary,
+            opacity: 0.9,
+            textShadow: cardBackground ? "0 2px 12px #000" : "none",
+          }}
+        >
           {t.name}
         </div>
       </div>

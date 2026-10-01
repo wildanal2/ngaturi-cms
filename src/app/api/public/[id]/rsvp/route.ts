@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import { invitations, rsvpResponses } from "@/lib/db/schema";
 import { rateLimit } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
+import { trustedClientIp } from "@/lib/security/request-metadata";
 
 const Body = z.object({
   _hp: z.string().optional(),
@@ -23,10 +25,13 @@ export async function POST(
 ) {
   const { id } = await params;
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const ip = trustedClientIp(h) ?? "unknown";
 
   if (!(await rateLimit(`rsvp:${ip}`, 5, 60))) {
-    return NextResponse.json({ error: "Terlalu banyak percobaan." }, { status: 429 });
+    return NextResponse.json(
+      { error: "Terlalu banyak percobaan." },
+      { status: 429 },
+    );
   }
 
   const json = await req.json().catch(() => null);
@@ -37,9 +42,7 @@ export async function POST(
   // Honeypot — diam-diam sukses.
   if (parsed.data._hp) return NextResponse.json({ ok: true });
 
-  if (
-    !(await verifyTurnstile(parsed.data["cf-turnstile-response"], ip))
-  ) {
+  if (!(await verifyTurnstile(parsed.data["cf-turnstile-response"], ip))) {
     return NextResponse.json(
       { error: "Verifikasi keamanan gagal. Muat ulang halaman." },
       { status: 400 },
@@ -47,12 +50,19 @@ export async function POST(
   }
 
   const [inv] = await db
-    .select({ id: invitations.id, status: invitations.status })
+    .select({
+      id: invitations.id,
+      status: invitations.status,
+      expiresAt: invitations.expiresAt,
+    })
     .from(invitations)
     .where(eq(invitations.id, id))
     .limit(1);
-  if (!inv || inv.status !== "published") {
-    return NextResponse.json({ error: "Undangan tidak aktif." }, { status: 404 });
+  if (!inv || !isInvitationPubliclyActive(inv)) {
+    return NextResponse.json(
+      { error: "Undangan tidak aktif." },
+      { status: 404 },
+    );
   }
 
   try {

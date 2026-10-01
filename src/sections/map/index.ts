@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { MapCinematicVintage } from "./map-cinematic-vintage";
+export { MapCinematicVintage };
 import { MapProps } from "../schema";
 import { DUMMY_MAP_EMBED, DUMMY_MAP_LINK } from "../fields";
 import { MapEmbed } from "./map-embed";
@@ -17,6 +19,15 @@ export const mapSection: SectionDefinition = {
     if (!base.maps_url) base.maps_url = DUMMY_MAP_LINK;
   },
   variants: {
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: MapCinematicVintage,
+      propsSchema: MapProps,
+      fields: [{ kind: "text", key: "venue_name", label: "Nama tempat" }, { kind: "textarea", key: "address", label: "Alamat" }, { kind: "url", key: "maps_url", label: "Link Google Maps" }],
+      defaultProps: { venue_name: "Graha Melati", address: "Jl. Melati No. 12, Bandung" },
+      isPremium: true,
+    },
     embed: {
       name: "Peta Tersemat",
       description: "Iframe Google Maps",

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 540" preserveAspectRatio="none" fill="none" stroke="currentColor">
+  <path stroke-width="5" d="M30 510V178C30 84 96 26 180 26s150 58 150 152v332H30Z"/>
+  <path stroke-width="1.5" d="M42 498V181C42 94 101 39 180 39s138 55 138 142v317H42Z"/>
+  <path stroke-width="1" d="M54 486V185c0-80 53-133 126-133s126 53 126 133v301H54Z"/>
+  <path stroke-width="2" d="M18 505h324M12 518h336M76 470V191c0-66 43-113 104-113s104 47 104 113v279"/>
+  <path stroke-width="2" d="M119 46c8-21 28-34 61-40 33 6 53 19 61 40M133 32l47-27 47 27M24 238c42-7 3-55 54-45m258 45c-42-7-3-55-54-45M24 419c42 7 3 55 54 45m258-45c-42 7-3 55-54 45"/>
+  <path d="M20 274h34m252 0h34M20 287h34m252 0h34M102 98c19-22 45-34 78-34s59 12 78 34"/>
+  <g fill="currentColor" stroke="none"><circle cx="180" cy="6" r="4"/><circle cx="30" cy="510" r="5"/><circle cx="330" cy="510" r="5"/><path d="M66 160c-30-26-15-49 3-25 20-27 37-4 4 25 31 24 13 45-4 21-19 25-35 4-3-21Zm228 0c-30-26-15-49 3-25 20-27 37-4 4 25 31 24 13 45-4 21-19 25-35 4-3-21Z"/></g>
+</svg>

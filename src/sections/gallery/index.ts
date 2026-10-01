@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { GalleryCinematicVintage } from "./gallery-cinematic-vintage";
+export { GalleryCinematicVintage };
 import { GalleryProps } from "../schema";
 import { dummyGallery } from "../dummy";
 import { columnsField, imagesArray } from "../fields";
@@ -28,6 +30,15 @@ export const gallerySection: SectionDefinition = {
     }
   },
   variants: {
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: GalleryCinematicVintage,
+      propsSchema: GalleryProps,
+      fields: [imagesArray],
+      defaultProps: { images: [], columns: 3 },
+      isPremium: true,
+    },
     grid: {
       name: "Grid Rapi",
       component: GalleryGrid,

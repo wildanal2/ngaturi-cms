@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { CoupleCinematicVintage } from "./couple-cinematic-vintage";
+export { CoupleCinematicVintage };
 import { CoupleIntroProps } from "../schema";
 import { dummyBride, dummyGroom } from "../dummy";
 import { coupleFields, sPhotoShape } from "../fields";
@@ -8,6 +10,7 @@ import { CouplePolaroid } from "./couple-polaroid";
 import { CoupleCard } from "./couple-card";
 import { CoupleDuoPortrait } from "./couple-duo-portrait";
 import { CoupleFloating17 } from "./couple-floating17";
+import { CoupleSekarJawa3D } from "./couple-sekar-jawa-3d";
 
 export {
   CoupleSideBySide,
@@ -16,6 +19,7 @@ export {
   CoupleCard,
   CoupleDuoPortrait,
   CoupleFloating17,
+  CoupleSekarJawa3D,
 };
 
 export const coupleSection: SectionDefinition = {
@@ -31,6 +35,28 @@ export const coupleSection: SectionDefinition = {
     if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
   },
   variants: {
+    "sekar-jawa-3d": {
+      name: "Potret Keraton",
+      description: "Dua potret lengkung dalam panel Pendopo",
+      component: CoupleSekarJawa3D,
+      propsSchema: CoupleIntroProps,
+      fields: [{ kind: "text", key: "title", label: "Judul" }, ...coupleFields],
+      defaultProps: {
+        title: "Mempelai",
+        bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi" },
+        groom: { name: "Raka", full_name: "Raka Wibowo" },
+      },
+      isPremium: true,
+    },
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: CoupleCinematicVintage,
+      propsSchema: CoupleIntroProps,
+      fields: [{ kind: "text", key: "title", label: "Judul" }, ...coupleFields],
+      defaultProps: { title: "Mempelai", bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi", parents: "Bapak Arif & Ibu Ratna" }, groom: { name: "Raka", full_name: "Raka Wibowo", parents: "Bapak Budi & Ibu Dewi" } },
+      isPremium: true,
+    },
     "duo-portrait": {
       name: "Dua Portrait Arch",
       description: "Dua foto arch berdampingan dengan watercolor dan bunga sudut khas kana1",

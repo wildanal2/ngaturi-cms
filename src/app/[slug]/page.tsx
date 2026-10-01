@@ -14,8 +14,16 @@ import {
   invitationSummary,
 } from "@/lib/invitation/query";
 import { InvitationCover } from "@/components/invitation/cover";
+import { serializeJsonLd } from "@/lib/security/json-ld";
+import { trustedClientIp } from "@/lib/security/request-metadata";
+import { resolveTemplateComposition } from "@/lib/templates/catalog";
+import { siteIndexingEnabled } from "@/lib/site-indexing";
+import {
+  canViewInvitation,
+  isInvitationPubliclyActive,
+} from "@/lib/invitation/visibility";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
+const SITE_URL = process.env.BETTER_AUTH_URL!;
 
 export async function generateMetadata({
   params,
@@ -24,7 +32,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const inv = await getPublicInvitation(slug);
-  if (!inv || inv.status !== "published") {
+  if (!inv || !isInvitationPubliclyActive(inv)) {
     return { title: "Undangan tidak ditemukan", robots: { index: false } };
   }
 
@@ -71,7 +79,11 @@ export async function generateMetadata({
       description,
       images: [`/${inv.slug}/opengraph-image`],
     },
-    robots: { index: true, follow: true, "max-image-preview": "large" },
+    robots: {
+      index: siteIndexingEnabled(),
+      follow: siteIndexingEnabled(),
+      "max-image-preview": "large",
+    },
   };
 }
 
@@ -87,19 +99,19 @@ export default async function InvitationPage({
   const inv = await getPublicInvitation(slug);
   if (!inv) notFound();
 
-  // owners can preview their own invitation before publishing
-  const isDraft = inv.status !== "published";
-  const isOwner = isDraft
-    ? (await getSession())?.user.id === inv.userId
-    : false;
-  if (isDraft && !isOwner) notFound();
+  // Owners retain preview access when draft or expired; public visitors do not.
+  const now = new Date();
+  const isPubliclyActive = isInvitationPubliclyActive(inv, now);
+  const viewerUserId = isPubliclyActive ? null : (await getSession())?.user.id;
+  if (!canViewInvitation(inv, viewerUserId, now)) notFound();
+  const isPreview = !isPubliclyActive;
 
   const guest = to ? await getGuestByToken(inv.id, to) : null;
   const guestName = guest?.name ?? null;
 
   // track view setelah response
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || null;
+  const ip = trustedClientIp(h);
   const ua = h.get("user-agent") ?? null;
   after(async () => {
     try {
@@ -116,7 +128,13 @@ export default async function InvitationPage({
         .where(eq(invitations.id, inv.id));
       if (guest) await markGuestOpened(guest.id);
     } catch {
-      /* noop */
+      console.warn(
+        "Public invitation analytics failed",
+        JSON.stringify({
+          invitationId: inv.id,
+          category: "background_write_failed",
+        }),
+      );
     }
   });
 
@@ -148,22 +166,24 @@ export default async function InvitationPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(eventJsonLd) }}
       />
       {/* crawler-visible heading (behind the cover overlay) */}
       <h1 className="sr-only">
         Undangan {s.eventLabel} {s.names}
       </h1>
-      {isDraft ? (
+      {isPreview ? (
         <div className="fixed inset-x-0 top-0 z-[60] bg-wine py-1.5 text-center text-xs font-medium text-white">
-          PRATINJAU — undangan ini belum dipublikasikan
+          PRATINJAU PEMILIK — undangan ini tidak sedang aktif untuk publik
         </div>
       ) : null}
       {!hasCoverSection && inv.global.cover_enabled !== false ? (
         <InvitationCover
           names={
             (inv.sections.find((s) => s.type === "hero")?.props
-              ?.couple_names as string) ?? inv.eventTitle ?? "Undangan"
+              ?.couple_names as string) ??
+            inv.eventTitle ??
+            "Undangan"
           }
           guestName={guestName}
           global={inv.global}
@@ -172,6 +192,7 @@ export default async function InvitationPage({
       <InvitationRenderer
         sections={inv.sections}
         global={inv.global}
+        composition={resolveTemplateComposition(inv.sourceTemplate)}
         invitationId={inv.id}
         guestName={guestName}
       />

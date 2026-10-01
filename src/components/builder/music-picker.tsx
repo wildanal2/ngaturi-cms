@@ -36,16 +36,25 @@ const POPULAR: { group: string; songs: { label: string; term: string }[] }[] = [
       { label: "Janji Suci — Yovie & Nuno", term: "Janji Suci Yovie Nuno" },
       { label: "Teman Hidup — Tulus", term: "Teman Hidup Tulus" },
       { label: "Menikahimu — Kahitna", term: "Menikahimu Kahitna" },
-      { label: "Kisah Romantis — Glenn Fredly", term: "Kisah Romantis Glenn Fredly" },
+      {
+        label: "Kisah Romantis — Glenn Fredly",
+        term: "Kisah Romantis Glenn Fredly",
+      },
     ],
   },
   {
     group: "Wedding Barat",
     songs: [
       { label: "Perfect — Ed Sheeran", term: "Perfect Ed Sheeran" },
-      { label: "A Thousand Years — Christina Perri", term: "A Thousand Years Christina Perri" },
+      {
+        label: "A Thousand Years — Christina Perri",
+        term: "A Thousand Years Christina Perri",
+      },
       { label: "All of Me — John Legend", term: "All of Me John Legend" },
-      { label: "I Think They Call This Love — Elliot James Reay", term: "I Think They Call This Love Elliot James Reay" },
+      {
+        label: "I Think They Call This Love — Elliot James Reay",
+        term: "I Think They Call This Love Elliot James Reay",
+      },
       { label: "Biblical — Calum Scott", term: "Biblical Calum Scott" },
     ],
   },
@@ -135,6 +144,10 @@ export function MusicPickerField({
   }
 
   function choose(t: Track) {
+    if (!ctx.premiumFeatures) {
+      toast.error("Memilih musik baru memerlukan paket Premium.");
+      return;
+    }
     ctx.write("audio_url", t.audioUrl);
     ctx.write("track_id", t.id);
     ctx.write("track_title", t.title);
@@ -151,12 +164,20 @@ export function MusicPickerField({
   }
 
   function clearTrack() {
-    ["audio_url", "track_id", "track_title", "track_artist", "cover_url"].forEach(
-      (k) => ctx.write(k, ""),
-    );
+    [
+      "audio_url",
+      "track_id",
+      "track_title",
+      "track_artist",
+      "cover_url",
+    ].forEach((k) => ctx.write(k, ""));
   }
 
   async function upload(file: File) {
+    if (!ctx.premiumFeatures) {
+      toast.error("Upload musik baru memerlukan paket Premium.");
+      return;
+    }
     if (!file.type.startsWith("audio/")) {
       toast.error("File harus berupa audio (mp3).");
       return;
@@ -192,7 +213,7 @@ export function MusicPickerField({
     if (!s) return ctx.write("start_at", 0);
     const m = s.match(/^(?:(\d+):)?(\d{1,2})$/);
     const secs = m
-      ? (Number(m[1] ?? 0) * 60 + Number(m[2]))
+      ? Number(m[1] ?? 0) * 60 + Number(m[2])
       : Math.max(0, Math.round(Number(s) || 0));
     ctx.write("start_at", secs);
   }
@@ -268,7 +289,7 @@ export function MusicPickerField({
           </div>
           <button
             onClick={() => choose(t)}
-            disabled={ctx.disabled}
+            disabled={ctx.disabled || !ctx.premiumFeatures}
             className={`shrink-0 rounded-full px-3 py-1 text-xs ${
               active
                 ? "bg-forest text-cream"
@@ -352,6 +373,13 @@ export function MusicPickerField({
           </button>
         ))}
       </div>
+
+      {!ctx.premiumFeatures ? (
+        <p className="rounded-lg border border-gold/40 bg-gold/10 p-2 text-xs text-ink-soft">
+          Musik yang sudah ada tetap aktif. Paket Premium diperlukan untuk
+          memilih atau mengunggah musik baru.
+        </p>
+      ) : null}
 
       <audio
         ref={audioRef}
@@ -452,7 +480,7 @@ export function MusicPickerField({
           <input
             type="url"
             defaultValue={currentUrl}
-            disabled={ctx.disabled}
+            disabled={ctx.disabled || !ctx.premiumFeatures}
             placeholder="https://…/lagu.mp3"
             onBlur={(e) => {
               ctx.write("audio_url", e.target.value);
@@ -462,7 +490,7 @@ export function MusicPickerField({
           />
           <button
             type="button"
-            disabled={ctx.disabled || uploading}
+            disabled={ctx.disabled || !ctx.premiumFeatures || uploading}
             onClick={() => fileRef.current?.click()}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-line py-2 text-sm hover:bg-cream-200 disabled:opacity-60"
           >
@@ -477,6 +505,7 @@ export function MusicPickerField({
             ref={fileRef}
             type="file"
             accept="audio/*"
+            disabled={ctx.disabled || !ctx.premiumFeatures}
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];

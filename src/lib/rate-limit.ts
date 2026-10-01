@@ -10,9 +10,6 @@ export async function rateLimit(
   windowSeconds: number,
 ): Promise<boolean> {
   const redisKey = `rl:${key}`;
-  const count = await redis.incr(redisKey);
-  if (count === 1) {
-    await redis.expire(redisKey, windowSeconds);
-  }
+  const count = await redis.incrementWithTtl(redisKey, windowSeconds);
   return count <= limit;
 }

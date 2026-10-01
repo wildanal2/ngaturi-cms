@@ -1,18 +1,19 @@
-import Redis from "ioredis";
 import { env } from "@/lib/env";
+import { createRuntimeRedisAdapter } from "@/lib/redis/runtime";
+import type { RedisStore } from "@/lib/redis/types";
 
-declare global {
-   
-  var __redisClient: Redis | undefined;
+/** Shared Redis interface; transport is selected by the runtime build. */
+let adapter: RedisStore | undefined;
+function getAdapter(): RedisStore {
+  adapter ??= createRuntimeRedisAdapter(env);
+  return adapter;
 }
 
-export const redis =
-  globalThis.__redisClient ??
-  new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    // connect on first command, not at module load — keeps `next build`
-    // from opening a socket during page-data collection
-    lazyConnect: true,
-  });
-
-if (env.NODE_ENV !== "production") globalThis.__redisClient = redis;
+export const redis: RedisStore = {
+  get: (key) => getAdapter().get(key),
+  set: (key, value, ttl) => getAdapter().set(key, value, ttl),
+  delete: (key) => getAdapter().delete(key),
+  getAndDelete: (key) => getAdapter().getAndDelete(key),
+  increment: (key) => getAdapter().increment(key),
+  incrementWithTtl: (key, ttl) => getAdapter().incrementWithTtl(key, ttl),
+};

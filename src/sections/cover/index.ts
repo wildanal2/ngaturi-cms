@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { CoverCinematicVintage } from "./cover-cinematic-vintage";
+export { CoverCinematicVintage };
 import { CoverProps } from "../schema";
 import { dummyHero } from "../dummy";
 import { coverDefaults, coverFields, coverPhotoField, sCoverOverlay } from "../fields";
@@ -9,6 +11,7 @@ import { CoverMinimal } from "./cover-minimal";
 import { CoverFloating } from "./cover-floating";
 import { CoverFloating17 } from "./cover-floating17";
 import { CoverWaxSeal } from "./cover-wax-seal";
+import { CoverSekarJawa3D } from "./cover-sekar-jawa-3d";
 
 export {
   CoverClassic,
@@ -18,6 +21,7 @@ export {
   CoverFloating,
   CoverFloating17,
   CoverWaxSeal,
+  CoverSekarJawa3D,
 };
 
 export const coverSection: SectionDefinition = {
@@ -27,11 +31,33 @@ export const coverSection: SectionDefinition = {
   icon: "BookOpen",
   category: "hero",
   dummyProps: (variantKey, base) => {
-    if (variantKey !== "minimal" && !base.background_image) {
+    if (
+      variantKey !== "minimal" &&
+      variantKey !== "sekar-jawa-3d" &&
+      !base.background_image
+    ) {
       base.background_image = dummyHero(`cover-${variantKey}`);
     }
   },
   variants: {
+    "sekar-jawa-3d": {
+      name: "Gerbang Taman Jawa",
+      description: "Sampul transparan di depan Candi Bentar tiga dimensi",
+      component: CoverSekarJawa3D,
+      propsSchema: CoverProps,
+      fields: coverFields,
+      defaultProps: { ...coverDefaults },
+      isPremium: true,
+    },
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: CoverCinematicVintage,
+      propsSchema: CoverProps,
+      fields: coverFields,
+      defaultProps: { ...coverDefaults },
+      isPremium: true,
+    },
     classic: {
       name: "Klasik",
       description: "Warna solid / foto, teks di tengah",

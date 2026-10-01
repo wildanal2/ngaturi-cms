@@ -421,6 +421,8 @@ export const payments = pgTable(
     grantUntil: timestamp("grant_until"),
     rawWebhook: jsonb("raw_webhook"),
     paidAt: timestamp("paid_at"),
+    refundRecordedAt: timestamp("refund_recorded_at"),
+    refundMetadata: jsonb("refund_metadata"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

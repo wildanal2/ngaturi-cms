@@ -1,11 +1,14 @@
 import type { SectionDefinition } from "../types";
+import { EventCinematicVintage } from "./event-cinematic-vintage";
+export { EventCinematicVintage };
 import { EventDetailsProps } from "../schema";
 import { eventsArray, nowPlus } from "../fields";
 import { EventTimeline } from "./event-timeline";
 import { EventCards } from "./event-cards";
 import { EventFormal } from "./event-formal";
+import { EventSekarJawa3D } from "./event-sekar-jawa-3d";
 
-export { EventTimeline, EventCards, EventFormal };
+export { EventTimeline, EventCards, EventFormal, EventSekarJawa3D };
 
 const introField = {
   kind: "textarea" as const,
@@ -28,6 +31,27 @@ export const eventsSection: SectionDefinition = {
   icon: "CalendarClock",
   category: "content",
   variants: {
+    "sekar-jawa-3d": {
+      name: "Kartu Pendopo",
+      description: "Kartu acara ringkas dengan aksen kayu dan emas",
+      component: EventSekarJawa3D,
+      propsSchema: EventDetailsProps,
+      fields: [introField, eventsArray],
+      defaultProps: {
+        intro: "Dengan penuh syukur, kami mengundang Anda merayakan hari bahagia kami.",
+        events: [sampleEvents[0], sampleEvents[1]],
+      },
+      isPremium: true,
+    },
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: EventCinematicVintage,
+      propsSchema: EventDetailsProps,
+      fields: [introField, eventsArray],
+      defaultProps: { events: [sampleEvents[0], sampleEvents[1]], intro: "Dengan penuh syukur, kami mengundang Anda merayakan hari bahagia kami." },
+      isPremium: true,
+    },
     timeline: {
       name: "Timeline",
       description: "Daftar vertikal berurutan",

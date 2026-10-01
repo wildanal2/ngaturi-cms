@@ -4,6 +4,12 @@ import { useStore } from "zustand";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 import { SectionRegistry, variantDefaultProps } from "@/sections/registry";
 import { DEFAULT_DEVICE } from "@/components/builder/devices";
+import {
+  canEditSectionVariant,
+  canReorderSection,
+  STANDARD_COMPOSITION_POLICY,
+  type CompositionPolicy,
+} from "@/lib/templates/composition-policy";
 
 interface BuilderState {
   invitationId: string | null;
@@ -13,12 +19,16 @@ interface BuilderState {
   deviceId: string;
   dirty: boolean;
   locked: boolean;
+  premiumFeatures: boolean;
+  compositionPolicy: CompositionPolicy;
 
   load: (data: {
     invitationId: string;
     sections: SectionData[];
     global: GlobalSettings;
     locked: boolean;
+    premiumFeatures?: boolean;
+    compositionPolicy: CompositionPolicy;
   }) => void;
   select: (id: string | null) => void;
   setDevice: (id: string) => void;
@@ -82,13 +92,24 @@ export const useBuilder = create<BuilderState>()(
       deviceId: DEFAULT_DEVICE,
       dirty: false,
       locked: false,
+      premiumFeatures: true,
+      compositionPolicy: STANDARD_COMPOSITION_POLICY,
 
-      load: ({ invitationId, sections, global, locked }) =>
+      load: ({
+        invitationId,
+        sections,
+        global,
+        locked,
+        premiumFeatures = true,
+        compositionPolicy,
+      }) =>
         set({
           invitationId,
           sections: reindex([...sections].sort((a, b) => a.order - b.order)),
           global,
           locked,
+          premiumFeatures,
+          compositionPolicy,
           dirty: false,
           selectedId: null,
         }),
@@ -98,8 +119,17 @@ export const useBuilder = create<BuilderState>()(
 
       addSection: (type, variant, atIndex) =>
         set((s) => {
-          const def = SectionRegistry[type]?.variants[variant];
-          if (!def) return s;
+          const sectionDefinition = SectionRegistry[type];
+          const def = sectionDefinition?.variants[variant];
+          if (
+            !def ||
+            (!s.premiumFeatures &&
+              (type === "music" ||
+                sectionDefinition?.isPremium ||
+                def.isPremium))
+          ) {
+            return s;
+          }
           const section: SectionData = {
             id: crypto.randomUUID(),
             type,
@@ -110,15 +140,30 @@ export const useBuilder = create<BuilderState>()(
           };
           const list = [...s.sections];
           list.splice(atIndex ?? list.length, 0, section);
-          return { sections: reindex(list), selectedId: section.id, dirty: true };
+          return {
+            sections: reindex(list),
+            selectedId: section.id,
+            dirty: true,
+          };
         }),
 
       duplicateSection: (id) =>
         set((s) => {
           const idx = s.sections.findIndex((x) => x.id === id);
           if (idx < 0) return s;
+          const source = s.sections[idx];
+          const sourceDefinition = SectionRegistry[source.type];
+          const sourceVariant = sourceDefinition?.variants[source.variant];
+          if (
+            !s.premiumFeatures &&
+            (source.type === "music" ||
+              sourceDefinition?.isPremium ||
+              sourceVariant?.isPremium)
+          ) {
+            return s;
+          }
           const copy: SectionData = {
-            ...structuredClone(s.sections[idx]),
+            ...structuredClone(source),
             id: crypto.randomUUID(),
           };
           const list = [...s.sections];
@@ -138,6 +183,9 @@ export const useBuilder = create<BuilderState>()(
           const from = s.sections.findIndex((x) => x.id === activeId);
           const to = s.sections.findIndex((x) => x.id === overId);
           if (from < 0 || to < 0 || from === to) return s;
+          if (!canReorderSection(s.compositionPolicy, s.sections[from].type)) {
+            return s;
+          }
           const list = [...s.sections];
           const [moved] = list.splice(from, 1);
           list.splice(to, 0, moved);
@@ -149,6 +197,9 @@ export const useBuilder = create<BuilderState>()(
           const idx = s.sections.findIndex((x) => x.id === id);
           const next = idx + dir;
           if (idx < 0 || next < 0 || next >= s.sections.length) return s;
+          if (!canReorderSection(s.compositionPolicy, s.sections[idx].type)) {
+            return s;
+          }
           const list = [...s.sections];
           [list[idx], list[next]] = [list[next], list[idx]];
           return { sections: reindex(list), dirty: true };
@@ -163,43 +214,81 @@ export const useBuilder = create<BuilderState>()(
         })),
 
       setVariant: (id, variant) =>
-        set((s) => ({
-          sections: s.sections.map((x) => {
-            if (x.id !== id) return x;
-            // pertahankan isi yang cocok, tambahkan default styleOption baru
-            const merged = {
-              ...variantDefaultProps(x.type, variant),
-              ...x.props,
-            };
-            const nextDefaults = variantDefaultProps(x.type, variant);
-            for (const k of Object.keys(nextDefaults)) {
-              if (k.startsWith("s_") && !(k in x.props)) {
-                merged[k] = nextDefaults[k];
+        set((s) => {
+          const section = s.sections.find((x) => x.id === id);
+          if (
+            !section ||
+            !canEditSectionVariant(s.compositionPolicy, section.type) ||
+            (!s.premiumFeatures &&
+              SectionRegistry[section.type]?.variants[variant]?.isPremium &&
+              section.variant !== variant)
+          ) {
+            return s;
+          }
+          return {
+            sections: s.sections.map((x) => {
+              if (x.id !== id) return x;
+              // pertahankan isi yang cocok, tambahkan default styleOption baru
+              const merged = {
+                ...variantDefaultProps(x.type, variant),
+                ...x.props,
+              };
+              const nextDefaults = variantDefaultProps(x.type, variant);
+              for (const k of Object.keys(nextDefaults)) {
+                if (k.startsWith("s_") && !(k in x.props)) {
+                  merged[k] = nextDefaults[k];
+                }
               }
-            }
-            return { ...x, variant, props: merged };
-          }),
-          dirty: true,
-        })),
+              return { ...x, variant, props: merged };
+            }),
+            dirty: true,
+          };
+        }),
 
       setProp: (id, key, value) =>
-        set((s) => ({
-          sections: s.sections.map((x) =>
-            x.id === id ? { ...x, props: setDeep(x.props, key, value) } : x,
-          ),
-          dirty: true,
-        })),
+        set((s) => {
+          const section = s.sections.find((x) => x.id === id);
+          if (!section) return s;
+          if (
+            key.startsWith("s_") &&
+            !canEditSectionVariant(s.compositionPolicy, section.type)
+          ) {
+            return s;
+          }
+          return {
+            sections: s.sections.map((x) =>
+              x.id === id ? { ...x, props: setDeep(x.props, key, value) } : x,
+            ),
+            dirty: true,
+          };
+        }),
 
       setProps: (id, patch) =>
-        set((s) => ({
-          sections: s.sections.map((x) =>
-            x.id === id ? { ...x, props: { ...x.props, ...patch } } : x,
-          ),
-          dirty: true,
-        })),
+        set((s) => {
+          const section = s.sections.find((x) => x.id === id);
+          if (!section) return s;
+          const nextPatch = { ...patch };
+          if (!canEditSectionVariant(s.compositionPolicy, section.type)) {
+            for (const key of Object.keys(nextPatch)) {
+              if (key.startsWith("s_")) delete nextPatch[key];
+            }
+          }
+          if (Object.keys(nextPatch).length === 0) return s;
+          return {
+            sections: s.sections.map((x) =>
+              x.id === id ? { ...x, props: { ...x.props, ...nextPatch } } : x,
+            ),
+            dirty: true,
+          };
+        }),
 
       setGlobal: (patch) =>
-        set((s) => ({ global: { ...s.global, ...patch }, dirty: true })),
+        set((s) => {
+          const nextPatch = { ...patch };
+          if (!s.compositionPolicy.canEditMotion) delete nextPatch.animation;
+          if (Object.keys(nextPatch).length === 0) return s;
+          return { global: { ...s.global, ...nextPatch }, dirty: true };
+        }),
 
       markClean: () => set({ dirty: false }),
     }),

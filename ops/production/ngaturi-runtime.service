@@ -1,0 +1,19 @@
+[Unit]
+Description=Recover Ngaturi Compose after the configured host address is ready
+Wants=network-online.target
+Requires=docker.service ngaturi-ingress.service
+After=network-online.target docker.service ngaturi-ingress.service
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/ngaturi/deploy.sh --recover
+TimeoutStartSec=900
+Restart=on-failure
+RestartSec=10
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

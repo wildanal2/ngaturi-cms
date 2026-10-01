@@ -1,3 +1,4 @@
+import { canonicalTemplateId } from "@/lib/templates/identity";
 import type { SectionDefinition } from "./types";
 
 import { coverSection } from "./cover";
@@ -47,7 +48,7 @@ export function getSectionDefinition(type: string) {
 }
 
 export function getVariant(type: string, variant: string) {
-  return SectionRegistry[type]?.variants[variant];
+  return SectionRegistry[type]?.variants[canonicalTemplateId(variant)];
 }
 
 export function getAllSections() {

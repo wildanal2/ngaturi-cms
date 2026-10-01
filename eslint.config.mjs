@@ -5,7 +5,16 @@ const eslintConfig = [
   ...coreWebVitals,
   ...typescript,
   {
-    ignores: [".next/**", "node_modules/**", "src/lib/db/migrations/**"],
+    ignores: [
+      ".agent-input/**",
+      ".next/**",
+      ".vinext/**",
+      ".wrangler/**",
+      "dist/**",
+      "node_modules/**",
+      "src/lib/db/migrations/**",
+      "worker-configuration.d.ts",
+    ],
   },
 ];
 

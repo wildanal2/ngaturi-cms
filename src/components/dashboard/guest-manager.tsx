@@ -23,10 +23,12 @@ export function GuestManager({
   invitationId,
   baseUrl,
   guests,
+  canCreate,
 }: {
   invitationId: string;
   baseUrl: string;
   guests: Guest[];
+  canCreate: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
@@ -39,59 +41,63 @@ export function GuestManager({
       `Kepada Yth. ${g.guestName},\n\nDengan hormat kami mengundang Anda. Info & konfirmasi kehadiran:\n${link(g)}`,
     );
     const phone = g.whatsappPhone?.replace(/[^0-9]/g, "").replace(/^0/, "62");
-    return phone ? `https://wa.me/${phone}?text=${text}` : `https://wa.me/?text=${text}`;
+    return phone
+      ? `https://wa.me/${phone}?text=${text}`
+      : `https://wa.me/?text=${text}`;
   }
 
   return (
     <div className="space-y-6">
       <Toaster position="bottom-center" richColors />
 
-      <form
-        key={formKey}
-        action={(fd) =>
-          startTransition(async () => {
-            const res = await createGuestInvite(invitationId, fd);
-            if (res.ok) {
-              toast.success("Tamu ditambahkan");
-              setFormKey((k) => k + 1);
-            } else {
-              toast.error(res.error ?? "Gagal");
-            }
-          })
-        }
-        className="grid gap-3 rounded-xl border border-line bg-paper p-4 sm:grid-cols-2"
-      >
-        <input
-          name="guest_name"
-          required
-          placeholder="Nama tamu"
-          className="rounded-lg border border-line px-3 py-2 text-sm"
-        />
-        <input
-          name="guest_group"
-          placeholder="Grup (opsional): Keluarga, Kantor…"
-          className="rounded-lg border border-line px-3 py-2 text-sm"
-        />
-        <input
-          name="whatsapp_phone"
-          placeholder="No. WhatsApp (opsional)"
-          className="rounded-lg border border-line px-3 py-2 text-sm"
-        />
-        <input
-          name="max_guests"
-          type="number"
-          min={1}
-          max={10}
-          defaultValue={2}
-          className="rounded-lg border border-line px-3 py-2 text-sm"
-        />
-        <button
-          disabled={pending}
-          className="rounded-full bg-forest px-4 py-2 text-sm font-medium text-cream disabled:opacity-60 sm:col-span-2"
+      {canCreate ? (
+        <form
+          key={formKey}
+          action={(fd) =>
+            startTransition(async () => {
+              const res = await createGuestInvite(invitationId, fd);
+              if (res.ok) {
+                toast.success("Tamu ditambahkan");
+                setFormKey((k) => k + 1);
+              } else {
+                toast.error(res.error ?? "Gagal");
+              }
+            })
+          }
+          className="grid gap-3 rounded-xl border border-line bg-paper p-4 sm:grid-cols-2"
         >
-          Tambah tamu
-        </button>
-      </form>
+          <input
+            name="guest_name"
+            required
+            placeholder="Nama tamu"
+            className="rounded-lg border border-line px-3 py-2 text-sm"
+          />
+          <input
+            name="guest_group"
+            placeholder="Grup (opsional): Keluarga, Kantor…"
+            className="rounded-lg border border-line px-3 py-2 text-sm"
+          />
+          <input
+            name="whatsapp_phone"
+            placeholder="No. WhatsApp (opsional)"
+            className="rounded-lg border border-line px-3 py-2 text-sm"
+          />
+          <input
+            name="max_guests"
+            type="number"
+            min={1}
+            max={10}
+            defaultValue={2}
+            className="rounded-lg border border-line px-3 py-2 text-sm"
+          />
+          <button
+            disabled={pending}
+            className="rounded-full bg-forest px-4 py-2 text-sm font-medium text-cream disabled:opacity-60 sm:col-span-2"
+          >
+            Tambah tamu
+          </button>
+        </form>
+      ) : null}
 
       <ul className="space-y-2">
         {guests.map((g) => (
@@ -103,7 +109,9 @@ export function GuestManager({
               <p className="font-medium">
                 {g.guestName}
                 {g.guestGroup ? (
-                  <span className="ml-2 text-xs text-muted">{g.guestGroup}</span>
+                  <span className="ml-2 text-xs text-muted">
+                    {g.guestGroup}
+                  </span>
                 ) : null}
               </p>
               <p className="text-xs text-muted">

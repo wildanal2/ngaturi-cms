@@ -4,7 +4,10 @@ import type { SectionRenderProps } from "../types";
 import { NavIcon, scrollToSection, useNavItems } from "./nav-shared";
 
 /** Full-width floating bar pinned to the bottom. */
-export function NavigationBar({ siblingTypes = [], inCanvas }: SectionRenderProps) {
+export function NavigationBar({
+  siblingTypes = [],
+  inCanvas,
+}: SectionRenderProps) {
   const items = useNavItems(siblingTypes);
   if (items.length < 2) return null;
 
@@ -18,7 +21,9 @@ export function NavigationBar({ siblingTypes = [], inCanvas }: SectionRenderProp
         {items.map((it) => (
           <button
             key={it.type}
-            onClick={() => scrollToSection(it.type, inCanvas)}
+            onClick={(event) =>
+              scrollToSection(it.type, inCanvas, event.currentTarget)
+            }
             className="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] hover:bg-white/10"
           >
             <NavIcon name={it.icon} />

@@ -121,7 +121,7 @@ export default async function InvitationsPage({
             <InvitationCard
               key={inv.id}
               invitation={inv}
-              appUrl={env.NEXT_PUBLIC_APP_URL}
+              appUrl={env.BETTER_AUTH_URL}
               stats={stats.get(inv.id)}
             />
           ))}

@@ -4,8 +4,9 @@ import { getTemplate } from "@/lib/templates/catalog";
 import { createInvitation } from "@/lib/invitation/actions";
 
 /**
- * "Pakai template" entry point. Requires login; then creates the
- * invitation (or reuses an existing free trial) and lands in the builder.
+ * "Pakai template" entry point. Requires login, then creates a new invitation.
+ * The first lifetime creation starts the trial; later quota-backed creations
+ * are locked and routed to upgrade.
  */
 export default async function UseTemplatePage({
   params,
@@ -16,9 +17,11 @@ export default async function UseTemplatePage({
   if (!getTemplate(id)) redirect("/templates");
 
   const session = await getSession();
-  if (!session) redirect(`/login?next=${encodeURIComponent(`/templates/${id}/use`)}`);
+  if (!session)
+    redirect(`/login?next=${encodeURIComponent(`/templates/${id}/use`)}`);
 
-  // createInvitation redirects to /builder/<id> (or existing trial)
+  // createInvitation redirects to the builder for a new trial or to upgrade
+  // for a locked quota-backed draft.
   await createInvitation(id);
   return null;
 }

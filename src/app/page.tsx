@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { connection } from "next/server";
 import Link from "next/link";
 import {
   Sparkles,
@@ -61,6 +62,7 @@ const FAQ = [
 ];
 
 export default async function Home() {
+  await connection();
   const recent = await getRecentInvitations(6);
 
   return (

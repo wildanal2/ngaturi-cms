@@ -21,9 +21,11 @@ import {
   EyeOff,
   Copy,
   Trash2,
+  Lock,
 } from "lucide-react";
 import { useBuilder } from "@/stores/builder-store";
 import { SectionRegistry } from "@/sections/registry";
+import { canReorderSection } from "@/lib/templates/composition-policy";
 
 export function SectionList() {
   const sections = useBuilder((s) => s.sections);
@@ -67,9 +69,14 @@ function Row({ id, locked }: { id: string; locked: boolean }) {
   const toggleVisible = useBuilder((s) => s.toggleVisible);
   const removeSection = useBuilder((s) => s.removeSection);
   const duplicateSection = useBuilder((s) => s.duplicateSection);
+  const compositionPolicy = useBuilder((s) => s.compositionPolicy);
+
+  const sectionType = section?.type ?? "";
+  const orderEditable = canReorderSection(compositionPolicy, sectionType);
+  const dragDisabled = locked || !orderEditable;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+    useSortable({ id, disabled: dragDisabled });
 
   if (!section) return null;
   const def = SectionRegistry[section.type];
@@ -83,15 +90,25 @@ function Row({ id, locked }: { id: string; locked: boolean }) {
         active ? "border-forest bg-cream-200" : "border-transparent hover:bg-cream-200"
       } ${isDragging ? "opacity-60" : ""}`}
     >
-      <button
-        {...attributes}
-        {...listeners}
-        disabled={locked}
-        className="cursor-grab text-muted disabled:cursor-not-allowed"
-        aria-label="Geser"
-      >
-        <GripVertical size={15} />
-      </button>
+      {orderEditable ? (
+        <button
+          {...attributes}
+          {...listeners}
+          disabled={locked}
+          className="cursor-grab text-muted disabled:cursor-not-allowed"
+          aria-label="Geser"
+        >
+          <GripVertical size={15} />
+        </button>
+      ) : (
+        <span
+          className="text-muted"
+          title="Urutan dikendalikan oleh template"
+          aria-label="Urutan dikendalikan oleh template"
+        >
+          <Lock size={14} />
+        </span>
+      )}
       <button
         onClick={() => select(id)}
         className={`flex-1 truncate text-left ${section.visible ? "" : "text-muted line-through"}`}

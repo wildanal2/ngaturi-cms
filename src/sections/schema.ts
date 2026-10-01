@@ -202,6 +202,7 @@ export const GlobalSettingsSchema = z.object({
     .catch("fade-up")
     .default("fade-up"),
   animation_repeat: z.boolean().optional(),
+  presentationMode: z.enum(["cinematic", "simple"]).optional(),
   music_url: z.string().optional(),
   is_rtl: z.boolean().default(false),
   cover_enabled: z.boolean().optional(),

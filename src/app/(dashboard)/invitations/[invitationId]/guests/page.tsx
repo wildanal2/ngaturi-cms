@@ -32,9 +32,9 @@ export default async function GuestsPage({
     .where(eq(guestInvites.invitationId, invitationId))
     .orderBy(desc(guestInvites.createdAt));
 
-  const allowed = hasProFeatures(inv);
+  const canCreate = hasProFeatures(inv);
   const viaTrial = isTrialActive(inv);
-  const baseUrl = `${env.NEXT_PUBLIC_APP_URL}/${inv.slug}`;
+  const baseUrl = `${env.BETTER_AUTH_URL}/${inv.slug}`;
 
   return (
     <div className="space-y-6">
@@ -46,11 +46,11 @@ export default async function GuestsPage({
         </p>
       </div>
 
-      {!allowed ? (
+      {!canCreate ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm">
           <span>
-            Masa coba undangan ini sudah berakhir. Aktifkan paket Premium untuk
-            memakai undangan per-tamu lagi.
+            Tamu yang sudah ada tetap dapat memakai tautannya dan dapat kamu
+            hapus kapan saja. Aktifkan Premium untuk menambah tamu baru.
           </span>
           <a
             href={`/invitations/${inv.id}/unlock`}
@@ -59,30 +59,27 @@ export default async function GuestsPage({
             Upgrade ke Premium
           </a>
         </div>
-      ) : (
-        <>
-          {viaTrial ? (
-            <p className="rounded-xl border border-forest/30 bg-forest/5 p-3 text-xs text-ink-soft">
-              Kamu sedang mencoba fitur Premium gratis. Fitur ini tetap aktif
-              selama masa edit undangan (3 hari) — upgrade untuk permanen.
-            </p>
-          ) : null}
-          <GuestManager
-          invitationId={inv.id}
-          baseUrl={baseUrl}
-          guests={guests.map((g) => ({
-            id: g.id,
-            guestName: g.guestName,
-            guestGroup: g.guestGroup,
-            slugToken: g.slugToken,
-            maxGuests: g.maxGuests,
-            whatsappPhone: g.whatsappPhone,
-            isSent: g.isSent,
-            openedAt: g.openedAt?.toISOString() ?? null,
-          }))}
-        />
-        </>
-      )}
+      ) : viaTrial ? (
+        <p className="rounded-xl border border-forest/30 bg-forest/5 p-3 text-xs text-ink-soft">
+          Kamu sedang mencoba fitur Premium gratis. Fitur ini tetap aktif selama
+          masa edit undangan (3 hari) — upgrade untuk permanen.
+        </p>
+      ) : null}
+      <GuestManager
+        invitationId={inv.id}
+        baseUrl={baseUrl}
+        canCreate={canCreate}
+        guests={guests.map((g) => ({
+          id: g.id,
+          guestName: g.guestName,
+          guestGroup: g.guestGroup,
+          slugToken: g.slugToken,
+          maxGuests: g.maxGuests,
+          whatsappPhone: g.whatsappPhone,
+          isSent: g.isSent,
+          openedAt: g.openedAt?.toISOString() ?? null,
+        }))}
+      />
     </div>
   );
 }

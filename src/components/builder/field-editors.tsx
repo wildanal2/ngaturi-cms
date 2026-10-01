@@ -32,6 +32,7 @@ function toDatetimeLocal(v: unknown): string {
 export interface FieldContext {
   invitationId: string;
   disabled: boolean;
+  premiumFeatures: boolean;
   /** read a value by dot-path from the section props */
   read: (path: string) => unknown;
   /** write a value by dot-path */
@@ -136,7 +137,10 @@ function ScalarInput({
           onChange={(e) => {
             const raw = e.target.value;
             const num = Number(raw);
-            write(path, Number.isFinite(num) && String(num) === raw ? num : raw);
+            write(
+              path,
+              Number.isFinite(num) && String(num) === raw ? num : raw,
+            );
           }}
         >
           {field.options.map((o) => (
@@ -201,7 +205,10 @@ function ArrayField({
     <div className="space-y-2">
       <span className="text-sm text-ink-soft">{field.label}</span>
       {items.map((_, idx) => (
-        <div key={idx} className="rounded-xl border border-line bg-cream/40 p-3">
+        <div
+          key={idx}
+          className="rounded-xl border border-line bg-cream/40 p-3"
+        >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium text-muted">
               {field.itemLabel} {idx + 1}
@@ -278,7 +285,9 @@ export function ImageInput({
   const [busy, setBusy] = useState(false);
   // pending file waiting for the crop dialog, or an existing URL to re-crop
   const [pending, setPending] = useState<
-    { kind: "file"; file: File; url: string } | { kind: "url"; url: string } | null
+    | { kind: "file"; file: File; url: string }
+    | { kind: "url"; url: string }
+    | null
   >(null);
 
   async function send(body: FormData) {

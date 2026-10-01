@@ -1,0 +1,116 @@
+name: Container release
+
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+# Serialize main releases, including retries, so version checks cannot race.
+concurrency:
+  group: container-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Focused runtime tests
+        run: npm test -- src/app/api/ready/route.test.ts src/lib/env.test.ts src/lib/storage/index.test.ts src/lib/site-indexing.test.ts src/proxy.test.ts src/app/sitemap.test.ts src/lib/payments/doku.test.ts src/app/api/cron/reconcile-doku-payments/route.test.ts src/lib/cron-auth.test.ts
+      - name: Production operations checks
+        run: |
+          bash scripts/test-production-runtime.sh
+          node --test scripts/production-scheduler.test.mjs scripts/container-release.test.mjs
+          git diff --check
+
+  image-validation:
+    if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Validate production Docker build (no publication)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: false
+          provenance: false
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      RELEASE_IMAGE: ghcr.io/wildanal2/ngaturi-cms
+      RELEASE_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve package version and guard release identity
+        id: release
+        run: |
+          current_main=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$current_main" != "$RELEASE_SHA" ]; then
+            echo '::error::This release is superseded by a newer main commit.'
+            exit 1
+          fi
+          node scripts/container-release.mjs prepare
+      - name: Build and publish production image once
+        id: build
+        if: steps.release.outputs.build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.RELEASE_IMAGE }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.release.outputs.version }}
+            org.opencontainers.image.created=${{ steps.release.outputs.created }}
+          provenance: false
+      - name: Package production operation files (no source or secrets)
+        run: tar -C ops/production -czf ngaturi-production-ops.tar.gz compose.yml deploy.sh rollback.sh scheduler.crontab scheduler.mjs deploy.env.example README.md ngaturi-runtime.service
+      - name: Promote same digest to version and stable; record manifest
+        env:
+          RELEASE_DIGEST: ${{ steps.build.outputs.digest || steps.release.outputs.digest }}
+        run: |
+          current_main=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$current_main" != "$RELEASE_SHA" ]; then
+            echo '::error::main advanced during build; stable publication stopped.'
+            exit 1
+          fi
+          node scripts/container-release.mjs promote
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-release-v${{ steps.release.outputs.version }}-${{ github.sha }}
+          path: |
+            release-manifest.json
+            ngaturi-production-ops.tar.gz
+          if-no-files-found: error

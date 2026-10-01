@@ -1,4 +1,6 @@
 import type { SectionDefinition } from "../types";
+import { HeroCinematicVintage } from "./hero-cinematic-vintage";
+export { HeroCinematicVintage };
 import { HeroProps } from "../schema";
 import { dummyHero } from "../dummy";
 import { heroBase, nowPlus, sOverlay, sTextPos } from "../fields";
@@ -9,6 +11,7 @@ import { HeroBotanical } from "./hero-botanical";
 import { HeroArch } from "./hero-arch";
 import { HeroGarland } from "./hero-garland";
 import { HeroFloating17 } from "./hero-floating17";
+import { HeroSekarJawa3D } from "./hero-sekar-jawa-3d";
 
 export {
   HeroCentered,
@@ -18,6 +21,7 @@ export {
   HeroArch,
   HeroGarland,
   HeroFloating17,
+  HeroSekarJawa3D,
 };
 
 const baseDefaults = {
@@ -36,6 +40,27 @@ export const heroSection: SectionDefinition = {
     if (!base.background_image) base.background_image = dummyHero(variantKey);
   },
   variants: {
+    "sekar-jawa-3d": {
+      name: "Potret Taman Keraton",
+      description: "Potret melengkung dan tipografi kerajaan Jawa",
+      component: HeroSekarJawa3D,
+      propsSchema: HeroProps,
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Foto pasangan" },
+      ],
+      defaultProps: { ...baseDefaults, has_countdown: false },
+      isPremium: true,
+    },
+    "cinematic-vintage": {
+      name: "Sinematik Vintage",
+      description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
+      component: HeroCinematicVintage,
+      propsSchema: HeroProps,
+      fields: [...heroBase, { kind: "image", key: "background_image", label: "Foto pasangan" }],
+      defaultProps: { ...baseDefaults },
+      isPremium: true,
+    },
     centered: {
       name: "Foto Fullscreen",
       description: "Foto memenuhi layar, teks di atasnya",

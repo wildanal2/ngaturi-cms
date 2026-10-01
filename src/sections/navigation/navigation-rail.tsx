@@ -23,7 +23,9 @@ export function NavigationRail({
         {items.map((it) => (
           <button
             key={it.type}
-            onClick={() => scrollToSection(it.type, inCanvas)}
+            onClick={(event) =>
+              scrollToSection(it.type, inCanvas, event.currentTarget)
+            }
             aria-label={it.label}
             title={it.label}
             className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/15"
