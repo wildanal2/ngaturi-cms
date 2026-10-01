@@ -1,0 +1,10 @@
+[Unit]
+Description=Ngaturi invitation edit locking (inactive until cutover)
+
+[Timer]
+OnCalendar=*-*-* 01:00:00 UTC
+Unit=ngaturi-cron@lock-expired-edits.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

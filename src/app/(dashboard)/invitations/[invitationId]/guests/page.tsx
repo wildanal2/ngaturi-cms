@@ -34,7 +34,7 @@ export default async function GuestsPage({
 
   const canCreate = hasProFeatures(inv);
   const viaTrial = isTrialActive(inv);
-  const baseUrl = `${env.NEXT_PUBLIC_APP_URL}/${inv.slug}`;
+  const baseUrl = `${env.BETTER_AUTH_URL}/${inv.slug}`;
 
   return (
     <div className="space-y-6">

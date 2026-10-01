@@ -1,0 +1,22 @@
+FROM node:24-bookworm-slim
+
+ARG DEV_UID=1001
+ARG DEV_GID=1001
+
+RUN groupadd --gid "${DEV_GID}" dev \
+    && useradd --uid "${DEV_UID}" --gid "${DEV_GID}" --create-home dev
+
+WORKDIR /app
+RUN chown dev:dev /app
+USER dev
+
+COPY --chown=dev:dev package.json package-lock.json ./
+RUN npm ci
+
+USER root
+RUN mkdir -p /app/.next && chown dev:dev /app/.next
+USER dev
+
+ENV NODE_ENV=development
+EXPOSE 3009
+CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { checkOrderStatus } from "@/lib/payments/doku";
 import { applyDokuResult, invitationIdForInvoice } from "@/lib/payments/grant";
+import { PaymentSandboxNotice } from "@/components/payment-sandbox-notice";
 
 /**
  * Where DOKU sends the buyer back after checkout (auto_redirect). The
@@ -50,6 +51,7 @@ export default async function PaymentCallbackPage({
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+      <PaymentSandboxNotice />
       <h1 className="font-display text-2xl">
         {result === "paid"
           ? "Pembayaran berhasil 🎉"

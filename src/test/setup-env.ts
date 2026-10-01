@@ -15,6 +15,8 @@ const FAKE: Record<string, string> = {
   AWS_ENDPOINT_URL_S3: "https://s3.example.com",
   S3_BUCKET: "test",
   S3_PUBLIC_URL: "https://cdn.example.com",
+  R2_PUBLIC_URL: "https://media.example.com",
+  LEGACY_MEDIA_PUBLIC_URLS: "https://legacy.example.com/media",
   BETTER_AUTH_SECRET: "test-secret",
   BETTER_AUTH_URL: "http://localhost:3030",
   GOOGLE_CLIENT_ID: "test",

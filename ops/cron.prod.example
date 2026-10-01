@@ -1,0 +1,9 @@
+# Example only. Do not install or activate until Phase 6, after the old schedulers are disabled.
+# Schedule requires a UTC cron daemon. Prefer the explicit UTC systemd timers
+# on hosts whose local timezone is not UTC; never install both mechanisms.
+# Install as the operator who can access Docker and /var/lib/ngaturi-deploy.
+RUNTIME_ENV_FILE=/etc/ngaturi/ngaturi.env
+
+0 1 * * * /opt/ngaturi-release/scripts/run-prod-cron.sh lock-expired-edits >> /var/log/ngaturi-cron.log 2>&1
+30 1 * * * /opt/ngaturi-release/scripts/run-prod-cron.sh archive-expired >> /var/log/ngaturi-cron.log 2>&1
+*/5 * * * * /opt/ngaturi-release/scripts/run-prod-cron.sh reconcile-doku-payments >> /var/log/ngaturi-cron.log 2>&1

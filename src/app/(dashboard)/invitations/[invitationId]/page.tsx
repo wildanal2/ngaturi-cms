@@ -15,6 +15,7 @@ import { ShareBox } from "@/components/dashboard/share-box";
 import { ViewsChart } from "@/components/dashboard/views-chart";
 import { DeleteInvitation } from "@/components/dashboard/delete-invitation";
 import { InvitationLink } from "@/components/dashboard/invitation-link";
+import { PaymentSandboxNotice } from "@/components/payment-sandbox-notice";
 
 export default async function InvitationDetailPage({
   params,
@@ -69,7 +70,7 @@ export default async function InvitationDetailPage({
   const attending = rsvps
     .filter((r) => r.status === "attending")
     .reduce((n, r) => n + r.guestCount, 0);
-  const url = `${env.NEXT_PUBLIC_APP_URL}/${inv.slug}`;
+  const url = `${env.BETTER_AUTH_URL}/${inv.slug}`;
 
   const days = last14Days(
     new Map(viewRows.map((r) => [r.day, r.count])),
@@ -115,6 +116,8 @@ export default async function InvitationDetailPage({
         </nav>
       </div>
 
+      <PaymentSandboxNotice />
+
       {!inv.isPaid ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm">
           <span>
@@ -132,7 +135,7 @@ export default async function InvitationDetailPage({
       <InvitationLink
         invitationId={inv.id}
         slug={inv.slug}
-        appUrl={env.NEXT_PUBLIC_APP_URL}
+        appUrl={env.BETTER_AUTH_URL}
       />
 
       {inv.status === "published" ? <ShareBox url={url} /> : null}

@@ -1,12 +1,13 @@
 import { ImageResponse } from "next/og";
-import { headers } from "next/headers";
 import {
   getPublicInvitation,
   invitationSummary,
 } from "@/lib/invitation/query";
-import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
-import { env } from "@/lib/env";
+import { getCardVisual } from "@/lib/invitation/card-visual";
+import { trustedPublicMediaPrefixes } from "@/lib/storage";
 import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
+import { canonicalApplicationOrigin } from "@/lib/security/origin";
+import { fetchOgImageData } from "@/lib/security/og-image";
 
 export const alt = "Undangan";
 export const size = { width: 1200, height: 630 };
@@ -15,8 +16,6 @@ export const contentType = "image/png";
 // edit their cover photo / names, which is rare. Keeps Satori renders off
 // the hot path for social-media crawlers.
 export const revalidate = 300;
-
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
 
 /** Satori (next/og) only shapes Latin reliably — strip the rest. */
 function safe(text: string, fallback = ""): string {
@@ -61,17 +60,16 @@ export default async function OgImage({
         year: "numeric",
       })
     : "";
-  const cdn = env.S3_PUBLIC_URL.replace(/\/$/, "");
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const origin = host ? `${protocol}://${host}` : SITE_URL;
+  const mediaPrefixes = trustedPublicMediaPrefixes();
+  const origin = canonicalApplicationOrigin();
   const visual = getCardVisual(inv?.sections ?? []);
-  const photo = cardImageUrl(visual.background ?? summary?.photo ?? undefined, origin, cdn);
-  const foreground = cardImageUrl(visual.foreground, origin, cdn);
-  const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin, cdn);
-  const ornamentRight = cardImageUrl(visual.ornamentRight, origin, cdn);
-  const seal = cardImageUrl(visual.seal, origin, cdn);
+  const [photo, foreground, ornamentLeft, ornamentRight, seal] = await Promise.all([
+    fetchOgImageData(visual.background ?? summary?.photo ?? undefined, origin, mediaPrefixes),
+    fetchOgImageData(visual.foreground, origin, mediaPrefixes),
+    fetchOgImageData(visual.ornamentLeft, origin, mediaPrefixes),
+    fetchOgImageData(visual.ornamentRight, origin, mediaPrefixes),
+    fetchOgImageData(visual.seal, origin, mediaPrefixes),
+  ]);
 
   try {
     return new ImageResponse(

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 
 const mocks = vi.hoisted(() => ({
@@ -14,6 +14,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import sitemap from "./sitemap";
+afterEach(() => vi.unstubAllEnvs());
 
 describe("sitemap timezone handling", () => {
   beforeEach(() => {
@@ -31,5 +32,11 @@ describe("sitemap timezone handling", () => {
     const condition = mocks.where.mock.calls[0]?.[0];
     const query = new PgDialect().sqlToQuery(condition).sql;
     expect(query).toContain("timezone('UTC', now())");
+  });
+
+  it("omits review URLs and avoids querying invitations when indexing is disabled", async () => {
+    vi.stubEnv("SITE_INDEXING_ENABLED", "false");
+    await expect(sitemap()).resolves.toEqual([]);
+    expect(mocks.select).not.toHaveBeenCalled();
   });
 });

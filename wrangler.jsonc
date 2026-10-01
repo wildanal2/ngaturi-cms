@@ -1,9 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ngaturi-staging",
+  // Isolated DEV Worker. Keep production resources in a separate configuration.
+  "name": "ngaturi-dev",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "dev.ngaturi.com",
+      "custom_domain": true,
+      "zone_name": "ngaturi.com",
+    },
+  ],
   "compatibility_date": "2026-09-22",
   "compatibility_flags": ["nodejs_compat"],
   "main": "worker/index.ts",
+  "triggers": {
+    "crons": ["*/5 * * * *"],
+  },
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",
@@ -12,22 +24,18 @@
   "images": {
     "binding": "IMAGES",
   },
-  // Replace this with a cache-disabled Hyperdrive configuration before deploy.
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "replace-with-hyperdrive-id",
+      "id": "183f3bd040ee44c4bb966feb0801644d",
     },
   ],
   "r2_buckets": [
     {
       "binding": "MEDIA_BUCKET",
-      "bucket_name": "ngaturi-staging-media",
+      "bucket_name": "ngaturi-media-dev",
     },
   ],
-  "triggers": {
-    "crons": ["*/5 * * * *"],
-  },
   "observability": {
     "enabled": true,
   },

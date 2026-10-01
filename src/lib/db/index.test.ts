@@ -11,7 +11,7 @@ vi.mock("drizzle-orm/postgres-js", async (importOriginal) => ({
   drizzle: mocks.drizzle,
 }));
 
-import { getDb } from "./index";
+import { db, getDb } from "./index";
 import {
   runWithInvocationContext,
   type NgaturiWorkerEnv,
@@ -35,16 +35,42 @@ beforeEach(() => {
 });
 
 describe("getDb", () => {
-  it("sets UTC on the Node development database session", () => {
+  it("keeps adapter metadata probes lazy outside an invocation", () => {
+    expect((db as unknown as { _: unknown })._).toBeUndefined();
+    expect(mocks.postgres).not.toHaveBeenCalled();
+    expect(mocks.drizzle).not.toHaveBeenCalled();
+  });
+
+  it("uses a bounded process-wide Node pool with verified TLS and UTC", () => {
     getDb();
+    getDb();
+    expect(mocks.postgres).toHaveBeenCalledOnce();
 
     expect(mocks.postgres).toHaveBeenCalledWith(
       "postgres://user:pass@localhost:5432/test",
       {
-        max: 10,
+        max: 5,
+        ssl: { rejectUnauthorized: true },
+        connect_timeout: 10,
+        idle_timeout: 20,
+        max_lifetime: 300,
         connection: { TimeZone: "UTC" },
       },
     );
+  });
+
+  it("overrides a URL that disables TLS verification in the real driver", async () => {
+    getDb();
+    const { default: postgres } = await vi.importActual<{
+      default: typeof import("postgres");
+    }>("postgres");
+    const client = postgres(
+      "postgres://user:pass@localhost/test?sslmode=require",
+      mocks.postgres.mock.calls[0][1],
+    );
+    expect(client.options.ssl).toEqual({ rejectUnauthorized: true });
+    expect(client.options.max).toBe(5);
+    await client.end();
   });
 
   it("creates one max-five Hyperdrive client per Worker invocation", async () => {
@@ -84,5 +110,12 @@ describe("getDb", () => {
         connection: { TimeZone: "UTC" },
       },
     );
+  });
+
+  it("never falls back to DATABASE_URL inside a Worker invocation", () => {
+    expect(() => runWithInvocationContext({}, getDb)).toThrow(
+      "HYPERDRIVE binding is required in the Cloudflare Worker runtime",
+    );
+    expect(mocks.postgres).not.toHaveBeenCalled();
   });
 });

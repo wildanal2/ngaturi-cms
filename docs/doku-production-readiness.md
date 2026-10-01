@@ -52,6 +52,20 @@ eligible pending DOKU payment → scheduled signed Check Status
 Rekonsiliasi mempertahankan minimum age 2 menit, maximum age 24 jam, batch 50,
 concurrency 5, dan urutan kandidat paling lama lebih dulu.
 
+### Hasil pembuatan checkout yang ambigu
+
+Payment lokal dibuat sebagai `pending` sebelum request Checkout dikirim. Hanya
+respons error DOKU yang signature-nya valid dan status HTTP-nya secara eksplisit
+diklasifikasikan sebagai penolakan request yang boleh mengubah payment menjadi
+`failed`. Timeout, network error, respons tanpa signature valid, body malformed,
+response mismatch, conflict, throttling, dan server error tetap `pending`.
+
+Status `pending` pada kondisi ini tidak memberikan entitlement. Signed webhook,
+callback Check Status, atau scheduled reconciliation berikutnya tetap melewati
+`applyDokuResult`, row lock, serta transaksi fulfillment yang sama. Dengan begitu
+`SUCCESS` yang datang terlambat dapat dipenuhi satu kali tanpa mempercayai
+redirect browser.
+
 ## Refund
 
 Refund merupakan status finansial. Persetujuan dan inisiasinya tetap manual

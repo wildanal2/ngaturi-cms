@@ -33,6 +33,12 @@ function getNodeDatabase(): Database {
   if (!globalThis.__pgClient) {
     globalThis.__pgClient = postgres(env.DATABASE_URL, {
       max: env.DATABASE_POOL_SIZE,
+      // Explicit options override sslmode=require, which disables certificate
+      // verification in Postgres.js. Keep Node's default hostname verification.
+      ssl: { rejectUnauthorized: true },
+      connect_timeout: 10,
+      idle_timeout: 20,
+      max_lifetime: 300,
       connection: { TimeZone: "UTC" },
     });
   }
@@ -46,13 +52,19 @@ function getNodeDatabase(): Database {
  * Resolve the database for the current runtime.
  *
  * Workers get one Postgres.js/Drizzle instance per invocation through
- * Hyperdrive. Node development and scripts retain their process-local pool.
+ * Hyperdrive. Node and scripts retain their verified-TLS process-local pool.
  */
 export function getDb(): Database {
   const workerEnv = getWorkerEnv();
-  if (workerEnv?.HYPERDRIVE?.connectionString) {
+  if (workerEnv) {
+    const hyperdriveConnectionString = workerEnv.HYPERDRIVE?.connectionString;
+    if (!hyperdriveConnectionString) {
+      throw new Error(
+        "HYPERDRIVE binding is required in the Cloudflare Worker runtime",
+      );
+    }
     return getInvocationValue(INVOCATION_DATABASE, () =>
-      createDatabase(workerEnv.HYPERDRIVE.connectionString, 5),
+      createDatabase(hyperdriveConnectionString, 5),
     )!;
   }
   return getNodeDatabase();
@@ -65,6 +77,11 @@ export function getDb(): Database {
  */
 export const db = new Proxy({} as Database, {
   get(_target, property) {
+    // Adapter factories (including Better Auth's Drizzle adapter) probe this
+    // metadata property during module initialization. The schema is already
+    // supplied explicitly to those adapters, so resolving a live database here
+    // would incorrectly create the Node client before a Worker invocation.
+    if (property === "_") return undefined;
     const database = getDb();
     const value = Reflect.get(database, property, database) as unknown;
     return typeof value === "function" ? value.bind(database) : value;

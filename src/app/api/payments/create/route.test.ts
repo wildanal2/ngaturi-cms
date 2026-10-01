@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   createCheckout: vi.fn(),
   getSession: vi.fn(),
+  isDefinitiveCheckoutRejection: vi.fn(),
   transaction: vi.fn(),
   update: vi.fn(),
+  updateSet: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/helpers", () => ({ getSession: mocks.getSession }));
@@ -15,6 +17,7 @@ vi.mock("@/lib/db", () => {
 vi.mock("@/lib/payments/doku", () => ({
   createCheckout: mocks.createCheckout,
   DOKU_CHECKOUT_DUE_MINUTES: 60,
+  isDefinitiveCheckoutRejection: mocks.isDefinitiveCheckoutRejection,
   isPaymentConfigured: () => true,
 }));
 
@@ -42,6 +45,20 @@ function request(body: object) {
   });
 }
 
+function checkoutTransaction() {
+  return {
+    select: vi
+      .fn()
+      .mockReturnValueOnce(
+        lockedRows([{ id: "invitation-1", userId: "user-1", isPaid: false }]),
+      )
+      .mockReturnValueOnce(rows([])),
+    insert: () => ({
+      values: () => ({ returning: async () => [{ id: "payment-1" }] }),
+    }),
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.getSession.mockResolvedValue({
@@ -52,9 +69,12 @@ beforeEach(() => {
     tokenId: "token",
     sessionId: "session",
   });
+  mocks.isDefinitiveCheckoutRejection.mockReturnValue(false);
+  mocks.updateSet.mockReturnValue({ where: async () => undefined });
   mocks.update.mockReturnValue({
-    set: () => ({ where: async () => undefined }),
+    set: mocks.updateSet,
   });
+  vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 describe("POST /api/payments/create", () => {
@@ -228,5 +248,42 @@ describe("POST /api/payments/create", () => {
     expect(response.status).toBe(200);
     expect(expirePending).toHaveBeenCalledOnce();
     expect(mocks.createCheckout).toHaveBeenCalledOnce();
+  });
+
+  it("marks only an authenticated provider rejection as failed", async () => {
+    const tx = checkoutTransaction();
+    mocks.transaction.mockImplementation(async (callback) => callback(tx));
+    mocks.createCheckout.mockRejectedValueOnce(new Error("provider rejected"));
+    mocks.isDefinitiveCheckoutRejection.mockReturnValueOnce(true);
+
+    const response = await POST(
+      request({
+        invitationId: "invitation-1",
+        kind: "invitation_unlock",
+        plan: "basic",
+      }),
+    );
+
+    expect(response.status).toBe(502);
+    expect(mocks.updateSet).toHaveBeenCalledWith({ status: "failed" });
+  });
+
+  it("leaves a transport-ambiguous checkout pending for reconciliation", async () => {
+    const tx = checkoutTransaction();
+    mocks.transaction.mockImplementation(async (callback) => callback(tx));
+    mocks.createCheckout.mockRejectedValueOnce(
+      new TypeError("network timeout"),
+    );
+
+    const response = await POST(
+      request({
+        invitationId: "invitation-1",
+        kind: "invitation_unlock",
+        plan: "basic",
+      }),
+    );
+
+    expect(response.status).toBe(502);
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });

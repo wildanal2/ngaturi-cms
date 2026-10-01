@@ -28,8 +28,29 @@ npm run demo:showcase          # (opsional) undangan contoh utk landing
 npm run dev
 ```
 
+`db:migrate` hanya boleh dijalankan oleh satu proses/operator terkontrol.
+`db:push` hanya untuk database lokal disposable, bukan staging atau Production.
+
+Upload media Builder memakai `/api/uploads`. Node memproses JPEG, PNG, WebP,
+dan AVIF statis dengan Sharp; Worker tetap memakai Cloudflare Images. Hasil
+gambar diorientasikan dari EXIF, di-crop bila diminta, dibatasi 1920 × 1920
+tanpa pembesaran, lalu disimpan sebagai WebP tanpa metadata. GIF dan gambar
+animasi ditolak. Batas gambar adalah nilai terendah dari `MAX_UPLOAD_MB` dan
+10 MiB, audio 15 MiB, decode gambar 24 megapiksel, dan maksimal dua upload
+Node serta dua transformasi gambar per proses. Recrop hanya mengambil URL media
+tepercaya, tanpa redirect, dengan timeout 8 detik dan batas sumber yang sama.
+Endpoint `/api/uploads/presign` dinonaktifkan sampai alur upload langsung dapat
+memverifikasi ukuran, isi, kepemilikan, dan penyelesaian upload.
+
+`BETTER_AUTH_URL` adalah origin kanonis untuk fetch kartu OG dan redirect login;
+origin DEV/deployed harus HTTPS. Node mengabaikan header IP dari proxy secara
+default. Set `TRUST_CLOUDFLARE_INGRESS=true` hanya setelah origin Node menerima
+trafik semata-mata melalui Cloudflare Tunnel tepercaya. Worker memakai konteks
+Cloudflare yang sudah terikat pada invocation.
+
 Google Console → Authorized redirect URI:
-`http://localhost:3000/api/auth/callback/google` (+ URL produksi)
+`http://localhost:3030/api/auth/callback/google` (+ exact staging/production
+URLs in `docs/phase-4-integration-readiness.md`)
 
 ---
 
@@ -316,11 +337,25 @@ Template = preset section + palet, di `src/lib/templates/catalog.ts`:
   rekonsiliasi DOKU; file tersebut bukan konfigurasi scheduler Production.
 - Rincian alur pembayaran, bukti Sandbox, strategi secret, dan batas migrasi ada
   di [`docs/doku-production-readiness.md`](docs/doku-production-readiness.md).
+- Kontrak Phase 0 untuk environment, Node rollback, migrasi, storage, dan backup
+  ada di [`docs/phase-0-production-safety.md`](docs/phase-0-production-safety.md).
+- Bukti lokal Phase 1 untuk equivalence Node/Worker, background work, scheduled
+  reconciliation, dan baseline bundle ada di
+  [`docs/phase-1-worker-runtime-equivalence.md`](docs/phase-1-worker-runtime-equivalence.md).
+- Kontrak Phase 2 untuk Neon direct endpoint, Hyperdrive tanpa query cache,
+  migrasi terkontrol, dan verifikasi transaksi staging ada di
+  [`docs/phase-2-neon-hyperdrive.md`](docs/phase-2-neon-hyperdrive.md).
+- Kontrak Phase 3 untuk R2, coexistence URL media lama/baru, dan verifikasi
+  integritas migrasi ada di
+  [`docs/phase-3-r2-migration.md`](docs/phase-3-r2-migration.md).
+- Kontrak Phase 4 untuk account-state authorization, OAuth/cookie origins,
+  Redis REST, DOKU Worker behavior, dan checklist staging ada di
+  [`docs/phase-4-integration-readiness.md`](docs/phase-4-integration-readiness.md).
 
 ## Scripts
 
 `dev` · `build` · `start` · `typecheck` · `lint` · `format`
-`db:generate` · `db:migrate` · `db:push` · `db:seed` · `db:studio` · `demo:showcase`
+`db:check` · `db:generate` · `db:migrate` · `db:push` · `db:seed` · `db:studio` · `demo:showcase`
 
 ## Struktur
 

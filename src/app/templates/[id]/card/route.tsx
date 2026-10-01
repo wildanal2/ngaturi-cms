@@ -6,7 +6,9 @@ import {
   resolveTemplateComposition,
 } from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
-import { cardImageUrl, getCardVisual } from "@/lib/invitation/card-visual";
+import { getCardVisual } from "@/lib/invitation/card-visual";
+import { canonicalApplicationOrigin } from "@/lib/security/origin";
+import { fetchOgImageData } from "@/lib/security/og-image";
 
 export const runtime = "nodejs";
 // Templates are defined in code — the card only changes on deploy.
@@ -30,7 +32,7 @@ function safe(text: string, fallback: string): string {
 }
 
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -57,14 +59,16 @@ export async function GET(
       "",
     "The Wedding Of",
   );
-  const origin = new URL(req.url).origin;
+  const origin = canonicalApplicationOrigin();
   const visual = getCardVisual(sections);
   const cardBackground = compositionCardBackground[t.id];
-  const background = cardImageUrl(cardBackground ?? visual.background, origin);
-  const foreground = cardImageUrl(visual.foreground, origin);
-  const ornamentLeft = cardImageUrl(visual.ornamentLeft, origin);
-  const ornamentRight = cardImageUrl(visual.ornamentRight, origin);
-  const seal = cardImageUrl(visual.seal, origin);
+  const [background, foreground, ornamentLeft, ornamentRight, seal] = await Promise.all([
+    fetchOgImageData(cardBackground ?? visual.background, origin),
+    fetchOgImageData(visual.foreground, origin),
+    fetchOgImageData(visual.ornamentLeft, origin),
+    fetchOgImageData(visual.ornamentRight, origin),
+    fetchOgImageData(visual.seal, origin),
+  ]);
 
   // Match the existing picker crop so the split gate is visible in full.
   if (t.id === "sekar-jawa-3d" && background) {

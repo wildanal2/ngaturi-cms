@@ -14,13 +14,16 @@ import {
   invitationSummary,
 } from "@/lib/invitation/query";
 import { InvitationCover } from "@/components/invitation/cover";
+import { serializeJsonLd } from "@/lib/security/json-ld";
+import { trustedClientIp } from "@/lib/security/request-metadata";
 import { resolveTemplateComposition } from "@/lib/templates/catalog";
+import { siteIndexingEnabled } from "@/lib/site-indexing";
 import {
   canViewInvitation,
   isInvitationPubliclyActive,
 } from "@/lib/invitation/visibility";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://ngaturi.com";
+const SITE_URL = process.env.BETTER_AUTH_URL!;
 
 export async function generateMetadata({
   params,
@@ -76,7 +79,11 @@ export async function generateMetadata({
       description,
       images: [`/${inv.slug}/opengraph-image`],
     },
-    robots: { index: true, follow: true, "max-image-preview": "large" },
+    robots: {
+      index: siteIndexingEnabled(),
+      follow: siteIndexingEnabled(),
+      "max-image-preview": "large",
+    },
   };
 }
 
@@ -104,7 +111,7 @@ export default async function InvitationPage({
 
   // track view setelah response
   const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || null;
+  const ip = trustedClientIp(h);
   const ua = h.get("user-agent") ?? null;
   after(async () => {
     try {
@@ -121,7 +128,13 @@ export default async function InvitationPage({
         .where(eq(invitations.id, inv.id));
       if (guest) await markGuestOpened(guest.id);
     } catch {
-      /* noop */
+      console.warn(
+        "Public invitation analytics failed",
+        JSON.stringify({
+          invitationId: inv.id,
+          category: "background_write_failed",
+        }),
+      );
     }
   });
 
@@ -153,7 +166,7 @@ export default async function InvitationPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(eventJsonLd) }}
       />
       {/* crawler-visible heading (behind the cover overlay) */}
       <h1 className="sr-only">
