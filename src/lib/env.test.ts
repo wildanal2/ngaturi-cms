@@ -14,6 +14,16 @@ async function readEnv() {
 }
 
 describe("runtime provider environment", () => {
+  it("does not require unused invitation domains or disabled Turnstile", async () => {
+    vi.stubEnv("NEXT_PUBLIC_INVITATION_DOMAINS", undefined);
+    vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", undefined);
+    vi.stubEnv("TURNSTILE_SECRET_KEY", undefined);
+    const config = await readEnv();
+    expect(config.NEXT_PUBLIC_INVITATION_DOMAINS).toBeUndefined();
+    expect(config.NEXT_PUBLIC_TURNSTILE_SITE_KEY).toBeUndefined();
+    expect(config.TURNSTILE_SECRET_KEY).toBeUndefined();
+  });
+
   it("defaults to a five-connection pool and REST Redis", async () => {
     vi.stubEnv("DATABASE_POOL_SIZE", undefined);
     vi.stubEnv("REDIS_TRANSPORT", undefined);

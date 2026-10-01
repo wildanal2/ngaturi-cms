@@ -4,10 +4,12 @@ import {
   checkOrderStatus,
   createCheckout,
   isDefinitiveCheckoutRejection,
+  isPaymentSandbox,
   mapStatus,
   sanitizeText,
   verifyNotificationSignature,
 } from "./doku";
+import { env } from "@/lib/env";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -18,6 +20,22 @@ const TEST_DOKU = {
   clientId: "test-client",
   secretKey: "test-secret",
 };
+
+describe("payment review mode", () => {
+  it("follows the actual runtime endpoint without treating production as Sandbox", () => {
+    const original = env.DOKU_BASE_URL;
+    try {
+      env.DOKU_BASE_URL = "https://api-sandbox.doku.com";
+      expect(isPaymentSandbox()).toBe(true);
+      env.DOKU_BASE_URL = "https://api.doku.com";
+      expect(isPaymentSandbox()).toBe(false);
+      env.DOKU_BASE_URL = "https://api-sandbox.doku.com.example.org";
+      expect(isPaymentSandbox()).toBe(false);
+    } finally {
+      env.DOKU_BASE_URL = original;
+    }
+  });
+});
 
 function signedDokuResponse(
   payload: object | string,

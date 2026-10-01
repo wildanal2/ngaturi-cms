@@ -7,6 +7,7 @@ import { isPaymentConfigured } from "@/lib/payments/doku";
 import { isRenewalEligible } from "@/lib/payments/renewal-policy";
 import { UnlockOptions } from "@/components/dashboard/unlock-options";
 import { RenewalOption } from "@/components/dashboard/renewal-option";
+import { PaymentSandboxNotice } from "@/components/payment-sandbox-notice";
 
 export default async function UnlockPage({
   params,
@@ -40,6 +41,8 @@ export default async function UnlockPage({
             : "Buka semua fitur, hilangkan watermark, dan edit tanpa batas waktu."}
         </p>
       </div>
+
+      <PaymentSandboxNotice />
 
       {canRenew ? (
         <RenewalOption

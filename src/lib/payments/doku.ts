@@ -41,6 +41,10 @@ export function isPaymentConfigured(): boolean {
   return Boolean(env.DOKU_CLIENT_ID && env.DOKU_SECRET_KEY);
 }
 
+export function isPaymentSandbox(): boolean {
+  return new URL(env.DOKU_BASE_URL).hostname === "api-sandbox.doku.com";
+}
+
 function paymentConfiguration(): DokuConfiguration {
   const clientId = env.DOKU_CLIENT_ID;
   const secretKey = env.DOKU_SECRET_KEY;

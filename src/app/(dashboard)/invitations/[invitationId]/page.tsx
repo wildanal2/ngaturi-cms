@@ -15,6 +15,7 @@ import { ShareBox } from "@/components/dashboard/share-box";
 import { ViewsChart } from "@/components/dashboard/views-chart";
 import { DeleteInvitation } from "@/components/dashboard/delete-invitation";
 import { InvitationLink } from "@/components/dashboard/invitation-link";
+import { PaymentSandboxNotice } from "@/components/payment-sandbox-notice";
 
 export default async function InvitationDetailPage({
   params,
@@ -114,6 +115,8 @@ export default async function InvitationDetailPage({
           )}
         </nav>
       </div>
+
+      <PaymentSandboxNotice />
 
       {!inv.isPaid ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm">
