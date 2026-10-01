@@ -35,8 +35,9 @@ export NGATURI_COMPOSE_FILE="$repo_dir/compose.prod.yml"
 image="ghcr.io/example/ngaturi@sha256:$(printf 'a%.0s' {1..64})"
 printf '%s\n' "$image" > "$fixture/state/current"
 bash "$repo_dir/scripts/start-prod-runtime.sh"
-rg -F "$image compose --env-file /dev/null" "$TEST_LOG" >/dev/null
-rg -F -- '--no-build --pull never --force-recreate app' "$TEST_LOG" >/dev/null
+calls=$(< "$TEST_LOG")
+[[ $calls == *"$image compose --env-file /dev/null"* ]]
+[[ $calls == *"--no-build --pull never --force-recreate app"* ]]
 [[ $(cat "$fixture/state/current") == "$image" ]]
 export TEST_PROBE_EXIT=22
 if bash "$repo_dir/scripts/start-prod-runtime.sh" >/dev/null 2>&1; then
