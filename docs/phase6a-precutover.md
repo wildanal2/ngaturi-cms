@@ -1,17 +1,18 @@
 # Phase 6A: PROD VM pre-cutover validation
 
 Phase 6A keeps production traffic and legacy schedulers on their existing
-targets. The pinned candidate now runs privately on the PROD host. This is
-not a production traffic cutover. The current image has no visible Sandbox
-payment notice; the source fixes below require a separately authorized future
-artifact before it can safely receive external review traffic.
+targets. The replacement review candidate now runs privately on the PROD host.
+This is not a production traffic cutover. Provider-side scheduler ownership
+and the exact legacy ingress settings remain user-confirmation gates. One
+controlled reboot proved firewall persistence and exposed a late-address bind
+race; the recovery helper is corrected but has not had a second reboot test.
 
 ## Artifact and access contract
 
 Use only:
 
 ```text
-ghcr.io/wildanal2/ngaturi-cms@sha256:5adb39ed37c30358df4d8e5f009e543255e4f960f690b53a0b2ba2bde5a8f6bc
+ghcr.io/wildanal2/ngaturi-cms@sha256:2231d9cda0ee2e6f6409967e8c980e9eaae65a01355180063d24dc9702fbd5ee
 ```
 
 Copy the Phase 5 release bundle (production Compose and deployment/scheduler
@@ -98,7 +99,7 @@ Run as an administrator, with the one explicit production env source:
 
 ```sh
 export RUNTIME_ENV_FILE=/etc/ngaturi/ngaturi.env
-export NGATURI_IMAGE='ghcr.io/wildanal2/ngaturi-cms@sha256:5adb39ed37c30358df4d8e5f009e543255e4f960f690b53a0b2ba2bde5a8f6bc'
+export NGATURI_IMAGE='ghcr.io/wildanal2/ngaturi-cms@sha256:2231d9cda0ee2e6f6409967e8c980e9eaae65a01355180063d24dc9702fbd5ee'
 docker compose --env-file /dev/null -f /opt/ngaturi-migration-job/compose.migrate.yml \
   -p ngaturi-migration run --rm -T migrate --require-empty
 # Check the direct Neon target against the independently confirmed PROD resource.
@@ -129,9 +130,15 @@ An active firewall unit is reloaded, not restarted, to avoid restarting Docker.
 The global nftables service is not enabled: its flush-all configuration would
 destroy existing Docker and host rules.
 
-LXC health/readiness and unrelated-LAN rejection were verified. Rule reload
-was verified; a full host reboot was not performed. Cloudflare ingress trust
-remains false, and `trustedProxyHeaders: false` is unchanged.
+LXC health/readiness and unrelated-LAN rejection were verified after the
+controlled reboot. The ingress unit entered active state before Docker.
+Docker's raw prerouting rule also rejects direct container-IP access from
+outside its bridge; direct routing is disabled, its bridge has one container,
+and IPv6 is disabled. After these checks, Cloudflare ingress trust was enabled
+in the external runtime env. `trustedProxyHeaders: false` remains unchanged.
+Runtime IP-helper checks accept only a single valid Cloudflare IP, discard
+untrusted forwarded headers, replace a forged internal header, and reject
+chained IPs. Public Cloudflare-to-candidate traffic is still not routed.
 
 `ops/ngaturi-cron@.service` uses `/etc/ngaturi/scheduler.conf` for non-secret
 host settings only (env-file path and port/bind configuration). Application
@@ -144,11 +151,18 @@ Do not install the cron example alongside these timers.
 
 ## Review safety and artifact boundary
 
-Minimal source fixes add a runtime-derived Sandbox notice to upgrade/renewal,
-payment callback, and invitation detail pages. The pinned container does not
-contain those fixes and must remain private. No replacement application image
-was built or published. A future authorized artifact must prove the visible
-notice before public review traffic is enabled.
+The replacement image was published by the existing Container release workflow
+from source commit `ab133aa5250f0a2339cf591cf078b7e3204600d8`, run
+`36818818173`. Registry metadata verified `linux/amd64` and the exact revision.
+The PROD deployment pulled its exact digest and recorded the earlier private
+candidate as `previous`; no application build ran on PROD.
+
+Runtime acceptance confirmed health/readiness, homepage/login/templates/static
+assets, Sharp, Upstash write/read/TTL/cleanup, Google initiation with the
+canonical callback, and signed/public R2 PNG write/read/delete with exact bytes
+and subsequent 404s. The unauthenticated payment callback visibly includes
+the Sandbox/simulated-payment notice without initiating a transaction.
+No DEV hostname appeared in the checked pages.
 
 `SITE_INDEXING_ENABLED=false` selects review mode at server runtime: page
 responses include `X-Robots-Tag: noindex, nofollow`, root and invitation
@@ -182,6 +196,76 @@ available to the supplied non-root account. Vercel deployed cron ownership and
 any deployed production Worker schedules still need provider-console evidence;
 checked-in declarations alone cannot establish the complete active inventory.
 
+The public GitHub API shows a successful legacy Vercel production deployment on
+2026-09-09. This establishes historical deployment, not current DNS ownership or
+current cron execution. Public requests traverse Cloudflare; response headers
+do not identify Vercel or another actual origin. Three uncached public health
+requests did not increment the private candidate's trusted-ingress counter.
+
+### Required user confirmations (no credentials requested)
+
+| Item | Location and exact values to inspect | Evidence to record without secrets |
+| --- | --- | --- |
+| Legacy Vercel project | Vercel dashboard: identify the project whose Settings → Domains includes `ngaturi.com`; inspect its current Production deployment | Project name, production deployment URL/ID, whether the domain still aliases it |
+| Edit locking | That project's Settings → Cron Jobs: `/api/cron/lock-expired-edits`, expected `0 1 * * *`; View Logs | Enabled/disabled, last invocation/result, actual production resource identity |
+| Archiving | Same page: `/api/cron/archive-expired`, expected `30 1 * * *`; View Logs | Enabled/disabled, last invocation/result, actual production resource identity |
+| DOKU reconciliation | Cloudflare Workers & Pages: inspect each production Worker, Settings → Triggers → Cron Triggers; View events under Trigger Events | Worker name, trigger expressions, execution history, PROD versus DEV resource identity; do not classify `ngaturi-dev` as PROD from its name alone |
+| Current DNS ingress | Cloudflare zone `ngaturi.com` → DNS → Records: apex and `www` | Record type, content/target, proxy state, TTL; retain an export/screenshot |
+| Tunnel ingress, if used | Cloudflare Networking → Tunnels: select the tunnel identified by the LXC's `cloudflared-ngaturi.service`; Routes → Published application | Existing `ngaturi.com`/`www` hostname and path entries, exact service URL, origin options, route ordering |
+| Worker ingress, if used | Workers & Pages → selected Worker → Settings → Domains & Routes | Custom domain or route matching `ngaturi.com`/`www`, Worker identity/version, fail-open setting |
+| Other ingress policies | Zone rules/load balancing if they override the above | Applicable rule/pool/redirect identity and prior values; explicitly confirm none if absent |
+| LXC privileged scheduler | Proxmox LXC console/operator root access: inspect all user crontabs and system timers | Any production Ngaturi task owners; readable system cron and timer listings currently show none |
+
+These locations follow the official [Vercel cron management guide](https://vercel.com/docs/cron-jobs/manage-cron-jobs),
+[Cloudflare tunnel guide](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/),
+and [Cloudflare Cron Triggers guide](https://developers.cloudflare.com/workers/configuration/cron-triggers/).
+No provider access was added and no legacy resource was modified.
+
+### Intended scheduler ownership at cutover
+
+| Responsibility | Current owner | Sole intended VM owner | Separately authorized Phase 6B action |
+| --- | --- | --- | --- |
+| Edit locking | Vercel declaration exists; live owner requires confirmation | `ngaturi-lock-expired-edits.timer`, 01:00 UTC | Disable the confirmed legacy project cron, drain existing runs, then enable this timer after ingress acceptance |
+| Archiving | Vercel declaration exists; live owner requires confirmation | `ngaturi-archive-expired.timer`, 01:30 UTC | Same owner verification/drain; enable only this timer |
+| DOKU reconciliation | PROD owner unknown; checked-in Worker schedule is DEV-only | `ngaturi-reconcile-doku-payments.timer`, every five minutes UTC | Retire only confirmed PROD reconciliation triggers/processes, wait for propagation/in-flight work, then enable this Sandbox-configured timer |
+
+Vercel supports a project-level **Disable Cron Jobs** control. Do not execute it
+now. For a Wrangler-managed production Worker, update its production `crons`
+configuration so a later deployment cannot recreate a retired schedule.
+Do not retire a DEV schedule as a substitute for identifying the PROD owner.
+
+## Controlled reboot and recovery evidence
+
+SSH, Docker, and the ingress unit are enabled at boot, the candidate and other
+Docker containers use `unless-stopped`, and Ngaturi timers remain inactive.
+The unrelated API-Mikrotik PM2 runtime had no boot unit. Read-only inspection
+found its existing saved configuration exactly matched both running processes.
+After the authorized reboot, the existing saved configuration was resurrected
+under its original owner; both processes returned online. No unrelated startup
+configuration was changed, and the recovery paths are recorded outside Git.
+
+The host boot ID changed, SSH recovered, other Docker containers recovered,
+and firewall-before-Docker ordering was verified. The Ngaturi candidate failed
+its initial automatic port bind because Docker started before DHCP assigned
+the narrow host address. A later start also left it without network attachments
+after Docker's failed setup. The firewall was not weakened and the binding was
+not widened.
+
+`scripts/start-prod-runtime.sh` and `ops/ngaturi-runtime.service` correct this
+race: wait at most 60 seconds for the configured IPv4 address, read and validate
+the exact `current` digest, force-recreate only the app from its cached image,
+and gate health/readiness. No pull, build, migration, env fallback, or source
+mount occurs. The enabled runtime unit depends on Docker and the persistent
+ingress unit, using the same non-secret host settings file as the inactive
+scheduler. Focused tests cover late address availability, immutable reference
+enforcement, cached-image recreation, and readiness failure.
+
+The new runtime unit was started successfully on the rebooted host; LXC probes
+returned 200 and unrelated LAN traffic remained blocked. Only one reboot was
+authorized/performed. Automatic recovery with this revised unit still requires
+a separately authorized subsequent reboot test before claiming that gate fully
+passed. Firewall persistence itself is verified by the completed reboot.
+
 ## Phase 6B switch order (not executed in Phase 6A)
 
 1. Complete all acceptance evidence above. Record the current production
@@ -210,6 +294,13 @@ checked-in declarations alone cannot establish the complete active inventory.
 
 ## Rollback and deployment state
 
+The new private candidate is `current`; the earlier private digest
+`sha256:5adb39ed37c30358df4d8e5f009e543255e4f960f690b53a0b2ba2bde5a8f6bc`
+is now `previous`. This establishes an artifact rollback option without
+claiming that either private candidate was the legacy public origin.
+The earlier image lacks the review notice/noindex controls and must not be
+promoted to public review traffic as a substitute for ingress rollback.
+
 The Phase 5 deployer stores only full image references in `current` and
 `previous`, under `NGATURI_DEPLOY_STATE_DIR` (default
 `/var/lib/ngaturi-deploy`). Verify the actual location and references on PROD;
@@ -220,6 +311,39 @@ On the first VM deployment, there is no previous known-good VM digest. A
 failed candidate is stopped; production remains served by the legacy target.
 A successful private deployment records `current` but does not establish a
 previous VM release or prove traffic-cutover readiness.
+
+### Public ingress rollback: confirmation required before Phase 6B
+
+Do not substitute the new VM origin or a guessed Vercel hostname for the old
+origin. The exact existing production target is not visible through current
+host access. Populate an operator-owned, non-secret rollback record outside
+Git with the dashboard values listed above: DNS record IDs/type/content/proxy
+state/TTL, any matching Worker route/version, tunnel hostname/path/service and
+origin options, any overriding rule/pool, the legacy deployment URL, and each
+task's prior scheduler owner/enabled state. Until those values are confirmed,
+the rollback ingress gate is unresolved and Phase 6B is not ready.
+
+The separately authorized rollback sequence is:
+
+1. Disable/stop all three VM timers and confirm their service instances have
+   finished; do not start legacy schedulers while VM work is still running.
+2. Restore only the ingress resources actually changed during cutover, using
+   the recorded original values. A tunnel rollback uses **Networking → Tunnels
+   → recorded tunnel → Routes → Published application**, restoring the original
+   service URL/options for the production hostname/path. A DNS rollback uses
+   **zone → DNS → Records**, restoring the recorded apex/`www` record values.
+   Restore an original matching Worker route/custom domain/version only if
+   cutover changed it. These are user dashboard actions with current access.
+3. Verify the recorded legacy deployment is healthy and public homepage/login,
+   OAuth initiation, and a known legacy media URL work. Confirm requests no
+   longer reach the new VM application port. Keep the VM timers stopped.
+4. Restore only the recorded original scheduler owners/enabled states, observe
+   their logs, and verify there is one owner for each responsibility. Vercel
+   deployment rollback does not automatically restore/change cron schedules;
+   scheduler state must be restored explicitly.
+
+This procedure was documented, not executed. Production DNS, tunnel routes,
+Worker routes, legacy deployments, and scheduled jobs were not changed.
 
 After a Phase 6B cutover failure, stop new VM scheduler invocations and drain
 in-flight work before restoring the recorded legacy ingress destination.
