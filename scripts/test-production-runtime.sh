@@ -15,6 +15,7 @@ export NGATURI_PROJECT_NAME=ngaturi-tooling-fixture RUNTIME_ENV_FILE="$fixture/r
 export DEPLOY_STATE_DIR="$fixture/state" SCHEDULER_ENABLED=false PROBE_ATTEMPTS=1
 export DEPLOY_CONFIG_FILE="$fixture/deploy.env"
 
+printf 'production checks: shell syntax and Compose rendering\n'
 bash -n "$repo_dir/ops/production/"*.sh
 "$real_docker" compose --env-file /dev/null -f "$repo_dir/ops/production/compose.yml" --profile scheduler config --format json > "$fixture/render.json"
 node --input-type=module - "$fixture/render.json" <<'JS'
@@ -80,7 +81,7 @@ reject "$rollback"
 reject "$rollback" v1.0.0
 
 "$deploy" --dry-run v0.1.0 > "$fixture/dry-run"
-rg -F "image=$image_a" "$fixture/dry-run" >/dev/null
+grep -Fq "image=$image_a" "$fixture/dry-run"
 [[ ! -f $DEPLOY_STATE_DIR/releases.env && ! -f $DEPLOY_STATE_DIR/compose.env ]]
 export FAIL_RESOLVE=true
 reject "$deploy" v0.1.0
@@ -93,16 +94,16 @@ export RESOLVED_DIGEST=${image_a#*@}
 export FAIL_READY_IMAGE=$image_a
 reject "$deploy" v0.1.0
 [[ ! -f $DEPLOY_STATE_DIR/releases.env && ! -f $DEPLOY_STATE_DIR/compose.env ]]
-rg -F 'stop app' "$TEST_LOG" >/dev/null
+grep -Fq 'stop app' "$TEST_LOG"
 unset FAIL_READY_IMAGE
 "$deploy" v0.1.0
 [[ $(state CURRENT_IMAGE) == "$image_a" && $(state CURRENT_VERSION) == v0.1.0 && -z $(state PREVIOUS_IMAGE) ]]
-rg -F "NGATURI_IMAGE=$image_a" "$DEPLOY_STATE_DIR/compose.env" >/dev/null
+grep -Fq "NGATURI_IMAGE=$image_a" "$DEPLOY_STATE_DIR/compose.env"
 
 export FAIL_READY_IMAGE=$image_b
 reject "$deploy" "$image_b"
 [[ $(state CURRENT_IMAGE) == "$image_a" && -z $(state PREVIOUS_IMAGE) ]]
-rg -F "NGATURI_IMAGE=$image_a" "$DEPLOY_STATE_DIR/compose.env" >/dev/null
+grep -Fq "NGATURI_IMAGE=$image_a" "$DEPLOY_STATE_DIR/compose.env"
 unset FAIL_READY_IMAGE
 export FAIL_START_IMAGE=$image_b
 reject "$deploy" "$image_b"
@@ -127,12 +128,12 @@ export FAIL_PULL_IMAGE=$image_c
 reject "$deploy" "$image_c"
 unset FAIL_PULL_IMAGE
 [[ $(state CURRENT_IMAGE) == "$image_a" ]]
-! rg -F -- '--force-recreate app' "$TEST_LOG"
+! grep -Fq -- '--force-recreate app' "$TEST_LOG"
 : > "$TEST_LOG"
 export FAIL_DRAIN=true
 reject "$deploy" "$image_c"
 unset FAIL_DRAIN
-! rg -F -- '--force-recreate app' "$TEST_LOG"
+! grep -Fq -- '--force-recreate app' "$TEST_LOG"
 
 # A concurrent operator cannot change state or the runtime.
 ( flock -n 9; reject "$deploy" "$image_c" ) 9>"$DEPLOY_STATE_DIR/deploy.lock"
@@ -141,7 +142,7 @@ unset FAIL_DRAIN
 : > "$TEST_LOG"
 "$deploy" --recover
 [[ -f $TEST_ADDRESS_CHECK ]]
-! rg '^.* pull ' "$TEST_LOG"
+! grep -Eq '^.* pull ' "$TEST_LOG"
 [[ $(state CURRENT_IMAGE) == "$image_a" ]]
 export FAIL_READY_IMAGE=$image_a
 reject "$deploy" --recover
