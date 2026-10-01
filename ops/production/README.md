@@ -1,6 +1,6 @@
 # Ngaturi production
 
-**Flow:** feature → Staging → main → GHCR `vX.Y.Z` / `stable` / `sha-<commit>` → deploy resolved digest. GitHub builds once for a new main release; it never deploys the VM. Each release artifact includes image metadata and `ngaturi-production-ops.tar.gz`.
+**Flow:** feature → Staging candidate → main → Git tag `vX.Y.Z` → GHCR release → deploy resolved digest. See [Git & Release Flow](GIT_RELEASE.md). GitHub never deploys the VM. Each official release artifact includes image metadata and `ngaturi-production-ops.tar.gz`.
 
 ## Initial setup
 
@@ -23,7 +23,8 @@ The existing VM has a DHCP bind-address race: replace its boot recovery unit wit
 cd /opt/ngaturi
 ./deploy.sh --dry-run v1.2.0
 ./deploy.sh v1.2.0
-# Also accepts sha256:<64 hex> or the configured package@sha256:<64 hex>.
+# Candidate: ./deploy.sh sha-<full 40-character commit SHA>
+# Exact artifact: ./deploy.sh sha256:<64 hex>
 ```
 
 A version resolves through GHCR to an exact digest before pulling. Compose uses only that digest. Health and readiness must pass before current/previous records change. Failure restores the known-good digest and verifies it, or stops a failed first deployment. State is non-secret in `/var/lib/ngaturi-deploy`: `releases.env` records versions/digests atomically; `compose.env` records the active runtime; `candidate.env` records the attempted release. First use imports the old Phase 5 `current`/`previous` digest records. Database migrations remain a separate operator step. A release briefly restarts the app.
@@ -52,6 +53,6 @@ One non-root Node runner in the same immutable image calls protected `http://app
 
 ## Version policy and secrets
 
-Feature = development; Staging = integration; main = stable source. `package.json` supplies the version. `vX.Y.Z` and SHA identify an immutable release; `stable` selects the newest approved release. Collision checks refuse different content; retrying the same source reuses its validated digest. The digest is the actual production identity. No `latest` policy.
+Feature/PR = validation; Staging = SHA candidate; main = production-ready source. Only a strict Git tag `vX.Y.Z` reachable from main releases production. Git tags supply versions; `package.json.version` is package metadata. Version/SHA collisions fail; matching candidates/retries reuse their digest. `stable` moves after a complete official release and is not a deploy input. Normal production deploys use `vX.Y.Z`; the runtime identity is always the resolved digest.
 
 Application secrets exist only in `/etc/ngaturi/ngaturi.env`, never in Git, deploy config, release artifacts or state. Update operation files by extracting the next ops artifact into `/opt/ngaturi`, retaining `deploy.env` and state. Phase 6B ingress/provider acceptance remains separately authorized.
