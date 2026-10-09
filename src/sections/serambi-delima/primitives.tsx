@@ -85,7 +85,15 @@ export function DelimaSeal({ className }: { className?: string }) {
   );
 }
 
-function Media({ src, alt }: { src: string; alt: string }) {
+function Media({
+  src,
+  alt,
+  eager,
+}: {
+  src: string;
+  alt: string;
+  eager: boolean;
+}) {
   const [failed, setFailed] = useState(false);
   return (
     <>
@@ -105,7 +113,7 @@ function Media({ src, alt }: { src: string; alt: string }) {
           width={900}
           height={1200}
           className={styles.photo}
-          loading="eager"
+          loading={eager ? "eager" : "lazy"}
           decoding="async"
           onError={() => setFailed(true)}
         />
@@ -117,10 +125,12 @@ function Media({ src, alt }: { src: string; alt: string }) {
 export function PortraitMedia({
   src,
   alt = "",
+  eager = true,
 }: {
   src: string;
   alt?: string;
+  eager?: boolean;
 }) {
   // Changing media in Builder retries a new URL without persisting UI state.
-  return <Media key={src} src={src} alt={alt} />;
+  return <Media key={src} src={src} alt={alt} eager={eager} />;
 }

@@ -7,8 +7,15 @@ import { EventTimeline } from "./event-timeline";
 import { EventCards } from "./event-cards";
 import { EventFormal } from "./event-formal";
 import { EventSekarJawa3D } from "./event-sekar-jawa-3d";
+import { EventSerambiDelima } from "./event-serambi-delima";
 
-export { EventTimeline, EventCards, EventFormal, EventSekarJawa3D };
+export {
+  EventTimeline,
+  EventCards,
+  EventFormal,
+  EventSekarJawa3D,
+  EventSerambiDelima,
+};
 
 const introField = {
   kind: "textarea" as const,
@@ -87,4 +94,12 @@ export const eventsSection: SectionDefinition = {
       },
     },
   },
+};
+
+eventsSection.variants["serambi-delima"] = {
+  ...eventsSection.variants.formal,
+  name: "Serambi Delima",
+  description: "Panel acara seremonial dengan tanggal utama dan detail emas",
+  component: EventSerambiDelima,
+  isPremium: true,
 };

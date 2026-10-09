@@ -1,0 +1,258 @@
+.formPanel {
+  text-align: left;
+  padding-inline: 16px;
+}
+.formFields {
+  display: grid;
+  min-width: 0;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.field {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+.label {
+  font: 500 1rem / 1.6 var(--sd-body);
+  color: var(--sd-ink);
+}
+.input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px;
+  border: 1px solid #ad8950;
+  border-radius: 8px;
+  background: #fffaf2;
+  color: var(--sd-ink);
+  font: 400 1rem / 1.6 var(--sd-body);
+}
+textarea.input {
+  resize: vertical;
+}
+.input:focus-visible {
+  outline: 2px solid var(--sd-wine);
+  outline-offset: 3px;
+}
+.input:disabled {
+  opacity: 0.7;
+}
+.hint {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--sd-ink);
+}
+.challenge {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+.formFooter {
+  display: grid;
+  gap: 20px;
+  margin-top: 24px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+.action {
+  margin-top: 0;
+}
+.action:disabled {
+  opacity: 0.65;
+}
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #bda77c;
+  border-radius: 8px;
+  background: var(--sd-paper);
+  color: var(--sd-ink);
+  font-size: 1rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.notice svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+  color: var(--sd-wine);
+}
+.notice > div {
+  min-width: 0;
+}
+.notice[data-tone="error"] {
+  border-color: var(--sd-wine);
+  color: var(--sd-wine);
+}
+.successPanel {
+  text-align: left;
+}
+.summary {
+  margin-top: 12px !important;
+  font-weight: 500;
+}
+.wishes {
+  margin-top: 36px;
+}
+.wishesTitle {
+  margin-bottom: 24px !important;
+  font: 400 clamp(1.25rem, 5cqi, 1.6rem) / 1.5 var(--sd-display);
+  text-align: center;
+}
+.wishList {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0;
+  padding: 0;
+  list-style: none;
+}
+.wishCard {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #bda77c;
+  border-radius: 16px 16px 4px 4px;
+  background: #faf5ec;
+}
+.wishHeader {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.wishName {
+  min-width: 0;
+  flex: 1 1 140px;
+  font: 500 1.125rem / 1.6 var(--sd-body);
+  color: var(--sd-wine);
+  overflow-wrap: anywhere;
+}
+.wishDate {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.wishMessage {
+  margin-top: 12px !important;
+  font-size: 1rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.listStatus {
+  display: grid;
+  gap: 16px;
+}
+.closingCopy {
+  margin-top: 32px;
+  text-align: center;
+}
+.closingMessage {
+  font-size: 1.0625rem;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.signature {
+  margin-top: 32px;
+}
+.closingEyebrow {
+  font: 400 0.875rem / 1.8 var(--sd-display);
+  letter-spacing: 0.06em;
+}
+.closingNames {
+  margin-top: 12px !important;
+  font: 400 clamp(1.7rem, 7cqi, 2.4rem) / 1.4 var(--sd-display);
+  color: var(--sd-wine);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+.musicTheme {
+  background: none;
+}
+/* Keep the shared Fab's positioning/Canvas behavior, adding safe-area insets locally. */
+.musicTheme[data-floating="true"] > div {
+  bottom: max(16px, env(safe-area-inset-bottom));
+}
+.musicTheme[data-floating="true"][data-side="right"] > div {
+  right: max(16px, env(safe-area-inset-right));
+}
+.musicTheme[data-floating="true"][data-side="left"] > div {
+  left: max(16px, env(safe-area-inset-left));
+}
+.musicButton {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid #d4ba8b;
+  border-radius: 50%;
+  background: var(--sd-wine);
+  color: #fff9ed;
+  box-shadow:
+    inset 0 0 0 3px var(--sd-wine),
+    inset 0 0 0 4px #d4ba8b80,
+    0 4px 16px #42182126;
+  cursor: pointer;
+  transition: background 180ms ease;
+}
+.musicButton:hover:not(:disabled) {
+  background: #521c2b;
+}
+.musicButton:focus-visible {
+  outline: 2px solid var(--sd-ink);
+  outline-offset: 4px;
+}
+.musicButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.spinner {
+  animation: sending 1s linear infinite;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@container (max-width: 420px) {
+  /* Preserve room for the existing 300px challenge, without scaling or clipping it. */
+  .formPanel {
+    margin-inline: calc(8px - clamp(20px, 6cqi, 36px));
+    padding-inline: 0;
+  }
+  .formFields,
+  .formFooter {
+    padding-inline: 16px;
+  }
+}
+@keyframes sending {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+  .musicButton {
+    transition: none;
+  }
+}

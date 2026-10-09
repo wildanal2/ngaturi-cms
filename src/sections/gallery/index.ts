@@ -9,6 +9,7 @@ import { GalleryMasonry } from "./gallery-masonry";
 import { GalleryCarousel } from "./gallery-carousel";
 import { GallerySpotlight } from "./gallery-spotlight";
 import { GalleryFloating17 } from "./gallery-floating17";
+import { GallerySerambiDelima } from "./gallery-serambi-delima";
 
 export {
   GalleryGrid,
@@ -16,6 +17,7 @@ export {
   GalleryCarousel,
   GallerySpotlight,
   GalleryFloating17,
+  GallerySerambiDelima,
 };
 
 export const gallerySection: SectionDefinition = {
@@ -110,4 +112,13 @@ export const gallerySection: SectionDefinition = {
       defaultProps: { images: [], columns: 3 },
     },
   },
+};
+
+gallerySection.variants["serambi-delima"] = {
+  ...gallerySection.variants.spotlight,
+  name: "Serambi Delima",
+  description: "Grid berbingkai emas dengan penampil foto aksesibel",
+  component: GallerySerambiDelima,
+  fields: [columnsField, imagesArray],
+  isPremium: true,
 };

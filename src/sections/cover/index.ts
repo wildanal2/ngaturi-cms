@@ -12,6 +12,7 @@ import { CoverFloating } from "./cover-floating";
 import { CoverFloating17 } from "./cover-floating17";
 import { CoverWaxSeal } from "./cover-wax-seal";
 import { CoverSekarJawa3D } from "./cover-sekar-jawa-3d";
+import { CoverSerambiDelima } from "./cover-serambi-delima";
 
 export {
   CoverClassic,
@@ -22,6 +23,7 @@ export {
   CoverFloating17,
   CoverWaxSeal,
   CoverSekarJawa3D,
+  CoverSerambiDelima,
 };
 
 export const coverSection: SectionDefinition = {
@@ -34,12 +36,22 @@ export const coverSection: SectionDefinition = {
     if (
       variantKey !== "minimal" &&
       variantKey !== "sekar-jawa-3d" &&
+      variantKey !== "serambi-delima" &&
       !base.background_image
     ) {
       base.background_image = dummyHero(`cover-${variantKey}`);
     }
   },
   variants: {
+    "serambi-delima": {
+      name: "Serambi Delima",
+      description: "Portal gading, dedaunan delima, dan kartu tamu personal",
+      component: CoverSerambiDelima,
+      propsSchema: CoverProps,
+      fields: [...coverFields, coverPhotoField],
+      defaultProps: { ...coverDefaults },
+      isPremium: true,
+    },
     "sekar-jawa-3d": {
       name: "Gerbang Taman Jawa",
       description: "Sampul transparan di depan Candi Bentar tiga dimensi",

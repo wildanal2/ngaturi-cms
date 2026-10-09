@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { SectionDefinition } from "../types";
 import { LoadingCinematicVintage } from "./loading-cinematic-vintage";
+import { LoadingSerambiDelima } from "./loading-serambi-delima";
 import { DEFAULT_LOADING_MESSAGE } from "./resolve";
 
 export const loadingSection: SectionDefinition = {
@@ -10,6 +11,16 @@ export const loadingSection: SectionDefinition = {
   icon: "Hourglass",
   category: "hero",
   variants: {
+    "serambi-delima": {
+      name: "Serambi Delima",
+      component: LoadingSerambiDelima,
+      propsSchema: z.object({
+        message: z.string().default(DEFAULT_LOADING_MESSAGE),
+      }),
+      defaultProps: { message: DEFAULT_LOADING_MESSAGE },
+      fields: [{ kind: "text", key: "message", label: "Pesan persiapan" }],
+      isPremium: true,
+    },
     "cinematic-vintage": {
       name: "Cinematic Vintage",
       component: LoadingCinematicVintage,

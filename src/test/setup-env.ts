@@ -1,3 +1,14 @@
+import { vi } from "vitest";
+
+// Next compiles localFont at build time; Vitest needs its generated style contract.
+vi.mock("next/font/local", () => ({
+  default: ({ variable }: { variable: string }) => ({
+    variable,
+    className: "test-local-font",
+    style: { fontFamily: "test-local-font" },
+  }),
+}));
+
 /**
  * Minimal fake env so modules that import `@/lib/env` can load under Vitest.
  * These values are never used to talk to a real service in unit tests.

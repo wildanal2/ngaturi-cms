@@ -4,8 +4,9 @@ export { QuoteCinematicVintage };
 import { QuoteProps } from "../schema";
 import { QuoteCentered } from "./quote-centered";
 import { QuoteBordered } from "./quote-bordered";
+import { QuoteSerambiDelima } from "./quote-serambi-delima";
 
-export { QuoteCentered, QuoteBordered };
+export { QuoteCentered, QuoteBordered, QuoteSerambiDelima };
 
 const quoteFields = [
   { kind: "textarea", key: "text", label: "Teks kutipan" },
@@ -49,4 +50,23 @@ export const quoteSection: SectionDefinition = {
       defaultProps: { ...quoteDefaults },
     },
   },
+};
+
+quoteSection.variants["serambi-delima"] = {
+  ...quoteSection.variants.centered,
+  name: "Serambi Delima",
+  description:
+    "Kutipan atau doa dengan dukungan teks Arab dan terjemahan berbaris",
+  component: QuoteSerambiDelima,
+  fields: [
+    {
+      kind: "textarea",
+      key: "text",
+      label: "Teks kutipan atau doa",
+      help: "Pisahkan teks Arab dan terjemahan dengan baris baru.",
+    },
+    { kind: "text", key: "source", label: "Sumber atau atribusi (opsional)" },
+  ],
+  defaultProps: { text: "", source: "" },
+  isPremium: true,
 };

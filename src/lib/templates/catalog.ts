@@ -63,7 +63,7 @@ export const TEMPLATES: TemplatePreset[] = [
     category: "wedding",
     tier: "premium",
     composition: "standard",
-    thumbnail: "/themes/serambi-delima/thumbnail.svg",
+    thumbnail: "/templates/serambi-delima/card",
     global_settings: {
       font_family: "Cormorant",
       color_primary: "#722735",
@@ -71,11 +71,23 @@ export const TEMPLATES: TemplatePreset[] = [
       color_background: "#f6f1e7",
       animation: "none",
     },
-    // Phase 1 review preset. Later sections are intentionally not registered here.
+    // Standard sections retain their individual contracts, including repeated instances.
     sections: [
       s("loading", "serambi-delima", 0),
       s("cover", "serambi-delima", 1),
       s("hero", "serambi-delima", 2),
+      s("quote", "serambi-delima", 3),
+      s("couple-intro", "serambi-delima", 4),
+      s("event-details", "serambi-delima", 5),
+      s("map-location", "serambi-delima", 6),
+      s("countdown", "serambi-delima", 7),
+      s("gallery", "serambi-delima", 8),
+      s("gallery", "serambi-delima", 9),
+      s("quote", "serambi-delima", 10),
+      s("rsvp", "serambi-delima", 11),
+      s("guestbook", "serambi-delima", 12),
+      s("closing", "serambi-delima", 13),
+      s("music", "serambi-delima", 14),
     ],
   },
   {

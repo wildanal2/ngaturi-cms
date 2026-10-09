@@ -16,6 +16,30 @@ const openingArt = [
 
 /** Add another template's first-view provider here; never collect all media. */
 export const loadingAssetProviders: Record<string, LoadingAssetProvider> = {
+  "serambi-delima": (root) => {
+    const surface = root.querySelector<HTMLElement>("[data-serambi-delima]");
+    const computed = surface ? getComputedStyle(surface) : null;
+    const fonts = ["--sd-font-display", "--sd-font-body"].flatMap(
+      (variable) => {
+        const family = computed?.getPropertyValue(variable).trim();
+        return family ? [{ family }] : [];
+      },
+    );
+    return {
+      images: [
+        ...root.querySelectorAll<HTMLImageElement>(
+          '[data-invitation-cover] [data-serambi-photo], [data-section="hero"] [data-serambi-photo]',
+        ),
+      ],
+      imageUrls: [
+        "portal-crown.svg",
+        "botanical-spray.svg",
+        "paper-pattern.svg",
+        "divider.svg",
+      ].map((file) => `/themes/serambi-delima/${file}`),
+      fonts,
+    };
+  },
   "cinematic-vintage": (root) => {
     const hero = root.querySelector<HTMLImageElement>("[data-hero-photo] img");
     const coverImages = [
