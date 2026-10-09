@@ -7,7 +7,11 @@ import { CompositionSchema } from "../schema";
 import { getVariant } from "../registry";
 import { InvitationRenderer } from "@/lib/invitation/renderer";
 import { useBuilder } from "@/stores/builder-store";
-import { cinematicContent, isCinematicComposition } from "./content";
+import {
+  cinematicContent,
+  cinematicVariant,
+  isCinematicComposition,
+} from "./content";
 import { CinematicComposition } from "./composition";
 
 const template = getTemplate("cinematic-vintage")!;
@@ -91,15 +95,7 @@ describe("Cinematic Vintage contract", () => {
     expect(content.remaining).toContain(gallery);
     expect(content.remaining).toContain(duplicate);
     expect(content.remaining.map((s) => s.type)).toEqual(
-      expect.arrayContaining([
-        "countdown",
-        "rsvp",
-        "gift",
-        "guestbook",
-        "music",
-        "navigation",
-        "cover",
-      ]),
+      expect.arrayContaining(["music", "navigation", "cover"]),
     );
   });
 
@@ -126,7 +122,7 @@ describe("Cinematic Vintage contract", () => {
     expect(markup).toContain("Akad Nikah");
     expect(markup).toContain("Resepsi");
     expect(markup.match(/data-event-portal=/g)).toHaveLength(2);
-    expect(markup.match(/Buka Google Maps/g)).toHaveLength(3);
+    expect(markup.match(/Buka Google Maps/g)).toHaveLength(2);
     const sceneNames = [...markup.matchAll(/data-scene="([^"]+)"/g)].map(
       (m) => m[1],
     );
@@ -134,16 +130,18 @@ describe("Cinematic Vintage contract", () => {
       "entrance",
       "couple",
       "quote",
+      "countdown",
       "world",
-      "venue",
       "closing",
     ]);
   });
 
   it("uses current Builder data without refilling deliberately cleared fields", () => {
+    const editable = sections();
+    editable.find((s) => s.type === "map-location")!.visible = true;
     useBuilder.getState().load({
       invitationId: "test",
-      sections: sections(),
+      sections: editable,
       global: template.global_settings,
       locked: false,
       compositionPolicy: getCompositionPolicy({
@@ -188,8 +186,9 @@ describe("Cinematic Vintage contract", () => {
       "Terima kasih semuanya",
     ])
       expect(markup).toContain(text);
+    expect(cinematicContent(current.sections).core.gallery).toBeUndefined();
     expect(
-      cinematicContent(current.sections).core.gallery?.props.images,
+      current.sections.find((s) => s.type === "gallery")?.props.images,
     ).toEqual([]);
     expect(markup).toContain('data-in-canvas="true"');
   });
@@ -226,7 +225,9 @@ describe("Cinematic Vintage contract", () => {
     expect(byType("hero").props.couple_names).toBe("Isi tetap bebas");
 
     useBuilder.getState().reorder(rsvp.id, guestbook.id);
-    expect(useBuilder.getState().sections.indexOf(byType("rsvp"))).toBeGreaterThan(
+    expect(
+      useBuilder.getState().sections.indexOf(byType("rsvp")),
+    ).toBeGreaterThan(
       useBuilder.getState().sections.indexOf(byType("guestbook")),
     );
   });
@@ -265,5 +266,143 @@ describe("Cinematic Vintage contract", () => {
       />,
     );
     expect(markup).not.toContain("data-event-portal=");
+  });
+
+  it("registers native supporting variants with the existing schemas and fields", () => {
+    const legacy = {
+      countdown: "plain",
+      rsvp: "form-card",
+      gift: "minimal",
+      guestbook: "chat",
+      music: "disc",
+      navigation: "bar",
+    };
+    for (const [type, variant] of Object.entries(legacy)) {
+      const native = getVariant(type, "cinematic-vintage")!;
+      expect(native.propsSchema).toBe(getVariant(type, variant)!.propsSchema);
+      expect(native.fields).toBe(getVariant(type, variant)!.fields);
+    }
+  });
+
+  it("renders the complete chapter order once, with interactions outside both stages", () => {
+    const markup = renderToStaticMarkup(
+      <InvitationRenderer
+        sections={sections()}
+        global={template.global_settings}
+        composition="cinematic-vintage"
+        guestName="Tamu Istimewa"
+        isPreview
+      />,
+    );
+    const types = [...markup.matchAll(/data-section="([^"]+)"/g)].map(
+      (match) => match[1],
+    );
+    expect(
+      types.filter((type) => !["cover", "music", "navigation"].includes(type)),
+    ).toEqual([
+      "hero",
+      "couple-intro",
+      "quote",
+      "countdown",
+      "gallery",
+      "event-details",
+      "rsvp",
+      "gift",
+      "guestbook",
+      "closing",
+    ]);
+    expect(markup.match(/data-cinematic-stage=/g)).toHaveLength(2);
+    expect(markup).toContain("Tamu Istimewa");
+    expect(markup).toContain("Perjalanan undangan");
+    expect(markup).not.toContain("Lainnya");
+    expect(markup).not.toMatch(/Bab \d+ \/ \d+/);
+    expect(markup.match(/data-cinematic-interaction=/g)).toHaveLength(3);
+    expect(markup).not.toContain("dicebear");
+    expect(markup).not.toContain("Buku Tamu &amp; RSVP");
+  });
+
+  it("adapts legacy preset presentations without mutating persisted section objects", () => {
+    const legacy = sections();
+    const variants: Record<string, string> = {
+      countdown: "plain",
+      rsvp: "form-card",
+      gift: "minimal",
+      guestbook: "chat",
+      music: "disc",
+      navigation: "bar",
+    };
+    for (const section of legacy)
+      section.variant = variants[section.type] ?? section.variant;
+    const before = JSON.stringify(legacy);
+    const content = cinematicContent(legacy, true);
+    expect(content.core.rsvp).toBe(
+      legacy.find((section) => section.type === "rsvp"),
+    );
+    const markup = renderToStaticMarkup(
+      <InvitationRenderer
+        sections={legacy}
+        global={template.global_settings}
+        composition="cinematic-vintage"
+        isPreview
+      />,
+    );
+    expect(markup).toContain("Janji yang dinantikan");
+    expect(markup).toContain("Tanda Kasih");
+    expect(JSON.stringify(legacy)).toBe(before);
+    expect(cinematicVariant({ type: "gallery", variant: "grid" })).toBe("grid");
+  });
+
+  it("omits empty chapters from rendering and navigation while keeping an empty guestbook usable", () => {
+    const empty = sections();
+    empty.find((section) => section.type === "quote")!.props.text = "  ";
+    empty.find((section) => section.type === "gallery")!.props.images = [
+      { url: " " },
+    ];
+    empty.find((section) => section.type === "gift")!.props.bank_accounts = [];
+    empty.find((section) => section.type === "countdown")!.props.target_date =
+      "not-a-date";
+    empty.find((section) => section.type === "rsvp")!.visible = false;
+    const content = cinematicContent(empty, true);
+    for (const type of ["quote", "gallery", "gift", "countdown", "rsvp"])
+      expect(content.siblingTypes).not.toContain(type);
+    const markup = renderToStaticMarkup(
+      <InvitationRenderer
+        sections={empty}
+        global={template.global_settings}
+        composition="cinematic-vintage"
+        isPreview
+      />,
+    );
+    for (const type of ["quote", "gallery", "gift", "countdown", "rsvp"])
+      expect(markup).not.toContain(`data-section="${type}"`);
+    expect(markup).toContain("Halaman pertama menanti");
+    expect(markup).toContain("Kirim Ucapan");
+  });
+
+  it("preserves long content and all photographs/events without clipping data or inserting defaults", () => {
+    const long = sections();
+    const event = long.find((section) => section.type === "event-details")!;
+    event.props.events = Array.from({ length: 4 }, (_, index) => ({
+      name: `Acara ${index}`,
+      date: "2027-08-12",
+      start_time: "09:00",
+      venue_name: "Gedung Pernikahan dengan Nama yang Sangat Panjang",
+      address: "Alamat yang sangat panjang ".repeat(10),
+      maps_url: "https://maps.google.com",
+    }));
+    long.find((section) => section.type === "gallery")!.props.images =
+      Array.from({ length: 9 }, (_, index) => ({ url: `/photo-${index}.jpg` }));
+    const markup = renderToStaticMarkup(
+      <CinematicComposition
+        sections={long}
+        global={template.global_settings}
+        isPreview
+      />,
+    );
+    expect(markup.match(/data-event-portal=/g)).toHaveLength(4);
+    expect(markup.match(/data-world-panel=/g)).toHaveLength(13);
+    expect(markup).toContain(
+      "Gedung Pernikahan dengan Nama yang Sangat Panjang",
+    );
   });
 });

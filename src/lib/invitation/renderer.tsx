@@ -1,9 +1,15 @@
 import type { CSSProperties, ReactNode } from "react";
+import { resolveLoading } from "@/sections/loading/resolve";
+import { InvitationLoadingBoundary } from "@/sections/loading/boundary";
 import { getVariant } from "@/sections/registry";
+import cinematicStyles from "@/sections/cinematic/cinematic.module.css";
 import { Reveal } from "@/sections/reveal";
 import { CinematicComposition } from "@/sections/cinematic/composition";
-import { cinematicContent } from "@/sections/cinematic/content";
-import { SekarJawa3DComposition } from "@/sections/sekar-jawa-3d/composition";
+import {
+  cinematicContent,
+  cinematicVariant,
+} from "@/sections/cinematic/content";
+import { SekarJawa3DComposition } from "./immersive-composition";
 import { sekarJawa3DContent } from "@/sections/sekar-jawa-3d/content";
 import type { TemplateComposition } from "@/lib/templates/catalog";
 import type { GlobalSettings, SectionData } from "@/sections/types";
@@ -33,6 +39,7 @@ export function InvitationRenderer({
   invitationId,
   guestName,
   isPreview = false,
+  opening,
 }: {
   sections: SectionData[];
   global: GlobalSettings;
@@ -40,11 +47,16 @@ export function InvitationRenderer({
   invitationId?: string;
   guestName?: string | null;
   isPreview?: boolean;
+  /** External legacy Opening participates in the same entry gate. */
+  opening?: ReactNode;
 }) {
   const ordered = [...sections]
-    .filter((s) => s.visible !== false)
+    .filter((s) => s.visible !== false && s.type !== "loading")
     .sort((a, b) => a.order - b.order);
-  const siblingTypes = ordered.map((s) => s.type);
+  const siblingTypes =
+    composition === "cinematic-vintage"
+      ? cinematicContent(ordered, true).siblingTypes
+      : ordered.map((s) => s.type);
   let flow = ordered;
   let ownedComposition: ReactNode = null;
 
@@ -83,11 +95,20 @@ export function InvitationRenderer({
   // running a CSS transform becomes the containing block for position:fixed.
   const OVERLAY = new Set(["cover", "music", "navigation"]);
 
-  return (
-    <div className="mx-auto max-w-lg" style={invitationRootStyle(global)}>
+  const content = (
+    <div
+      className={composition === "cinematic-vintage" ? `cinematic-invitation mx-auto max-w-lg ${cinematicStyles.invitationRoot}` : "mx-auto max-w-lg"}
+      data-cinematic-public={composition === "cinematic-vintage" || undefined}
+      style={invitationRootStyle(global)}
+    >
       {ownedComposition}
       {flow.map((section, i) => {
-        const variant = getVariant(section.type, section.variant);
+        const variant = getVariant(
+          section.type,
+          composition === "cinematic-vintage"
+            ? cinematicVariant(section)
+            : section.variant,
+        );
         if (!variant) return null;
         const Component = variant.component;
         const node = (
@@ -116,5 +137,28 @@ export function InvitationRenderer({
         );
       })}
     </div>
+  );
+  const loading = resolveLoading(sections, composition);
+  if (!loading) return <>{opening}{content}</>;
+  const variant = getVariant("loading", loading.variant);
+  if (!variant) return <>{opening}{content}</>;
+  const LoadingVisual = variant.component;
+  const names =
+    sections.find((section) => section.type === "cover" && section.visible !== false)?.props.names ??
+    sections.find((section) => section.type === "hero" && section.visible !== false)?.props.couple_names;
+  return (
+    <InvitationLoadingBoundary
+      profile={loading.variant}
+      visual={
+        <LoadingVisual
+          props={{ ...loading.props, names }}
+          global={global}
+          isPreview={isPreview}
+        />
+      }
+    >
+      {opening}
+      {content}
+    </InvitationLoadingBoundary>
   );
 }

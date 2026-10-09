@@ -235,6 +235,12 @@ export function mergeInvitationIntoTemplate(
 
   for (const section of orderedExisting) {
     if (usedSections.has(section)) continue;
+    // Loading is template entry presentation, not invitation business content.
+    // Do not append it into a target that has not opted into this capability.
+    if (
+      section.type === "loading" &&
+      !targetTemplate.sections.some((s) => s.type === "loading")
+    ) continue;
     const typeIndex = existingTypeIndexes.get(section) ?? 0;
     const sourceDefaults = sourceByType.get(section.type)?.[typeIndex]?.props;
     const standardVariant =

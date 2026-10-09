@@ -1,16 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useGuestbook, type GuestbookMessage as Msg, GUESTBOOK_NAME_MAX as NAME_MAX, GUESTBOOK_MESSAGE_MAX as MSG_MAX, GUESTBOOK_PAGE as PAGE } from "./use-guestbook";
 import Image from "next/image";
 import type { SectionRenderProps } from "../types";
 import { pickDecor, decorBgStyle, DecorOrnaments, DecorDivider } from "../shared";
 import { TurnstileField } from "../turnstile-field";
-
-type Msg = { id: string; name: string; message: string; createdAt: string };
-
-const NAME_MAX = 25;
-const MSG_MAX = 255;
-const PAGE = 6;
 
 const avatar = (seed: string) =>
   `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(
@@ -82,42 +77,8 @@ export function GuestbookChat({
 }: SectionRenderProps) {
   const p = props as Record<string, unknown>;
   const d = pickDecor(p);
-  const [msgs, setMsgs] = useState<Msg[]>([]);
   const [page, setPage] = useState(1);
-  const [name, setName] = useState(() => guestName ?? "");
-  const [message, setMessage] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "done">("idle");
-  const [pendingNote, setPendingNote] = useState(false);
-
-  useEffect(() => {
-    if (isPreview || !invitationId) return;
-    fetch(`/api/public/${invitationId}/guestbook`)
-      .then((r) => r.json())
-      .then((d) => setMsgs(d.messages ?? []))
-      .catch(() => {});
-  }, [invitationId, isPreview]);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (isPreview || !invitationId) return;
-    const fd = new FormData(e.currentTarget);
-    setState("sending");
-    const res = await fetch(`/api/public/${invitationId}/guestbook`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(fd)),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (res.ok) {
-      setName("");
-      setMessage("");
-      setState("done");
-      if (body.pending) setPendingNote(true);
-      else if (body.message) setMsgs((m) => [body.message, ...m]);
-    } else {
-      setState("idle");
-    }
-  }
+  const { msgs, name, setName, message, setMessage, state, pendingNote, onSubmit } = useGuestbook(invitationId, guestName, isPreview);
 
   const shown = msgs.slice(0, page * PAGE);
 

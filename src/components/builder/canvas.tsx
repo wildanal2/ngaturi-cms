@@ -9,8 +9,12 @@ import type { TemplateComposition } from "@/lib/templates/catalog";
 import { AddSectionButton } from "./add-section-menu";
 import { DeviceFrame } from "./device-frame";
 import { getDevice } from "./devices";
+import cinematicStyles from "@/sections/cinematic/cinematic.module.css";
 import { CinematicComposition } from "@/sections/cinematic/composition";
-import { cinematicContent } from "@/sections/cinematic/content";
+import {
+  cinematicContent,
+  cinematicVariant,
+} from "@/sections/cinematic/content";
 import { SekarJawa3DComposition } from "@/sections/sekar-jawa-3d/composition";
 import { sekarJawa3DContent } from "@/sections/sekar-jawa-3d/content";
 
@@ -25,7 +29,7 @@ export function getBuilderFlow(
       return ordered;
     case "cinematic-vintage":
       return cinematicContent(ordered, true).remaining.filter(
-        (section) => section.type !== "cover",
+        (section) => section.type !== "cover" && section.type !== "loading",
       );
     case "sekar-jawa-3d":
       return sekarJawa3DContent(ordered).remaining;
@@ -45,7 +49,9 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   const clickInCanvas = useRef(false);
 
   const ordered = [...sections].sort((a, b) => a.order - b.order);
-  const siblingTypes = ordered.map((s) => s.type);
+  const siblingTypes = cinematicVintage
+    ? cinematicContent(ordered, true).siblingTypes
+    : ordered.map((s) => s.type);
   const flow = getBuilderFlow(ordered, composition);
   // music + navigation float over the device viewport (pinned, non-scrolling)
   // exactly like the live page. In the section flow they get a slim
@@ -66,7 +72,10 @@ export function Canvas({ invitationId }: { invitationId: string }) {
       return;
     }
     const root = scrollRef.current;
-    const stage = root?.querySelector("[data-cinematic-stage]");
+    const target = root?.querySelector<HTMLElement>(
+      `[data-section-id="${selectedId}"]`,
+    );
+    const stage = target?.closest("[data-cinematic-stage]");
     if (stage) {
       const seek = new CustomEvent("cinematic:seek", {
         detail: selectedId,
@@ -92,7 +101,10 @@ export function Canvas({ invitationId }: { invitationId: string }) {
     overlaySections.length > 0 ? (
       <>
         {overlaySections.map((section) => {
-          const variant = getVariant(section.type, section.variant);
+          const variant = getVariant(
+            section.type,
+            cinematicVintage ? cinematicVariant(section) : section.variant,
+          );
           if (!variant || section.visible === false) return null;
           const Component = variant.component;
           const isMusic = section.type === "music";
@@ -108,9 +120,10 @@ export function Canvas({ invitationId }: { invitationId: string }) {
             : "pointer-events-none absolute inset-0 [&_nav]:pointer-events-auto";
           // Sekar Jawa 3D's overlay buttons own their clicks (seek/audio).
           // Its flow placeholder remains the selection target for the inspector.
-          const overlaySelectHandler = sekarJawa3D
-            ? undefined
-            : selectHandler(section.id);
+          const overlaySelectHandler =
+            sekarJawa3D || cinematicVintage
+              ? undefined
+              : selectHandler(section.id);
           return (
             <div
               key={section.id}
@@ -141,7 +154,11 @@ export function Canvas({ invitationId }: { invitationId: string }) {
       <DeviceFrame preset={preset} overlay={floatingOverlay}>
         <div
           ref={scrollRef}
-          className={cinematicVintage ? "mx-auto max-w-lg" : undefined}
+          className={
+            cinematicVintage
+              ? `cinematic-invitation mx-auto max-w-lg ${cinematicStyles.invitationRoot}`
+              : undefined
+          }
           style={invitationRootStyle(global)}
         >
           {ordered.length === 0 ? (
@@ -152,7 +169,8 @@ export function Canvas({ invitationId }: { invitationId: string }) {
 
           {cinematicVintage
             ? ordered
-                .filter((s) => s.type === "cover" && s.visible !== false)
+                .filter((s) => (s.type === "loading" || s.type === "cover") && s.visible !== false)
+                .sort((a, b) => Number(a.type === "cover") - Number(b.type === "cover"))
                 .map((section) => {
                   const Component = getVariant(
                     section.type,
@@ -208,7 +226,10 @@ export function Canvas({ invitationId }: { invitationId: string }) {
             />
           ) : null}
           {flow.map((section) => {
-            const variant = getVariant(section.type, section.variant);
+            const variant = getVariant(
+              section.type,
+              cinematicVintage ? cinematicVariant(section) : section.variant,
+            );
             const def = SectionRegistry[section.type];
             const selected = selectedId === section.id;
             if (!variant) return null;

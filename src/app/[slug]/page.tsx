@@ -177,7 +177,9 @@ export default async function InvitationPage({
           PRATINJAU PEMILIK — undangan ini tidak sedang aktif untuk publik
         </div>
       ) : null}
-      {!hasCoverSection && inv.global.cover_enabled !== false ? (
+      {!hasCoverSection &&
+      inv.global.cover_enabled !== false &&
+      resolveTemplateComposition(inv.sourceTemplate) !== "cinematic-vintage" ? (
         <InvitationCover
           names={
             (inv.sections.find((s) => s.type === "hero")?.props
@@ -190,6 +192,16 @@ export default async function InvitationPage({
         />
       ) : null}
       <InvitationRenderer
+        opening={
+          !hasCoverSection && inv.global.cover_enabled !== false &&
+          resolveTemplateComposition(inv.sourceTemplate) === "cinematic-vintage" ? (
+            <InvitationCover
+              names={(inv.sections.find((s) => s.type === "hero")?.props.couple_names as string) ?? inv.eventTitle ?? "Undangan"}
+              guestName={guestName}
+              global={inv.global}
+            />
+          ) : undefined
+        }
         sections={inv.sections}
         global={inv.global}
         composition={resolveTemplateComposition(inv.sourceTemplate)}

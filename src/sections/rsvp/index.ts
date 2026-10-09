@@ -1,3 +1,4 @@
+import { RsvpCinematicVintage } from "./rsvp-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { RsvpProps } from "../schema";
 import { RsvpFormCard } from "./rsvp-form-card";
@@ -33,4 +34,10 @@ export const rsvpSection: SectionDefinition = {
       defaultProps: { max_guests_per_person: 2, require_phone: false },
     },
   },
+};
+
+rsvpSection.variants["cinematic-vintage"] = {
+  ...rsvpSection.variants["form-card"],
+  name: "Cinematic Vintage",
+  component: RsvpCinematicVintage,
 };

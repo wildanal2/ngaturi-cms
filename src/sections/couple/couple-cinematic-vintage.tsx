@@ -11,7 +11,9 @@ export function CoupleCinematicVintage({ props }: SectionRenderProps) {
     <SceneBody className={styles.coupleScene}>
       <p className={styles.eyebrow}>Dua hati, satu perjalanan</p>
       <h2>{p.title ?? "Mempelai"}</h2>
-      <div className={styles.coupleGrid}>
+      <div
+        className={`${styles.coupleGrid} ${[p.bride, p.groom].some((person) => (person?.full_name?.length ?? 0) > 32 || (person?.parents?.length ?? 0) > 65) ? styles.coupleStacked : ""}`}
+      >
         {[p.bride, p.groom].map((person, i) => (
           <div key={i} data-couple-person={i}>
             <Portrait
@@ -19,9 +21,9 @@ export function CoupleCinematicVintage({ props }: SectionRenderProps) {
               alt={person?.full_name ?? person?.name ?? ""}
             />
             <h3>{person?.full_name ?? person?.name ?? "Nama Mempelai"}</h3>
-            <p>{person?.child_order}</p>
-            <p>{person?.parents}</p>
-            <p>{person?.residence}</p>
+            <p className={styles.familyLabel}>{person?.child_order}</p>
+            <p className={styles.familyNames}>{person?.parents}</p>
+            <p className={styles.familyLabel}>{person?.residence}</p>
             {person?.instagram ? (
               <a
                 className="inline-block p-2 underline"

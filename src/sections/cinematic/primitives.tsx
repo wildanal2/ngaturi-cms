@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { CriticalPortrait } from "./critical-portrait";
 import styles from "./cinematic.module.css";
 
 export function DepthLayer({
@@ -27,12 +28,12 @@ export function Backdrop() {
     <>
       <DepthLayer depth={0} className={styles.backdrop} />
       <DepthLayer depth={1} className={styles.architecture} />
-      <DepthLayer depth={2} className={styles.chandelier} />
-      <DepthLayer depth={3} className={styles.glow} />
-      <DepthLayer depth={4} className={styles.floralLeft} />
-      <DepthLayer depth={5} className={styles.floralRight} />
-      <DepthLayer depth={6} className={styles.foregroundFloral} />
-      <DepthLayer depth={2} className={styles.dust} />
+      <DepthLayer depth={1} className={styles.chandelier} />
+      <DepthLayer depth={0} className={styles.glow} />
+      <DepthLayer depth={2} className={styles.floralLeft} />
+      <DepthLayer depth={2} className={styles.floralRight} />
+      <DepthLayer depth={1} className={styles.foregroundFloral} />
+      <DepthLayer depth={0} className={styles.dust} />
     </>
   );
 }
@@ -41,14 +42,18 @@ export function Portrait({
   src,
   alt = "",
   className = "",
+  eager = false,
 }: {
   src?: string;
   alt?: string;
   className?: string;
+  eager?: boolean;
 }) {
   return (
     <div className={`relative overflow-hidden ${styles.portrait} ${className}`}>
-      {src ? (
+      {src && eager ? (
+        <CriticalPortrait key={src} src={src} alt={alt} />
+      ) : src ? (
         <Image
           src={src}
           alt={alt}
