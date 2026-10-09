@@ -56,6 +56,29 @@ const themeDecor = (theme: ThemeAssets) => ({
 
 export const TEMPLATES: TemplatePreset[] = [
   {
+    id: "serambi-delima",
+    name: "Serambi Delima",
+    description:
+      "Serambi gading, botani delima, dan detail emas dalam komposisi undangan yang khidmat.",
+    category: "wedding",
+    tier: "premium",
+    composition: "standard",
+    thumbnail: "/themes/serambi-delima/thumbnail.svg",
+    global_settings: {
+      font_family: "Cormorant",
+      color_primary: "#722735",
+      color_secondary: "#ad8950",
+      color_background: "#f6f1e7",
+      animation: "none",
+    },
+    // Phase 1 review preset. Later sections are intentionally not registered here.
+    sections: [
+      s("loading", "serambi-delima", 0),
+      s("cover", "serambi-delima", 1),
+      s("hero", "serambi-delima", 2),
+    ],
+  },
+  {
     id: "cinematic-vintage",
     name: "Cinematic Vintage",
     description: "Perjalanan sinematik melewati bingkai kenangan, janji akad, dan perayaan. Burgundy, emas lembut, serta kedalaman yang mengikuti setiap guliran Anda.",

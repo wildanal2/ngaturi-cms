@@ -1,0 +1,568 @@
+.theme {
+  --sd-paper: var(--inv-bg, #f6f1e7);
+  --sd-wine: var(--inv-primary, #722735);
+  --sd-gold: var(--inv-secondary, #ad8950);
+  --sd-ink: #421821;
+  --sd-champagne: #e6d8bc;
+  --sd-display: var(--sd-font-display), Georgia, serif;
+  --sd-body: var(--sd-font-body), Georgia, serif;
+  --sd-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color: var(--sd-ink);
+  background:
+    url("/themes/serambi-delima/paper-pattern.svg") center / 120px 160px repeat,
+    var(--sd-paper);
+  font-family: var(--sd-body);
+  font-size: 1rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.theme *,
+.theme *::before,
+.theme *::after {
+  box-sizing: border-box;
+}
+.theme p,
+.theme h1 {
+  margin: 0;
+}
+.theme h1,
+.theme p,
+.theme time,
+.theme button {
+  overflow-wrap: anywhere;
+}
+.theme img {
+  display: block;
+}
+
+.eyebrow {
+  font: 400 clamp(0.7rem, 3cqi, 0.85rem) / 1.8 var(--sd-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.divider {
+  width: min(100%, 220px);
+  height: auto;
+  margin: 18px auto;
+  pointer-events: none;
+}
+
+/* The crown has a fixed aspect ratio; columns stretch with editable content. */
+.portal {
+  position: relative;
+  container-type: inline-size;
+  isolation: isolate;
+}
+.portalCrown {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 3;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+.portalColumns {
+  position: absolute;
+  inset: calc(43.75cqi - 1px) 0 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.portalColumns::before,
+.portalColumns::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 6%;
+  border-inline: 1px solid #bda77c;
+  background: linear-gradient(
+    90deg,
+    #eadfc8,
+    #fff9e9 28%,
+    #d5c09a 36%,
+    #f3e9d5 50%,
+    #e0cead 82%,
+    #bda77c
+  );
+}
+.portalColumns::before {
+  inset-inline-start: 0;
+}
+.portalColumns::after {
+  inset-inline-end: 0;
+  transform: scaleX(-1);
+}
+
+.botanicalBorder {
+  position: relative;
+  height: clamp(112px, 32cqi, 160px);
+  overflow: clip;
+  pointer-events: none;
+}
+.branchLeft,
+.branchRight {
+  position: absolute;
+  bottom: 0;
+  width: 46%;
+  height: 100%;
+}
+.branchLeft {
+  left: 0;
+}
+.branchRight {
+  right: 0;
+}
+.branchLeft img,
+.branchRight img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: left bottom;
+}
+.branchRight img {
+  transform: scaleX(-1);
+}
+.borderJewel {
+  position: absolute;
+  bottom: 22px;
+  left: calc(50% - 3px);
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--sd-gold);
+  transform: rotate(45deg);
+}
+
+.photo,
+.mediaFallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.photo {
+  object-fit: cover;
+  object-position: center 40%;
+}
+.mediaFallback {
+  display: grid;
+  place-items: center;
+  background:
+    url("/themes/serambi-delima/paper-pattern.svg") center / 100px 134px,
+    radial-gradient(ellipse at 50% 30%, #efe4ce, #d6bc94);
+  color: #7b5437;
+}
+.fallbackSeal {
+  width: 32%;
+  max-width: 112px;
+  height: auto;
+}
+
+.cover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transition: opacity 400ms ease;
+  /* Do not transform the overlay: its owner remains the viewport. */
+}
+.cover[hidden] {
+  display: none;
+}
+/* The fixed Cover remains the only scroll surface while it is visible.
+   CSS ownership also composes with the existing loader's inline scroll lock. */
+:global(html):has(.cover:not([hidden]):not(.coverCanvas)) {
+  overflow: hidden;
+}
+.cover[data-leaving] {
+  opacity: 0;
+  pointer-events: none;
+}
+.coverStage {
+  --sd-stage-height: 100svh;
+  --sd-stage-border: 0px;
+  position: relative;
+  container-type: inline-size;
+  width: min(100%, 32rem);
+  min-height: var(--sd-stage-height);
+  margin-inline: auto;
+}
+.coverStage > .portal {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(var(--sd-stage-height) - 2 * var(--sd-stage-border));
+}
+.coverPhoto {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #2d1420;
+}
+.coverPhoto::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    #170910d9,
+    #170910ba 28%,
+    #1709100d 55%,
+    #17091066 80%,
+    #170910a6
+  );
+}
+.coverPhoto .mediaFallback {
+  color: #d8be84;
+  background:
+    url("/themes/serambi-delima/paper-pattern.svg") center / 140px 186px,
+    radial-gradient(ellipse at 50% 45%, #713645, #291420);
+}
+.coverPhoto .fallbackSeal {
+  display: none;
+}
+.coverContent {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(132px, 35cqi, 172px) clamp(36px, 10cqi, 58px) 16px;
+  text-align: center;
+}
+.coverHeading {
+  width: 100%;
+  color: #fff9ed;
+}
+.coverNames {
+  margin-top: 12px !important;
+  font: 500 clamp(2rem, 9cqi, 3rem) / 1.2 var(--sd-body);
+  text-wrap: balance;
+}
+.coverHeading .divider {
+  opacity: 0.95;
+}
+.coverBreathingRoom {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: clamp(132px, 34cqi, 168px);
+  padding-block: 16px;
+}
+.coverSeal {
+  width: 84px;
+  height: auto;
+  color: #d8be84;
+}
+.coverStage:has([data-serambi-photo]) .coverSeal {
+  visibility: hidden;
+}
+.guestCard {
+  width: 100%;
+  padding: 22px 16px;
+  border: 1px solid #d4ba8b;
+  outline: 1px solid #f6f1e7a6;
+  outline-offset: 5px;
+  background: #faf5ec;
+  box-shadow: 0 12px 36px #1c091b26;
+}
+.greeting {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.guestName {
+  margin-top: 8px !important;
+  font: 600 clamp(1.15rem, 5.5cqi, 1.5rem) / 1.4 var(--sd-body);
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 100%;
+  min-height: 48px;
+  margin-top: 20px;
+  padding: 12px 22px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--sd-wine);
+  color: #fff9ed;
+  font: 500 1rem / 1.5 var(--sd-body);
+  cursor: pointer;
+  transition:
+    background 200ms ease,
+    box-shadow 200ms ease;
+}
+.button svg {
+  flex-shrink: 0;
+}
+.button:hover:not(:disabled) {
+  background: #521c2b;
+  box-shadow: 0 4px 14px #42182126;
+}
+.button:focus-visible {
+  outline: 2px solid var(--sd-ink);
+  outline-offset: 4px;
+}
+.button:disabled {
+  cursor: default;
+}
+.cover .botanicalBorder {
+  z-index: 4;
+  height: clamp(104px, 26cqi, 132px);
+  margin-top: 8px;
+  border-top: 1px solid #ad895066;
+  background: var(--sd-paper);
+}
+.coverCanvas {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  overflow: visible;
+}
+.coverCanvas .coverStage {
+  --sd-stage-height: 720px;
+}
+
+.hero {
+  position: relative;
+  container-type: inline-size;
+  padding-top: 24px;
+  border-inline: 1px solid #b99d6933;
+}
+.heroTop {
+  padding-inline: 32px;
+}
+.heroTop .divider {
+  width: min(72%, 250px);
+  margin: 0 auto 18px;
+}
+.portraitFrame {
+  width: min(76%, 300px);
+  margin-inline: auto;
+}
+.portraitFrame .portal {
+  padding: 28px 18px 12px;
+  overflow: hidden;
+  border-radius: 48% 48% 46% 46%;
+}
+.portraitFrame .portalCrown {
+  opacity: 0.85;
+}
+.portraitFrame .portalColumns {
+  opacity: 0.65;
+}
+.portraitMask {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid var(--sd-wine);
+  border-radius: 48% 48% 46% 46%;
+  background: var(--sd-champagne);
+}
+.heroCopy {
+  padding: 26px clamp(28px, 8cqi, 48px) 8px;
+  text-align: center;
+}
+.heroNames {
+  margin-top: 14px !important;
+  font: 400 clamp(1.75rem, 8cqi, 2.65rem) / 1.3 var(--sd-display);
+  text-wrap: balance;
+}
+.heroNames:focus {
+  outline: none;
+}
+.heroNames:focus-visible:not([data-focus-origin="pointer"]) {
+  outline: 2px solid var(--sd-wine);
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+.hero .botanicalBorder {
+  height: clamp(104px, 26cqi, 120px);
+}
+.hero .branchLeft,
+.hero .branchRight {
+  width: 38%;
+}
+.eventDate {
+  display: block;
+  font: 400 clamp(0.85rem, 3.6cqi, 1rem) / 1.8 var(--sd-display);
+  letter-spacing: 0.04em;
+}
+
+.loading {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: max(32px, env(safe-area-inset-top)) 28px
+    max(32px, env(safe-area-inset-bottom));
+  text-align: center;
+  overscroll-behavior: contain;
+  transition: opacity 350ms ease;
+  outline: none;
+}
+.loading[data-loading-phase="leaving"] {
+  opacity: 0;
+}
+.loadingContent {
+  width: min(100%, 360px);
+  padding-block: 40px;
+}
+.loadingSeal {
+  display: block;
+  width: 66px;
+  height: 80px;
+  margin: 0 auto 24px;
+  color: var(--sd-wine);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+.loadingNames {
+  font: 400 clamp(1.4rem, 5vw, 2rem) / 1.4 var(--sd-display);
+}
+.loadingMessage {
+  font-size: 0.95rem;
+}
+.loadingLine {
+  display: block;
+  width: 56px;
+  height: 2px;
+  margin: 24px auto 0;
+  overflow: hidden;
+  background: #d8c9aa;
+}
+.loadingLine::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--sd-wine);
+  transform-origin: left;
+  animation: prepare 2.4s ease-in-out infinite;
+}
+.loadingCanvas {
+  position: relative;
+  inset: auto;
+  min-height: 380px;
+  z-index: auto;
+}
+.loadingCanvas .loadingSeal,
+.loadingCanvas .loadingLine::after {
+  animation: none;
+}
+
+/* Content remains in flow; only opacity/transform animate, once per entry. */
+.enterUp {
+  animation: enter-up 2.2s var(--sd-ease) both;
+}
+.enterZoom {
+  animation: enter-zoom 2.6s var(--sd-ease) both;
+}
+.branchLeft {
+  animation: enter-left 2.6s var(--sd-ease) both;
+}
+.branchRight {
+  animation: enter-right 2.6s var(--sd-ease) both;
+}
+[data-motion="pending"] .enterUp,
+[data-motion="pending"] .enterZoom,
+[data-motion="pending"] .branchLeft,
+[data-motion="pending"] .branchRight {
+  animation-play-state: paused;
+}
+[data-motion="preview"] .enterUp,
+[data-motion="preview"] .enterZoom,
+[data-motion="preview"] .branchLeft,
+[data-motion="preview"] .branchRight {
+  animation: none;
+}
+
+@keyframes enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes enter-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes enter-left {
+  from {
+    opacity: 0;
+    transform: translate(-16px, 14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes enter-right {
+  from {
+    opacity: 0;
+    transform: translate(16px, 14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes prepare {
+  0%,
+  100% {
+    transform: scaleX(0.2);
+  }
+  50% {
+    transform: scaleX(1);
+  }
+}
+
+@media (min-width: 900px) {
+  .cover:not(.coverCanvas) {
+    padding: 24px;
+  }
+  .cover:not(.coverCanvas) .coverStage {
+    --sd-stage-height: calc(100svh - 48px);
+    --sd-stage-border: 1px;
+    border: 1px solid #bda77c;
+    box-shadow: 0 16px 60px #4218211a;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme .enterUp,
+  .theme .enterZoom,
+  .theme .branchLeft,
+  .theme .branchRight,
+  .theme .loadingSeal,
+  .theme .loadingLine::after {
+    animation: none;
+  }
+  .cover,
+  .loading,
+  .button {
+    transition: none;
+  }
+}
