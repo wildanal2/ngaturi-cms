@@ -1,3 +1,4 @@
+import { CountdownCinematicVintage } from "./countdown-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { CountdownProps } from "../schema";
 import { countdownFields, nowPlus } from "../fields";
@@ -91,4 +92,10 @@ export const countdownSection: SectionDefinition = {
       defaultProps: d(),
     },
   },
+};
+
+countdownSection.variants["cinematic-vintage"] = {
+  ...countdownSection.variants["plain"],
+  name: "Cinematic Vintage",
+  component: CountdownCinematicVintage,
 };

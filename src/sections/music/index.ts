@@ -1,3 +1,4 @@
+import { MusicCinematicVintage } from "./music-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { MusicProps2 } from "../schema";
 import { musicPickerField, sMusicPosition } from "../fields";
@@ -51,4 +52,10 @@ export const musicSection: SectionDefinition = {
       defaultProps: { autoplay: true },
     },
   },
+};
+
+musicSection.variants["cinematic-vintage"] = {
+  ...musicSection.variants["disc"],
+  name: "Cinematic Vintage",
+  component: MusicCinematicVintage,
 };

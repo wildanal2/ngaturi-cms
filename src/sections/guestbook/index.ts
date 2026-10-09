@@ -1,3 +1,4 @@
+import { GuestbookCinematicVintage } from "./guestbook-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { GuestbookProps } from "../schema";
 import { GuestbookCards } from "./guestbook-cards";
@@ -32,4 +33,10 @@ export const guestbookSection: SectionDefinition = {
       defaultProps: { require_approval: true },
     },
   },
+};
+
+guestbookSection.variants["cinematic-vintage"] = {
+  ...guestbookSection.variants["chat"],
+  name: "Cinematic Vintage",
+  component: GuestbookCinematicVintage,
 };

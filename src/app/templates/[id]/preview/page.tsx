@@ -47,7 +47,8 @@ export default async function TemplatePreviewPage({
       </div>
 
       <div className="relative mx-auto max-w-lg">
-        {!t.sections.some((s) => s.type === "cover") ? (
+        {!t.sections.some((s) => s.type === "cover") &&
+        resolveTemplateComposition(t.id) !== "cinematic-vintage" ? (
           <InvitationCover
             names={
               (t.sections.find((s) => s.type === "hero")?.props
@@ -58,6 +59,16 @@ export default async function TemplatePreviewPage({
           />
         ) : null}
         <InvitationRenderer
+          opening={
+            !t.sections.some((s) => s.type === "cover") &&
+            resolveTemplateComposition(t.id) === "cinematic-vintage" ? (
+              <InvitationCover
+                names={(t.sections.find((s) => s.type === "hero")?.props.couple_names as string) ?? t.name}
+                guestName={null}
+                global={t.global_settings}
+              />
+            ) : undefined
+          }
           sections={sections}
           global={t.global_settings}
           composition={resolveTemplateComposition(t.id)}

@@ -1,6 +1,7 @@
 import type { Field, SectionDefinition } from "../types";
 import { StoryProps } from "../schema";
 import { dummyGallery } from "../dummy";
+import { StoryCinematicVintage } from "./story-cinematic-vintage";
 import { StoryTimeline } from "./story-timeline";
 
 export { StoryTimeline };
@@ -32,7 +33,8 @@ export const storySection: SectionDefinition = {
   description: "Garis waktu perjalanan hubungan: tahun, momen, cerita, foto",
   icon: "HeartHandshake",
   category: "content",
-  dummyProps: (_variantKey, base) => {
+  dummyProps: (variantKey, base) => {
+    if (variantKey === "cinematic-vintage") return;
     const items = base.items as { image?: string }[] | undefined;
     if (Array.isArray(items)) {
       const imgs = dummyGallery("story");
@@ -56,4 +58,12 @@ export const storySection: SectionDefinition = {
       defaultProps: { eyebrow: "Our Journey", title: "Kisah Cinta", items: sample },
     },
   },
+};
+
+storySection.variants["cinematic-vintage"] = {
+  ...storySection.variants.timeline,
+  name: "Cinematic Vintage",
+  description: "Bingkai cerita dalam perjalanan sinematik",
+  component: StoryCinematicVintage,
+  defaultProps: { eyebrow: "Sepenggal kisah kita", title: "Perjalanan Kami", items: [] },
 };

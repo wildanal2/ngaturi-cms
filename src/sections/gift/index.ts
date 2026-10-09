@@ -1,3 +1,4 @@
+import { GiftCinematicVintage } from "./gift-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { GiftProps } from "../schema";
 import { bankLogo, giftFields } from "../fields";
@@ -53,4 +54,10 @@ export const giftSection: SectionDefinition = {
       },
     },
   },
+};
+
+giftSection.variants["cinematic-vintage"] = {
+  ...giftSection.variants["minimal"],
+  name: "Cinematic Vintage",
+  component: GiftCinematicVintage,
 };

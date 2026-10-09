@@ -1,6 +1,7 @@
 import { canonicalTemplateId } from "@/lib/templates/identity";
 import type { SectionDefinition } from "./types";
 
+import { loadingSection } from "./loading";
 import { coverSection } from "./cover";
 import { heroSection } from "./hero";
 import { coupleSection } from "./couple";
@@ -25,6 +26,7 @@ import { giftSection } from "./gift";
  * dropping a `.tsx` file in the folder and registering it in that index.
  */
 export const SectionRegistry: Record<string, SectionDefinition> = {
+  loading: loadingSection,
   cover: coverSection,
   hero: heroSection,
   "couple-intro": coupleSection,
