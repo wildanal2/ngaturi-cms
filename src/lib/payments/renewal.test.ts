@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/db";
 import { invitations, payments } from "@/lib/db/schema";
-import { applyDokuResult } from "./grant";
+import { applyDokuResult } from "./legacy-doku";
 
 function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 86_400_000);

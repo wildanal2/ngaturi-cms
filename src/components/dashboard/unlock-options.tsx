@@ -7,9 +7,11 @@ import { PLANS, type PaidPlan } from "@/lib/payments/plans";
 export function UnlockOptions({
   invitationId,
   configured,
+  providerLabel = "",
 }: {
   invitationId: string;
   configured: boolean;
+  providerLabel?: string;
 }) {
   const [busy, setBusy] = useState<PaidPlan | null>(null);
 
@@ -73,7 +75,7 @@ export function UnlockOptions({
       </div>
 
       <p className="text-xs text-muted">
-        Pembayaran diproses aman oleh DOKU (kartu, VA bank, e-wallet, QRIS).
+        Pembayaran diproses melalui {providerLabel || "penyedia pembayaran"}.
       </p>
     </>
   );

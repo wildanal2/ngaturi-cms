@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
-import { isPaymentConfigured } from "@/lib/payments/doku";
+import { paymentAvailability } from "@/lib/payments/registry";
 import { isRenewalEligible } from "@/lib/payments/renewal-policy";
 import { UnlockOptions } from "@/components/dashboard/unlock-options";
 import { RenewalOption } from "@/components/dashboard/renewal-option";
@@ -28,6 +28,7 @@ export default async function UnlockPage({
     .limit(1);
   if (!inv) notFound();
   const canRenew = isRenewalEligible(inv);
+  const availability = paymentAvailability();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -48,12 +49,14 @@ export default async function UnlockPage({
         <RenewalOption
           invitationId={inv.id}
           expiresAt={inv.expiresAt?.toISOString() ?? null}
-          configured={isPaymentConfigured()}
+          configured={availability.configured}
+          providerLabel={availability.label}
         />
       ) : (
         <UnlockOptions
           invitationId={inv.id}
-          configured={isPaymentConfigured()}
+          configured={availability.configured}
+          providerLabel={availability.label}
         />
       )}
     </div>

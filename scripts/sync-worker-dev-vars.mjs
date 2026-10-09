@@ -25,6 +25,11 @@ const WORKER_KEYS = [
   "CRON_SECRET",
   "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
   "TURNSTILE_SECRET_KEY",
+  "PAYMENT_PROVIDER",
+  "SUMOPOD_BASE_URL",
+  "SUMOPOD_API_KEY",
+  "SUMOPOD_WEBHOOK_SECRET",
+  "SUMOPOD_WEBHOOK_TOKEN",
   "DOKU_CLIENT_ID",
   "DOKU_SECRET_KEY",
   "DOKU_BASE_URL",
@@ -36,8 +41,12 @@ const source = parse(await readFile(".env.local"));
 if (source.NODE_ENV !== "development") {
   throw new Error(".env.local must identify a development runtime");
 }
-if (new URL(source.DOKU_BASE_URL).hostname !== "api-sandbox.doku.com") {
+if ((source.DOKU_CLIENT_ID || source.DOKU_SECRET_KEY) && new URL(source.DOKU_BASE_URL || "https://api-sandbox.doku.com").hostname !== "api-sandbox.doku.com") {
   throw new Error(".env.local must use the DOKU Sandbox API");
+}
+
+if (source.PAYMENT_PROVIDER === "sumopod" && (source.SUMOPOD_BASE_URL || "https://api-pay-sandbox.sumopod.com") !== "https://api-pay-sandbox.sumopod.com") {
+  throw new Error("Worker DEV inputs must use Sumopod Sandbox");
 }
 
 const required = [

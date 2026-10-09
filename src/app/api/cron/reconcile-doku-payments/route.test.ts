@@ -13,7 +13,7 @@ vi.mock("@/lib/payments/doku", () => ({
   isPaymentConfigured: mocks.isPaymentConfigured,
 }));
 vi.mock("@/lib/payments/reconcile", () => ({
-  reconcilePendingDokuPayments: mocks.reconcile,
+  reconcilePayments: mocks.reconcile,
 }));
 
 import { GET } from "./route";
@@ -48,13 +48,11 @@ describe("GET /api/cron/reconcile-doku-payments", () => {
     expect(mocks.reconcile).not.toHaveBeenCalled();
   });
 
-  it("fails closed when DOKU credentials are missing", async () => {
+  it("does not gate historical recovery on new-checkout credentials", async () => {
     mocks.isPaymentConfigured.mockReturnValue(false);
-
     const response = await GET(new Request("http://localhost/api/cron/test"));
-
-    expect(response.status).toBe(503);
-    expect(mocks.reconcile).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(mocks.reconcile).toHaveBeenCalledOnce();
   });
 
   it("returns the safe aggregate summary", async () => {

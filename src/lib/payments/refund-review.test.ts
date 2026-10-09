@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/db";
 import { invitations, payments, userProfiles } from "@/lib/db/schema";
-import { applyDokuResult } from "./grant";
+import { applyDokuResult } from "./legacy-doku";
 import { reconcileDokuPaymentReference } from "./refund-reconcile";
 import {
   RefundReviewResolutionError,
@@ -75,7 +75,12 @@ function harness(
           };
         }
         return {
-          where: () => ({ limit: async () => [storedInvitation] }),
+          where: () => ({
+            limit: () =>
+              Object.assign(Promise.resolve([storedInvitation]), {
+                for: async () => [storedInvitation],
+              }),
+          }),
         };
       },
     }),
@@ -107,6 +112,9 @@ function harness(
 
   let queue = Promise.resolve<unknown>(undefined);
   const database = {
+    select: () => ({
+      from: () => ({ where: () => ({ limit: async () => [storedPayment] }) }),
+    }),
     transaction: vi.fn((callback) => {
       const run = queue.then(async () => {
         const snapshot = structuredClone(storedPayment);

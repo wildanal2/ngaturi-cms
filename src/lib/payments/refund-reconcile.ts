@@ -1,6 +1,27 @@
 import { db, type Database } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { payments } from "@/lib/db/schema";
 import { checkOrderStatus } from "./doku";
-import { applyDokuResult, type AppliedPaymentResult } from "./grant";
+import { PaymentResultError, type AppliedPaymentResult } from "./grant";
+import { applyDokuResult } from "./legacy-doku";
+
+async function localDokuPayment(
+  invoiceNumber: string,
+  database: Database,
+  refund = false,
+) {
+  const [payment] = await database
+    .select({ id: payments.id, provider: payments.provider })
+    .from(payments)
+    .where(eq(payments.providerOrderId, invoiceNumber))
+    .limit(1);
+  if (!payment) throw new PaymentResultError("unknown_payment");
+  if (payment.provider !== "doku")
+    throw new PaymentResultError(
+      refund ? "unsupported_refund" : "wrong_provider",
+    );
+  return payment;
+}
 
 export type RefundReconciliationResult =
   | { outcome: "not_refunded"; providerStatus: string }
@@ -16,8 +37,13 @@ export async function reconcileDokuPaymentReference(
   checkStatus: typeof checkOrderStatus = checkOrderStatus,
   applyResult: typeof applyDokuResult = applyDokuResult,
 ): Promise<AppliedPaymentResult> {
+  const payment = await localDokuPayment(invoiceNumber, database);
   const result = await checkStatus(invoiceNumber);
-  return applyResult(result, { source: "operator_reconciliation" }, database);
+  return applyResult(
+    result,
+    { source: "operator_reconciliation", paymentId: payment.id },
+    database,
+  );
 }
 
 /**
@@ -31,6 +57,7 @@ export async function reconcileDokuRefund(
   checkStatus: typeof checkOrderStatus = checkOrderStatus,
   applyResult: typeof applyDokuResult = applyDokuResult,
 ): Promise<RefundReconciliationResult> {
+  const payment = await localDokuPayment(invoiceNumber, database, true);
   const result = await checkStatus(invoiceNumber);
   if (result.status !== "REFUNDED") {
     return { outcome: "not_refunded", providerStatus: result.status };
@@ -40,7 +67,7 @@ export async function reconcileDokuRefund(
     outcome: "processed",
     payment: await applyResult(
       result,
-      { source: "refund_reconciliation" },
+      { source: "refund_reconciliation", paymentId: payment.id },
       database,
     ),
   };

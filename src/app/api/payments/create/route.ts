@@ -3,14 +3,18 @@ import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/helpers";
 import { getDb } from "@/lib/db";
-import { invitations, payments } from "@/lib/db/schema";
-import { PLANS, RENEWAL_PRICE, type PaidPlan } from "@/lib/payments/plans";
+import { payments } from "@/lib/db/schema";
+import { PLANS } from "@/lib/payments/plans";
+import { reservePaymentAttempt } from "@/lib/payments/checkout";
+import { resolveCheckoutProvider } from "@/lib/payments/registry";
 import {
-  createCheckout,
-  DOKU_CHECKOUT_DUE_MINUTES,
-  isDefinitiveCheckoutRejection,
-  isPaymentConfigured,
-} from "@/lib/payments/doku";
+  PaymentProviderError,
+  type PaymentProvider,
+} from "@/lib/payments/provider";
+import {
+  persistProviderReference,
+  recordProviderReferenceFailure,
+} from "@/lib/payments/reference";
 import { env } from "@/lib/env";
 
 const Body = z.object({
@@ -20,12 +24,18 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
-  const db = getDb();
   const session = await getSession();
-  if (!session) {
+  if (!session)
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  if (!isPaymentConfigured()) {
+  const parsed = Body.safeParse(await req.json().catch(() => null));
+  if (!parsed.success)
+    return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
+  let provider: PaymentProvider;
+  try {
+    provider = resolveCheckoutProvider();
+    if (!provider.isConfigured())
+      throw new PaymentProviderError("payment_not_configured", "unavailable");
+  } catch {
     return NextResponse.json(
       {
         error:
@@ -34,148 +44,82 @@ export async function POST(req: Request) {
       { status: 503 },
     );
   }
-
-  const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
-  }
+  const db = getDb();
   const { invitationId, kind, plan } = parsed.data;
-
-  const tier: PaidPlan = plan ?? "basic";
-  const amount =
-    kind === "invitation_renewal" ? RENEWAL_PRICE : PLANS[tier].price;
-  // Keep invoice_number <= 30 characters for DOKU credit-card compatibility.
-  const uniqueReference = crypto.randomUUID().replaceAll("-", "").slice(0, 20);
-  const orderId = `NG${kind === "invitation_renewal" ? "RNW" : "UNL"}-${uniqueReference}`;
-  const itemName =
-    kind === "invitation_renewal"
-      ? "Perpanjangan undangan 90 hari"
-      : `Upgrade undangan ${PLANS[tier].name}`;
-
-  let paymentId: string;
+  // Keep durable references <=30 ASCII characters for historical DOKU compatibility.
+  const orderId = `NG${kind === "invitation_renewal" ? "RNW" : "UNL"}-${crypto.randomUUID().replaceAll("-", "").slice(0, 20)}`;
+  let payment: Awaited<ReturnType<typeof reservePaymentAttempt>>;
   try {
-    paymentId = await db.transaction(async (tx) => {
-      const [inv] = await tx
-        .select()
-        .from(invitations)
-        .where(
-          and(
-            eq(invitations.id, invitationId),
-            eq(invitations.userId, session.user.id),
-          ),
-        )
-        .limit(1)
-        .for("update");
-      if (!inv) throw new Error("invitation_not_found");
-      if (kind === "invitation_unlock" && inv.isPaid) {
-        throw new Error("already_paid");
-      }
-      if (kind === "invitation_renewal" && !inv.isPaid) {
-        throw new Error("renewal_requires_paid_invitation");
-      }
-
-      const [pending] = await tx
-        .select({ id: payments.id, createdAt: payments.createdAt })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.invitationId, inv.id),
-            eq(payments.provider, "doku"),
-            eq(payments.kind, kind),
-            eq(payments.status, "pending"),
-          ),
-        )
-        .limit(1);
-      if (pending) {
-        const retryAfter = new Date(
-          Date.now() - (DOKU_CHECKOUT_DUE_MINUTES + 5) * 60_000,
-        );
-        if (pending.createdAt > retryAfter) {
-          throw new Error("payment_in_progress");
-        }
-        await tx
-          .update(payments)
-          .set({ status: "expired" })
-          .where(
-            and(eq(payments.id, pending.id), eq(payments.status, "pending")),
-          );
-      }
-
-      const [created] = await tx
-        .insert(payments)
-        .values({
-          userId: session.user.id,
-          invitationId: inv.id,
-          provider: "doku",
-          providerOrderId: orderId,
-          amount: String(amount),
-          currency: "IDR",
-          status: "pending",
-          kind,
-          planTier: kind === "invitation_renewal" ? inv.plan : tier,
-          grantUntil: null,
-        })
-        .returning({ id: payments.id });
-      return created.id;
-    });
+    payment = await reservePaymentAttempt(
+      {
+        userId: session.user.id,
+        invitationId,
+        kind,
+        plan,
+        provider: provider.name,
+        merchantReference: orderId,
+      },
+      db,
+    );
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
-    if (code === "invitation_not_found") {
-      return NextResponse.json(
-        { error: "Undangan tidak ditemukan." },
-        { status: 404 },
-      );
-    }
-    if (code === "already_paid") {
-      return NextResponse.json(
-        { error: "Undangan ini sudah aktif." },
-        { status: 409 },
-      );
-    }
-    if (code === "renewal_requires_paid_invitation") {
-      return NextResponse.json(
-        { error: "Hanya undangan berbayar yang dapat diperpanjang." },
-        { status: 400 },
-      );
-    }
-    if (code === "payment_in_progress") {
-      return NextResponse.json(
-        { error: "Pembayaran untuk undangan ini masih diproses." },
-        { status: 409 },
-      );
+    const errors: Record<string, [number, string]> = {
+      invitation_not_found: [404, "Undangan tidak ditemukan."],
+      already_paid: [409, "Undangan ini sudah aktif."],
+      renewal_requires_paid_invitation: [
+        400,
+        "Hanya undangan berbayar yang dapat diperpanjang.",
+      ],
+      payment_in_progress: [
+        409,
+        "Pembayaran untuk undangan ini masih diproses.",
+      ],
+    };
+    if (Object.hasOwn(errors, code)) {
+      const [status, message] = errors[code];
+      return NextResponse.json({ error: message }, { status });
     }
     throw error;
   }
 
-  let checkout: Awaited<ReturnType<typeof createCheckout>>;
+  const callbackUrl = new URL("/payment/callback", env.BETTER_AUTH_URL);
+  callbackUrl.searchParams.set("invoice", orderId);
+  let created;
   try {
-    const callbackUrl = new URL(
-      env.DOKU_CALLBACK_URL || `${env.BETTER_AUTH_URL}/payment/callback`,
-    );
-    callbackUrl.searchParams.set("invoice", orderId);
-    checkout = await createCheckout({
-      orderId,
-      amount,
-      itemName,
+    // The durable attempt transaction has committed before this external request.
+    created = await provider.createPayment({
+      merchantReference: orderId,
+      amount: payment.amount,
+      currency: "IDR",
+      itemName:
+        kind === "invitation_renewal"
+          ? "Perpanjangan undangan 90 hari"
+          : `Upgrade undangan ${PLANS[plan ?? "basic"].name}`,
       customer: { name: session.user.name, email: session.user.email },
       callbackUrl: callbackUrl.toString(),
     });
   } catch (error) {
-    const definitiveRejection = isDefinitiveCheckoutRejection(error);
-    if (definitiveRejection) {
+    const rejected =
+      error instanceof PaymentProviderError && error.outcome === "rejected";
+    if (rejected) {
       await db
         .update(payments)
-        .set({ status: "failed" })
-        .where(and(eq(payments.id, paymentId), eq(payments.status, "pending")));
+        .set({
+          status: "failed",
+          rawWebhook: {
+            creation: { outcome: "rejected", provider: provider.name },
+          },
+        })
+        .where(
+          and(eq(payments.id, payment.id), eq(payments.status, "pending")),
+        );
     }
     console.error(
-      "DOKU checkout creation failed",
+      "Payment creation failed",
       JSON.stringify({
-        paymentId,
-        providerOrderId: orderId,
-        category: definitiveRejection
-          ? "provider_rejected"
-          : "provider_outcome_unknown",
+        paymentId: payment.id,
+        provider: provider.name,
+        category: rejected ? "provider_rejected" : "provider_outcome_unknown",
       }),
     );
     return NextResponse.json(
@@ -184,23 +128,34 @@ export async function POST(req: Request) {
     );
   }
 
-  const providerPaymentId = checkout.sessionId || checkout.tokenId || null;
-  if (providerPaymentId) {
+  if (created.providerPaymentId) {
     try {
-      await db
-        .update(payments)
-        .set({ providerPaymentId })
-        .where(and(eq(payments.id, paymentId), eq(payments.status, "pending")));
+      await persistProviderReference(
+        payment.id,
+        provider.name,
+        orderId,
+        created.providerPaymentId,
+        db,
+      );
     } catch {
+      try {
+        await recordProviderReferenceFailure(payment.id, db);
+      } catch {
+        /* Safe log below; the durable attempt remains unresolved. */
+      }
       console.warn(
-        "DOKU provider reference was not persisted",
+        "Provider reference was not persisted",
         JSON.stringify({
-          paymentId,
-          providerOrderId: orderId,
-          category: "database_update_failed",
+          paymentId: payment.id,
+          provider: provider.name,
+          category: "reference_persistence_failed",
         }),
+      );
+      return NextResponse.json(
+        { error: "Transaksi sedang diverifikasi. Jangan ulangi pembayaran." },
+        { status: 502 },
       );
     }
   }
-  return NextResponse.json({ redirectUrl: checkout.url });
+  return NextResponse.json({ redirectUrl: created.redirectUrl });
 }

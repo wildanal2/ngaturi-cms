@@ -14,7 +14,7 @@ vi.mock("@/lib/payments/doku", () => ({
   isPaymentConfigured: mocks.isPaymentConfigured,
 }));
 vi.mock("@/lib/payments/reconcile", () => ({
-  reconcilePendingDokuPayments: mocks.reconcile,
+  reconcilePayments: mocks.reconcile,
 }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.getDb }));
 
@@ -116,19 +116,12 @@ describe("Cloudflare Worker entrypoint", () => {
     expect(getWorkerEnv()).toBeUndefined();
   });
 
-  it("skips scheduled provider work when payments are disabled", async () => {
+  it("reconciles historical providers even when new checkout is unavailable", async () => {
     const ctx = executionContext();
     mocks.isPaymentConfigured.mockReturnValue(false);
-
-    worker.scheduled(
-      { cron: "*/5 * * * *", scheduledTime: Date.now() },
-      completeEnv(),
-      ctx.context,
-    );
-
+    worker.scheduled({ cron: "*/5 * * * *", scheduledTime: Date.now() }, completeEnv(), ctx.context);
     await expect(ctx.pending()).resolves.toBeUndefined();
-    expect(mocks.getDb).not.toHaveBeenCalled();
-    expect(mocks.reconcile).not.toHaveBeenCalled();
+    expect(mocks.reconcile).toHaveBeenCalledOnce();
   });
 
   it("reports a partial batch failure to the platform for retry", async () => {
@@ -142,10 +135,10 @@ describe("Cloudflare Worker entrypoint", () => {
     );
 
     await expect(ctx.pending()).rejects.toThrow(
-      "DOKU scheduled reconciliation completed with errors",
+      "Scheduled payment reconciliation failed",
     );
     expect(console.error).toHaveBeenCalledWith(
-      "DOKU scheduled reconciliation failed",
+      "Payment scheduled reconciliation failed",
       expect.stringContaining("batch_processing_error"),
     );
   });

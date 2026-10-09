@@ -96,9 +96,9 @@ export default function PricingPage() {
       </div>
 
       <p className="mx-auto mt-10 max-w-xl text-center text-sm text-muted">
-        Pembayaran online diproses aman oleh DOKU. Jika memilih Basic setelah
-        trial, fitur Premium yang sudah dipakai tetap tampil; penambahan fitur
-        Premium baru memerlukan upgrade Premium.
+        Pembayaran online diproses melalui penyedia pembayaran. Jika memilih
+        Basic setelah trial, fitur Premium yang sudah dipakai tetap tampil;
+        penambahan fitur Premium baru memerlukan upgrade Premium.
       </p>
     </MarketingPage>
   );

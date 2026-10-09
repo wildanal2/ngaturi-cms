@@ -8,10 +8,12 @@ export function RenewalOption({
   invitationId,
   expiresAt,
   configured,
+  providerLabel = "",
 }: {
   invitationId: string;
   expiresAt: string | null;
   configured: boolean;
+  providerLabel?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const expiry = expiresAt ? new Date(expiresAt) : null;
@@ -81,7 +83,7 @@ export function RenewalOption({
           {busy ? "Mengalihkan ke pembayaran…" : "Perpanjang 90 hari"}
         </button>
         <p className="mt-3 text-xs text-muted">
-          Pembayaran diproses aman oleh DOKU.
+          Pembayaran diproses melalui {providerLabel || "penyedia pembayaran"}.
         </p>
       </section>
     </>

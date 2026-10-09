@@ -76,6 +76,11 @@ const schema = z.object({
   // Optional (fitur menyusul)
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),
+  PAYMENT_PROVIDER: z.string().optional(),
+  SUMOPOD_BASE_URL: z.string().optional(),
+  SUMOPOD_API_KEY: z.string().optional(),
+  SUMOPOD_WEBHOOK_SECRET: z.string().optional(),
+  SUMOPOD_WEBHOOK_TOKEN: z.string().optional(),
   DOKU_CLIENT_ID: z.string().optional(),
   DOKU_SECRET_KEY: z.string().optional(),
   DOKU_BASE_URL: z.url().default("https://api-sandbox.doku.com"),

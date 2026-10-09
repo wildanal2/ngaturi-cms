@@ -13,7 +13,7 @@ vi.mock("@/lib/invitation/cron", () => ({
 }));
 vi.mock("@/lib/payments/doku", () => ({ isPaymentConfigured: () => true }));
 vi.mock("@/lib/payments/reconcile", () => ({
-  reconcilePendingDokuPayments: mocks.reconcile,
+  reconcilePayments: mocks.reconcile,
 }));
 
 import { isAuthorizedCron } from "./cron-auth";

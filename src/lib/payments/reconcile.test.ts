@@ -1,213 +1,180 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DokuPaymentResult } from "./doku";
-import type { AppliedPaymentResult } from "./grant";
 import type { Database } from "@/lib/db";
+import type { PaymentObservation, PaymentProvider } from "./provider";
 import {
-  DOKU_RECONCILIATION_BATCH_SIZE,
-  reconcilePendingDokuPayments,
+  reconcilePayments,
+  RECONCILIATION_BATCH_SIZE,
+  type ReconciliationCandidate,
 } from "./reconcile";
 
-function candidate(index: number) {
+function candidate(
+  index: number,
+  provider: "doku" | "sumopod" = "doku",
+): ReconciliationCandidate {
   return {
     id: `payment-${index}`,
+    provider,
     providerOrderId: `NGUNL-${index}`,
+    providerPaymentId: null,
+    createdAt: new Date("2020-01-01"),
+    status: "pending",
+    paidAt: null,
+    rawWebhook: null,
   };
 }
-
-function result(
-  invoiceNumber: string,
-  status: DokuPaymentResult["status"] = "SUCCESS",
-): DokuPaymentResult {
-  return { invoiceNumber, amount: 49_000, currency: "IDR", status };
-}
-
-function applied(
-  paymentId: string,
-  status: AppliedPaymentResult["status"] = "paid",
-): AppliedPaymentResult {
+function observation(
+  reference: string,
+  provider: "doku" | "sumopod" = "doku",
+  status: "paid" | "pending" = "paid",
+): PaymentObservation {
   return {
-    paymentId,
+    provider,
+    merchantReference: reference,
+    amount: "49000.00",
+    currency: "IDR",
     status,
-    transitioned: status !== "pending",
-    fulfilled: status === "paid",
+    providerStatus: status,
+  };
+}
+function applied(result: PaymentObservation) {
+  return {
+    paymentId: result.merchantReference,
+    status: result.status,
+    transitioned: result.status === "paid",
+    fulfilled: result.status === "paid",
     reviewRequired: false,
   };
 }
+function resolver(
+  getPaymentStatus: PaymentProvider["getPaymentStatus"],
+  name: "doku" | "sumopod" = "doku",
+) {
+  return { name, getPaymentStatus } as PaymentProvider;
+}
+const recordAttempt = vi.fn().mockResolvedValue(undefined);
 
-describe("reconcilePendingDokuPayments", () => {
-  it("uses the bounded two-minute to 24-hour eligibility window", async () => {
-    const now = new Date("2026-09-22T12:00:00.000Z");
+describe("mixed-provider reconciliation", () => {
+  it("keeps an initial delay, bounded batch, and no maximum age cutoff", async () => {
+    const now = new Date("2026-09-22T12:00:00Z");
     const database = {} as Database;
     const loadCandidates = vi.fn().mockResolvedValue([]);
-
-    const summary = await reconcilePendingDokuPayments({
-      now,
-      database,
-      loadCandidates,
-    });
-
+    expect(
+      await reconcilePayments({ now, database, loadCandidates, recordAttempt }),
+    ).toMatchObject({ selected: 0, checked: 0, errors: 0, truncated: false });
     expect(loadCandidates).toHaveBeenCalledWith(
-      {
-        oldestCreatedAt: new Date("2026-09-21T12:00:00.000Z"),
-        newestCreatedAt: new Date("2026-09-22T11:58:00.000Z"),
-        limit: DOKU_RECONCILIATION_BATCH_SIZE + 1,
-      },
+      { newestCreatedAt: new Date("2026-09-22T11:58:00Z"), limit: 51 },
       database,
     );
-    expect(summary).toEqual({
-      selected: 0,
-      checked: 0,
-      transitioned: 0,
-      fulfilled: 0,
-      reviewRequired: 0,
-      statuses: { paid: 0, expired: 0, failed: 0, pending: 0, refunded: 0 },
-      errors: 0,
-      truncated: false,
-    });
   });
-
-  it("checks each candidate and reuses the reconciliation fulfillment path", async () => {
+  it("selects each adapter by stored provider in a mixed historical batch", async () => {
     const database = {} as Database;
-    const candidates = [candidate(1), candidate(2)];
-    const checkStatus = vi.fn(async (invoiceNumber: string) =>
-      result(
-        invoiceNumber,
-        invoiceNumber.endsWith("1") ? "SUCCESS" : "PENDING",
-      ),
+    const doku = vi.fn(async ({ providerOrderId }) =>
+      observation(providerOrderId),
     );
-    const applyResult = vi.fn(
-      async (
-        paymentResult: DokuPaymentResult,
-        metadata: { source: string },
-        receivedDatabase: Database,
-      ) => {
-        expect(metadata).toEqual({ source: "reconciliation" });
-        expect(receivedDatabase).toBe(database);
-        return applied(
-          paymentResult.invoiceNumber,
-          paymentResult.status === "SUCCESS" ? "paid" : "pending",
-        );
-      },
+    const sumopod = vi.fn(async ({ providerOrderId }) =>
+      observation(providerOrderId, "sumopod", "pending"),
     );
-
-    const summary = await reconcilePendingDokuPayments({
+    const resolveProvider = vi.fn((name) =>
+      resolver(name === "doku" ? doku : sumopod, name),
+    );
+    const applyResult = vi.fn(async (result: PaymentObservation) =>
+      applied(result),
+    );
+    const summary = await reconcilePayments({
       database,
-      loadCandidates: async () => candidates,
-      checkStatus,
+      loadCandidates: async () => [candidate(1), candidate(2, "sumopod")],
+      resolveProvider,
       applyResult,
+      recordAttempt,
     });
-
-    expect(checkStatus).toHaveBeenCalledTimes(2);
-    expect(applyResult).toHaveBeenCalledTimes(2);
-    expect(applyResult.mock.calls.every((call) => call[2] === database)).toBe(
-      true,
-    );
-    expect(summary).toEqual({
-      selected: 2,
+    expect(resolveProvider.mock.calls).toEqual([["doku"], ["sumopod"]]);
+    expect(doku).toHaveBeenCalledWith({
+      providerOrderId: "NGUNL-1",
+      providerPaymentId: null,
+    });
+    expect(sumopod).toHaveBeenCalledWith({
+      providerOrderId: "NGUNL-2",
+      providerPaymentId: null,
+    });
+    expect(summary).toMatchObject({
       checked: 2,
-      transitioned: 1,
       fulfilled: 1,
-      reviewRequired: 0,
-      statuses: { paid: 1, expired: 0, failed: 0, pending: 1, refunded: 0 },
+      aged: 2,
       errors: 0,
-      truncated: false,
     });
-  });
-
-  it("isolates a rejected provider result and continues the batch", async () => {
-    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const candidates = [candidate(1), candidate(2), candidate(3)];
-    const checkStatus = vi.fn(async (invoiceNumber: string) => {
-      if (invoiceNumber.endsWith("2")) {
-        throw new Error("DOKU status response signature is invalid");
-      }
-      return result(invoiceNumber);
-    });
-    const applyResult = vi.fn(async (paymentResult: DokuPaymentResult) =>
-      applied(paymentResult.invoiceNumber),
+    expect(applyResult).toHaveBeenCalledWith(
+      expect.anything(),
+      { source: "reconciliation", paymentId: "payment-1" },
+      database,
     );
-
-    const summary = await reconcilePendingDokuPayments({
-      loadCandidates: async () => candidates,
-      checkStatus,
-      applyResult,
+  });
+  it("keeps timeout unresolved and continues other rows", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const check = vi.fn(async ({ providerOrderId }) => {
+      if (providerOrderId.endsWith("2")) throw new Error("timeout");
+      return observation(providerOrderId);
     });
-
-    expect(checkStatus).toHaveBeenCalledTimes(3);
+    const applyResult = vi.fn(async (result: PaymentObservation) =>
+      applied(result),
+    );
+    const record = vi.fn().mockResolvedValue(undefined);
+    const summary = await reconcilePayments({
+      loadCandidates: async () => [candidate(1), candidate(2), candidate(3)],
+      resolveProvider: () => resolver(check),
+      applyResult,
+      recordAttempt: record,
+    });
+    expect(summary).toMatchObject({ checked: 2, fulfilled: 2, errors: 1 });
     expect(applyResult).toHaveBeenCalledTimes(2);
-    expect(summary.checked).toBe(2);
-    expect(summary.fulfilled).toBe(2);
-    expect(summary.errors).toBe(1);
-    expect(warning).toHaveBeenCalledWith(
-      "DOKU reconciliation candidate failed",
-      JSON.stringify({
-        paymentId: "payment-2",
-        category: "provider_or_processing_error",
-      }),
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "payment-2" }),
+      expect.any(Date),
+      "provider_or_processing_error",
+      expect.anything(),
     );
     warning.mockRestore();
   });
-
-  it("caps a run at 50 payments and reports truncation", async () => {
-    const candidates = Array.from(
-      { length: DOKU_RECONCILIATION_BATCH_SIZE + 1 },
-      (_, index) => candidate(index),
+  it("caps each cycle at fifty rows", async () => {
+    const check = vi.fn(async ({ providerOrderId }) =>
+      observation(providerOrderId, "doku", "pending"),
     );
-    const checkStatus = vi.fn(async (invoiceNumber: string) =>
-      result(invoiceNumber, "PENDING"),
-    );
-    const applyResult = vi.fn(async (paymentResult: DokuPaymentResult) =>
-      applied(paymentResult.invoiceNumber, "pending"),
-    );
-
-    const summary = await reconcilePendingDokuPayments({
-      loadCandidates: async () => candidates,
-      checkStatus,
-      applyResult,
+    const summary = await reconcilePayments({
+      loadCandidates: async () =>
+        Array.from({ length: 51 }, (_, i) => candidate(i)),
+      resolveProvider: () => resolver(check),
+      applyResult: async (result) => applied(result),
+      recordAttempt,
     });
-
-    expect(summary.selected).toBe(DOKU_RECONCILIATION_BATCH_SIZE);
-    expect(summary.checked).toBe(DOKU_RECONCILIATION_BATCH_SIZE);
-    expect(summary.truncated).toBe(true);
-    expect(checkStatus).toHaveBeenCalledTimes(DOKU_RECONCILIATION_BATCH_SIZE);
+    expect(summary).toMatchObject({
+      selected: RECONCILIATION_BATCH_SIZE,
+      checked: 50,
+      truncated: true,
+    });
+    expect(check).toHaveBeenCalledTimes(50);
   });
-
-  it("never runs more than five provider checks concurrently", async () => {
-    const candidates = Array.from({ length: 10 }, (_, index) =>
-      candidate(index),
-    );
-    const releases: Array<() => void> = [];
+  it("never runs more than five provider requests concurrently", async () => {
     let active = 0;
-    let maximumActive = 0;
-    const checkStatus = vi.fn(async (invoiceNumber: string) => {
-      active += 1;
-      maximumActive = Math.max(maximumActive, active);
+    let maximum = 0;
+    const releases: Array<() => void> = [];
+    const check = vi.fn(async ({ providerOrderId }) => {
+      active++;
+      maximum = Math.max(maximum, active);
       await new Promise<void>((resolve) => releases.push(resolve));
-      active -= 1;
-      return result(invoiceNumber, "PENDING");
+      active--;
+      return observation(providerOrderId);
     });
-    const applyResult = vi.fn(async (paymentResult: DokuPaymentResult) =>
-      applied(paymentResult.invoiceNumber, "pending"),
-    );
-
-    const reconciliation = reconcilePendingDokuPayments({
-      loadCandidates: async () => candidates,
-      checkStatus,
-      applyResult,
+    const reconciliation = reconcilePayments({
+      loadCandidates: async () =>
+        Array.from({ length: 10 }, (_, i) => candidate(i)),
+      resolveProvider: () => resolver(check),
+      applyResult: async (result) => applied(result),
+      recordAttempt,
     });
-
-    await vi.waitFor(() => expect(checkStatus).toHaveBeenCalledTimes(5));
-    expect(maximumActive).toBe(5);
+    await vi.waitFor(() => expect(check).toHaveBeenCalledTimes(5));
     releases.splice(0).forEach((release) => release());
-
-    await vi.waitFor(() => expect(checkStatus).toHaveBeenCalledTimes(10));
-    expect(maximumActive).toBe(5);
+    await vi.waitFor(() => expect(check).toHaveBeenCalledTimes(10));
     releases.splice(0).forEach((release) => release());
-
-    await expect(reconciliation).resolves.toMatchObject({
-      selected: 10,
-      checked: 10,
-      errors: 0,
-    });
+    expect((await reconciliation).checked).toBe(10);
+    expect(maximum).toBe(5);
   });
 });
