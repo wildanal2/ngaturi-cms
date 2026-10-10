@@ -28,6 +28,30 @@ export function Divider() {
   return <Artwork file="divider.svg" className={styles.divider} />;
 }
 
+/** A single sprig or offset corners, built from the original delima artwork. */
+export function BotanicalAccent({
+  placement = "lower",
+}: {
+  placement?: "lower" | "corners";
+}) {
+  return (
+    <div
+      className={styles.botanicalAccent}
+      data-placement={placement}
+      aria-hidden="true"
+    >
+      <span className={styles.accentLeft}>
+        <Artwork file="botanical-spray.svg" />
+      </span>
+      {placement === "corners" ? (
+        <span className={styles.accentRight}>
+          <Artwork file="botanical-spray.svg" />
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function BotanicalBorder() {
   return (
     <div className={styles.botanicalBorder} aria-hidden="true">

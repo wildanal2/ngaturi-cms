@@ -5,6 +5,7 @@ import type { SectionRenderProps } from "../types";
 import type { Person } from "./person";
 import {
   Divider,
+  BotanicalAccent,
   Portal,
   PortraitMedia,
   textProp,
@@ -21,17 +22,21 @@ function Partner({
   person,
   label,
   inCanvas,
+  side,
 }: {
   person: Person;
   label: string;
   inCanvas?: boolean;
+  side: "groom" | "bride";
 }) {
   const name = textProp(person.full_name) || textProp(person.name);
   const instagram = textProp(person.instagram).replace(/^@/, "");
   return (
     <SerambiEntrance inCanvas={inCanvas} zoom>
-      <article className={styles.partner}>
-        <div className={foundation.portraitFrame}>
+      <article className={styles.partner} data-partner={side}>
+        <div
+          className={`${foundation.portraitFrame} ${foundation.editorialPortrait} ${styles.partnerPortrait}`}
+        >
           <Portal>
             <div className={foundation.portraitMask}>
               <PortraitMedia
@@ -41,6 +46,7 @@ function Partner({
               />
             </div>
           </Portal>
+          <BotanicalAccent />
         </div>
         <div className={styles.partnerCopy}>
           <p className={styles.eyebrow}>{label}</p>
@@ -97,11 +103,13 @@ export function CoupleSerambiDelima({ props, inCanvas }: SectionRenderProps) {
           person={p.groom ?? {}}
           label="Mempelai Pria"
           inCanvas={inCanvas}
+          side="groom"
         />
         <Partner
           person={p.bride ?? {}}
           label="Mempelai Wanita"
           inCanvas={inCanvas}
+          side="bride"
         />
       </div>
     </SerambiSection>

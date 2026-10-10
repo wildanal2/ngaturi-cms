@@ -46,6 +46,7 @@ const themeAssets = (root: string): ThemeAssets => ({
 const FLOATING_EMAS = themeAssets("floating-emas");
 const FLOATING_TERRACOTTA = themeAssets("floating-terracotta");
 const SEKAR_JAWA_3D_EVENT_DATE = inDays(75);
+const SERAMBI_DELIMA_EVENT_DATE = `${inDays(75).slice(0, 10)}T08:00:00+07:00`;
 
 const themeDecor = (theme: ThemeAssets) => ({
   background_image: theme.bg,
@@ -75,15 +76,56 @@ export const TEMPLATES: TemplatePreset[] = [
     sections: [
       s("loading", "serambi-delima", 0),
       s("cover", "serambi-delima", 1),
-      s("hero", "serambi-delima", 2),
+      s("hero", "serambi-delima", 2, { event_date: SERAMBI_DELIMA_EVENT_DATE }),
       s("quote", "serambi-delima", 3),
-      s("couple-intro", "serambi-delima", 4),
-      s("event-details", "serambi-delima", 5),
+      s("couple-intro", "serambi-delima", 4, {
+        groom: {
+          name: "Raka",
+          full_name: "Raka Wibowo",
+          child_order: "Putra pertama dari",
+          parents: "Bapak Budi Wibowo & Ibu Dewi Lestari",
+        },
+        bride: {
+          name: "Dinda",
+          full_name: "Dinda Ayu Pratiwi",
+          child_order: "Putri kedua dari",
+          parents: "Bapak Arif Pratama & Ibu Ratna Puspita",
+        },
+      }),
+      s("event-details", "serambi-delima", 5, {
+        events: [
+          {
+            name: "Akad Nikah",
+            date: SERAMBI_DELIMA_EVENT_DATE,
+            start_time: "08:00",
+            end_time: "10:00",
+            venue_name: "Masjid Al-Falah",
+            address: "Jl. Melati No. 10, Bandung",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=-6.914744,107.609810",
+          },
+          {
+            name: "Resepsi",
+            date: SERAMBI_DELIMA_EVENT_DATE,
+            start_time: "11:00",
+            end_time: "14:00",
+            venue_name: "Graha Melati",
+            address: "Jl. Melati No. 12, Bandung",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=-6.914744,107.609810",
+          },
+        ],
+      }),
       s("map-location", "serambi-delima", 6),
-      s("countdown", "serambi-delima", 7),
+      s("countdown", "serambi-delima", 7, {
+        target_date: SERAMBI_DELIMA_EVENT_DATE,
+      }),
       s("gallery", "serambi-delima", 8),
       s("gallery", "serambi-delima", 9),
-      s("quote", "serambi-delima", 10),
+      s("quote", "serambi-delima", 10, {
+        text: "Semoga kebersamaan ini senantiasa dipenuhi kasih, ketenteraman, dan kebaikan. Semoga setiap langkah menjadi awal dari kenangan yang indah.",
+        source: "Doa untuk kedua mempelai",
+      }),
       s("rsvp", "serambi-delima", 11),
       s("guestbook", "serambi-delima", 12),
       s("closing", "serambi-delima", 13),

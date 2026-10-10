@@ -2,7 +2,7 @@
 
 import type { SectionRenderProps } from "../types";
 import {
-  BotanicalBorder,
+  BotanicalAccent,
   Divider,
   Portal,
   PortraitMedia,
@@ -33,12 +33,9 @@ export function HeroSerambiDelima({ props, inCanvas }: SectionRenderProps) {
   return (
     <section className={`${serambiTheme} ${styles.hero}`} data-serambi-delima>
       <div ref={ref} data-motion={inCanvas ? "preview" : "pending"}>
-        <div className={styles.heroTop}>
-          <Divider />
-        </div>
-        <div className={`${styles.portraitFrame} ${styles.enterZoom}`}>
+        <div className={`${styles.heroPortrait} ${styles.enterZoom}`}>
           <Portal>
-            <div className={styles.portraitMask}>
+            <div className={`${styles.portraitMask} ${styles.heroMask}`}>
               <PortraitMedia
                 src={
                   textProp(props.background_image) ||
@@ -48,6 +45,7 @@ export function HeroSerambiDelima({ props, inCanvas }: SectionRenderProps) {
               />
             </div>
           </Portal>
+          <BotanicalAccent placement="corners" />
         </div>
         <div className={`${styles.heroCopy} ${styles.enterUp}`}>
           {textProp(props.tagline) ? (
@@ -73,7 +71,9 @@ export function HeroSerambiDelima({ props, inCanvas }: SectionRenderProps) {
             </time>
           ) : null}
         </div>
-        <BotanicalBorder />
+        <div className={styles.heroEndpoint} aria-hidden="true">
+          <span />
+        </div>
       </div>
     </section>
   );

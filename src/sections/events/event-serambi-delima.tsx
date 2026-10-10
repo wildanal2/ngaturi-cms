@@ -41,8 +41,7 @@ export function EventSerambiDelima({ props, inCanvas }: SectionRenderProps) {
       <div className={styles.stack}>
         {events.map((event, index) => (
           <SerambiEntrance key={index} inCanvas={inCanvas}>
-            <article className={styles.panel}>
-              <span className={styles.panelJewel} aria-hidden="true" />
+            <article className={styles.eventPanel}>
               <h3 className={styles.panelTitle}>{event.name}</h3>
               <EventDate iso={event.date} />
               {event.start_time ? (
@@ -50,6 +49,7 @@ export function EventSerambiDelima({ props, inCanvas }: SectionRenderProps) {
                   {formatTimeRange(event.start_time, event.end_time)}
                 </p>
               ) : null}
+              <span className={styles.eventRule} aria-hidden="true" />
               <p className={styles.venue}>{event.venue_name}</p>
               {event.address ? (
                 <p className={styles.address}>{event.address}</p>

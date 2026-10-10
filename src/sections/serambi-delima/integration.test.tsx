@@ -12,6 +12,8 @@ import { getBuilderFlow } from "@/components/builder/canvas";
 import { getVariant } from "../registry";
 import { EventSerambiDelima } from "../events/event-serambi-delima";
 import { QuoteSerambiDelima } from "../quote/quote-serambi-delima";
+import { GiftSerambiDelima } from "../gift/gift-serambi-delima";
+import { GiftProps } from "../schema";
 
 const template = getTemplate("serambi-delima")!;
 const journey = [
@@ -33,6 +35,59 @@ const journey = [
 ];
 
 describe("Serambi Delima integration", () => {
+  it("keeps demo dates coherent and the two quote instances distinct", () => {
+    const sections = hydrateTemplateSections(template);
+    const date = sections.find((s) => s.type === "hero")!.props.event_date;
+    expect(
+      sections.find((s) => s.type === "countdown")!.props.target_date,
+    ).toBe(date);
+    const events = sections.find((s) => s.type === "event-details")!.props
+      .events as { date: string }[];
+    expect(events.every((event) => event.date === date)).toBe(true);
+    const quotes = sections.filter((s) => s.type === "quote");
+    expect(quotes[0].props.text).not.toEqual(quotes[1].props.text);
+  });
+
+  it("supports optional Gift accounts through the unchanged existing contract", () => {
+    expect(getVariant("gift", "serambi-delima")?.propsSchema).toBe(GiftProps);
+    const props = {
+      intro: "Authored gift message",
+      bank_accounts: [
+        {
+          bank_name: "Example bank",
+          account_name: "Authored owner",
+          account_number: "1234567890",
+        },
+        {
+          bank_name: "Example wallet",
+          account_name: "Authored owner",
+          account_number: "081234567890",
+        },
+      ],
+    };
+    const before = structuredClone(props);
+    const html = renderToStaticMarkup(
+      <GiftSerambiDelima
+        props={props}
+        global={template.global_settings}
+        inCanvas
+      />,
+    );
+    expect(html.match(/<article/g)).toHaveLength(2);
+    expect(html).toContain('aria-label="Salin nomor Example bank"');
+    expect(html).toContain("1234567890");
+    expect(props).toEqual(before);
+    expect(
+      renderToStaticMarkup(
+        <GiftSerambiDelima
+          props={{ bank_accounts: [] }}
+          global={template.global_settings}
+          inCanvas
+        />,
+      ),
+    ).toBe("");
+  });
+
   it("hydrates the complete standard journey without sharing repeated data", () => {
     const sections = hydrateTemplateSections(template);
     expect(template.composition).toBe("standard");

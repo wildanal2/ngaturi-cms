@@ -37,7 +37,14 @@ export function GallerySerambiDelima({ props, inCanvas }: SectionRenderProps) {
           <ul
             className={styles.galleryGrid}
             data-columns={columns}
-            style={{ "--sd-gallery-columns": columns } as CSSProperties}
+            style={
+              {
+                "--sd-gallery-columns": Math.min(
+                  columns,
+                  Math.max(1, images.length - 1),
+                ),
+              } as CSSProperties
+            }
           >
             {images.map((image, index) => (
               <li key={index} className={styles.galleryItem}>

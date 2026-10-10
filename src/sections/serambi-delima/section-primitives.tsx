@@ -1,7 +1,13 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
-import { BotanicalBorder, Divider, serambiTheme } from "./primitives";
+import {
+  BotanicalAccent,
+  BotanicalBorder,
+  DelimaSeal,
+  Divider,
+  serambiTheme,
+} from "./primitives";
 import { useSerambiEntrance } from "./use-entrance";
 import foundation from "./serambi-delima.module.css";
 import styles from "./sections.module.css";
@@ -48,6 +54,7 @@ export function SerambiSection({
   inCanvas?: boolean;
 }) {
   const titleId = useId();
+  const seal = ["quote", "rsvp", "guestbook", "gift"].includes(type);
   return (
     <section
       data-section={type}
@@ -57,19 +64,32 @@ export function SerambiSection({
     >
       <div className={styles.content}>
         <SerambiEntrance inCanvas={inCanvas} className={styles.sectionHeader}>
+          {seal ? <DelimaSeal className={styles.headerSeal} /> : null}
           {eyebrow ? <p className={styles.eyebrow}>{eyebrow}</p> : null}
           <h2 id={titleId} className={styles.title}>
             {title}
           </h2>
-          <Divider />
+          {!seal ? (
+            <span className={styles.headerRule} aria-hidden="true" />
+          ) : null}
           {intro ? <p className={styles.copy}>{intro}</p> : null}
         </SerambiEntrance>
         {children}
       </div>
-      {/* Dedicated space keeps foliage outside all editable text and actions. */}
-      <SerambiEntrance inCanvas={inCanvas} className={styles.footer}>
-        <BotanicalBorder />
-      </SerambiEntrance>
+      {/* Ornament rhythm varies by section; its own flow space protects editable content. */}
+      {type !== "couple-intro" ? (
+        <SerambiEntrance inCanvas={inCanvas} className={styles.footer}>
+          {type === "closing" ? (
+            <BotanicalBorder />
+          ) : type === "countdown" ? (
+            <BotanicalAccent />
+          ) : type === "gallery" ? (
+            <BotanicalAccent placement="corners" />
+          ) : (
+            <Divider />
+          )}
+        </SerambiEntrance>
+      ) : null}
     </section>
   );
 }

@@ -1,8 +1,11 @@
 .quote {
-  margin: 0;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 0;
+  text-align: center;
 }
 .quoteBody {
-  font: 400 clamp(1rem, 4.4cqi, 1.2rem) / 1.9 var(--sd-body);
+  font: 400 clamp(1.125rem, 4.6cqi, 1.35rem) / 1.95 var(--sd-body);
   white-space: pre-wrap;
   unicode-bidi: plaintext;
 }
@@ -24,7 +27,7 @@
   margin-top: 20px;
 }
 .attribution {
-  margin-top: 28px;
+  margin-top: 32px;
   font-size: 1rem;
   color: var(--sd-wine);
   overflow-wrap: anywhere;
@@ -36,7 +39,7 @@
   display: grid;
   grid-template-columns: repeat(var(--sd-gallery-columns, 3), minmax(0, 1fr));
   align-items: start;
-  gap: clamp(8px, 2.5cqi, 16px);
+  gap: clamp(12px, 3cqi, 20px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -44,17 +47,23 @@
 .galleryItem {
   min-width: 0;
 }
+.galleryItem:first-child {
+  grid-column: 1 / -1;
+}
+.galleryItem:first-child .galleryTile {
+  aspect-ratio: 4 / 3;
+}
 .galleryTile {
   display: block;
   width: 100%;
-  aspect-ratio: 1;
-  padding: 4px;
-  border: 1px solid #bda77c;
-  border-radius: 20px 20px 4px 4px;
+  aspect-ratio: 3 / 4;
+  padding: 3px;
+  border: 1px solid #ad895066;
+  border-radius: 3px;
   background: var(--sd-champagne);
   color: var(--sd-ink);
   cursor: pointer;
-  box-shadow: 0 4px 14px #4218210a;
+  box-shadow: 0 8px 20px #4218210d;
 }
 .galleryTile:focus-visible,
 .viewerControl:focus-visible {
@@ -67,6 +76,7 @@
   line-height: 1.6;
   overflow-wrap: anywhere;
   text-align: center;
+  font-style: italic;
 }
 .media {
   position: relative;
@@ -118,6 +128,10 @@
 }
 .galleryTile .mediaSeal {
   max-width: 24px;
+}
+.galleryItem:first-child .mediaSeal {
+  display: block;
+  max-width: 56px;
 }
 .lightbox {
   position: fixed;

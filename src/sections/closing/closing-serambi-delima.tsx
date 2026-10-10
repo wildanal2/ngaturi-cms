@@ -3,6 +3,7 @@
 import type { SectionRenderProps } from "../types";
 import {
   Divider,
+  BotanicalAccent,
   Portal,
   PortraitMedia,
   textProp,
@@ -20,7 +21,10 @@ export function ClosingSerambiDelima({ props, inCanvas }: SectionRenderProps) {
   return (
     <SerambiSection type="closing" title="Terima Kasih" inCanvas={inCanvas}>
       <SerambiEntrance inCanvas={inCanvas} zoom>
-        <div className={foundation.portraitFrame}>
+        <div
+          className={`${foundation.portraitFrame} ${foundation.editorialPortrait} ${styles.closingPortrait}`}
+          data-has-photo={!!textProp(props.photo)}
+        >
           <Portal>
             <div className={foundation.portraitMask}>
               <PortraitMedia
@@ -30,6 +34,7 @@ export function ClosingSerambiDelima({ props, inCanvas }: SectionRenderProps) {
               />
             </div>
           </Portal>
+          <BotanicalAccent placement="corners" />
         </div>
       </SerambiEntrance>
       <SerambiEntrance inCanvas={inCanvas} className={styles.closingCopy}>

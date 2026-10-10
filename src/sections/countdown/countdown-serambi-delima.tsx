@@ -17,6 +17,17 @@ export function CountdownSerambiDelima({
 }: SectionRenderProps) {
   const countdown = useCountdown(textProp(props.target_date));
   const calendarUrl = textProp(props.calendar_url);
+  const target = textProp(props.target_date);
+  const date = target ? new Date(target) : null;
+  const finalDate =
+    date && !Number.isNaN(date.getTime())
+      ? new Intl.DateTimeFormat("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          timeZone: "Asia/Jakarta",
+        }).format(date)
+      : "";
   return (
     <SerambiSection
       type="countdown"
@@ -24,8 +35,7 @@ export function CountdownSerambiDelima({
       inCanvas={inCanvas}
     >
       <SerambiEntrance inCanvas={inCanvas}>
-        <div className={styles.panel}>
-          <span className={styles.panelJewel} aria-hidden="true" />
+        <div className={styles.countdownStage}>
           {countdown?.done ? (
             <div className={styles.completed} role="status">
               <Expired msg={textProp(props.message_expired) || undefined} />
@@ -47,6 +57,11 @@ export function CountdownSerambiDelima({
               ))}
             </dl>
           )}
+          {finalDate ? (
+            <time className={styles.countdownDate} dateTime={target}>
+              {finalDate}
+            </time>
+          ) : null}
           {calendarUrl ? (
             <div className={styles.actions}>
               <SerambiLink href={calendarUrl} secondary>
