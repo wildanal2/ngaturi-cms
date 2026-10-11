@@ -11,6 +11,7 @@ import { CoupleCard } from "./couple-card";
 import { CoupleDuoPortrait } from "./couple-duo-portrait";
 import { CoupleFloating17 } from "./couple-floating17";
 import { CoupleSekarJawa3D } from "./couple-sekar-jawa-3d";
+import { CoupleSerambiDelima } from "./couple-serambi-delima";
 
 export {
   CoupleSideBySide,
@@ -20,6 +21,7 @@ export {
   CoupleDuoPortrait,
   CoupleFloating17,
   CoupleSekarJawa3D,
+  CoupleSerambiDelima,
 };
 
 export const coupleSection: SectionDefinition = {
@@ -170,4 +172,22 @@ export const coupleSection: SectionDefinition = {
       },
     },
   },
+};
+
+coupleSection.variants["serambi-delima"] = {
+  ...coupleSection.variants.stacked,
+  name: "Serambi Delima",
+  description: "Potret mempelai berurutan dalam serambi gading dan emas",
+  component: CoupleSerambiDelima,
+  fields: [
+    { kind: "text", key: "eyebrow", label: "Teks pembuka (opsional)" },
+    { kind: "text", key: "title", label: "Judul" },
+    ...coupleFields,
+  ],
+  styleOptions: undefined,
+  defaultProps: {
+    ...coupleSection.variants.stacked.defaultProps,
+    title: "Mempelai",
+  },
+  isPremium: true,
 };

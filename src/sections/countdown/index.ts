@@ -8,6 +8,7 @@ import { CountdownRings } from "./countdown-rings";
 import { CountdownPill } from "./countdown-pill";
 import { CountdownElegant } from "./countdown-elegant";
 import { CountdownPlain } from "./countdown-plain";
+import { CountdownSerambiDelima } from "./countdown-serambi-delima";
 
 export {
   CountdownMinimal,
@@ -16,6 +17,7 @@ export {
   CountdownPill,
   CountdownElegant,
   CountdownPlain,
+  CountdownSerambiDelima,
 };
 
 const calendarField = {
@@ -98,4 +100,12 @@ countdownSection.variants["cinematic-vintage"] = {
   ...countdownSection.variants["plain"],
   name: "Cinematic Vintage",
   component: CountdownCinematicVintage,
+};
+
+countdownSection.variants["serambi-delima"] = {
+  ...countdownSection.variants.plain,
+  name: "Serambi Delima",
+  description: "Hitung mundur serif dalam bingkai seremonial",
+  component: CountdownSerambiDelima,
+  isPremium: true,
 };

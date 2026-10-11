@@ -12,6 +12,7 @@ import { HeroArch } from "./hero-arch";
 import { HeroGarland } from "./hero-garland";
 import { HeroFloating17 } from "./hero-floating17";
 import { HeroSekarJawa3D } from "./hero-sekar-jawa-3d";
+import { HeroSerambiDelima } from "./hero-serambi-delima";
 
 export {
   HeroCentered,
@@ -22,6 +23,7 @@ export {
   HeroGarland,
   HeroFloating17,
   HeroSekarJawa3D,
+  HeroSerambiDelima,
 };
 
 const baseDefaults = {
@@ -37,9 +39,22 @@ export const heroSection: SectionDefinition = {
   icon: "Sparkles",
   category: "hero",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "serambi-delima") return;
     if (!base.background_image) base.background_image = dummyHero(variantKey);
   },
   variants: {
+    "serambi-delima": {
+      name: "Serambi Delima",
+      description: "Potret berbingkai portal, kertas gading, dan aksen botani delima",
+      component: HeroSerambiDelima,
+      propsSchema: HeroProps,
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Foto pasangan" },
+      ],
+      defaultProps: { ...baseDefaults, has_countdown: false },
+      isPremium: true,
+    },
     "sekar-jawa-3d": {
       name: "Potret Taman Keraton",
       description: "Potret melengkung dan tipografi kerajaan Jawa",

@@ -2,8 +2,9 @@ import { RsvpCinematicVintage } from "./rsvp-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { RsvpProps } from "../schema";
 import { RsvpFormCard } from "./rsvp-form-card";
+import { RsvpSerambiDelima } from "./rsvp-serambi-delima";
 
-export { RsvpFormCard };
+export { RsvpFormCard, RsvpSerambiDelima };
 
 export const rsvpSection: SectionDefinition = {
   type: "rsvp",
@@ -40,4 +41,12 @@ rsvpSection.variants["cinematic-vintage"] = {
   ...rsvpSection.variants["form-card"],
   name: "Cinematic Vintage",
   component: RsvpCinematicVintage,
+};
+
+rsvpSection.variants["serambi-delima"] = {
+  ...rsvpSection.variants["form-card"],
+  name: "Serambi Delima",
+  description: "Konfirmasi kehadiran dalam panel seremonial gading dan emas",
+  component: RsvpSerambiDelima,
+  isPremium: true,
 };
