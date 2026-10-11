@@ -57,6 +57,13 @@
       "when": 1790130000000,
       "tag": "0007_consume_existing_trials",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791518283833,
+      "tag": "0008_payment_provider_sumopod",
+      "breakpoints": true
     }
   ]
 }

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
-import { checkOrderStatus } from "@/lib/payments/doku";
-import { applyDokuResult, invitationIdForInvoice } from "@/lib/payments/grant";
+import { resolvePaymentCallback } from "@/lib/payments/callback";
 import { PaymentSandboxNotice } from "@/components/payment-sandbox-notice";
+import { PAYMENT_PENDING_MESSAGE } from "@/lib/payments/checkout-feedback";
 
 /**
- * Where DOKU sends the buyer back after checkout (auto_redirect). The
+ * Where the provider returns the buyer after checkout. The
  * webhook is the source of truth; here we re-check once in case it's
  * delayed, then bounce to the invitation.
  */
@@ -18,30 +18,22 @@ export default async function PaymentCallbackPage({
   const db = getDb();
   const sp = await searchParams;
   const invoice =
-    (sp.invoice_number as string) ||
-    (sp.order_id as string) ||
-    (sp.invoice as string) ||
-    "";
+    [sp.invoice_number, sp.order_id, sp.invoice].find(
+      (value): value is string => typeof value === "string" && value.length > 0,
+    ) || "";
 
   let result:
     "paid" | "expired" | "failed" | "pending" | "refunded" | "unknown" =
     "unknown";
   let invitationId: string | null = null;
+  let storedProvider: string | undefined;
 
   if (invoice) {
-    invitationId = await invitationIdForInvoice(invoice, db);
-    try {
-      const paymentResult = await checkOrderStatus(invoice);
-      const applied = await applyDokuResult(
-        paymentResult,
-        {
-          source: "status_query",
-        },
-        db,
-      );
-      result = applied.status;
-    } catch {
-      result = "pending";
+    const payment = await resolvePaymentCallback(invoice, db);
+    if (payment) {
+      invitationId = payment.invitationId;
+      result = payment.status;
+      storedProvider = payment.provider;
     }
   }
 
@@ -51,7 +43,7 @@ export default async function PaymentCallbackPage({
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
-      <PaymentSandboxNotice />
+      <PaymentSandboxNotice provider={storedProvider} />
       <h1 className="font-display text-2xl">
         {result === "paid"
           ? "Pembayaran berhasil 🎉"
@@ -66,7 +58,7 @@ export default async function PaymentCallbackPage({
           ? "Undangan kamu sudah diaktifkan."
           : result === "refunded"
             ? "Status finansial refund sudah tercatat."
-            : "Kami akan memperbarui status begitu pembayaran dikonfirmasi."}
+            : PAYMENT_PENDING_MESSAGE}
       </p>
       <Link href="/invitations" className="mt-2 text-forest underline">
         Ke daftar undangan

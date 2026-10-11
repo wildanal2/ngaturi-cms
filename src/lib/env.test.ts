@@ -14,6 +14,25 @@ async function readEnv() {
 }
 
 describe("runtime provider environment", () => {
+  it("does not require inactive or selected payment credentials at startup", async () => {
+    vi.stubEnv("PAYMENT_PROVIDER", "sumopod");
+    vi.stubEnv("SUMOPOD_BASE_URL", "https://api-pay.sumopod.com");
+    vi.stubEnv("SUMOPOD_LIVE_ENABLED", "true");
+    for (const key of [
+      "DOKU_CLIENT_ID",
+      "DOKU_SECRET_KEY",
+      "SUMOPOD_API_KEY",
+      "SUMOPOD_WEBHOOK_SECRET",
+      "SUMOPOD_WEBHOOK_TOKEN",
+    ])
+      vi.stubEnv(key, undefined);
+    expect((await readEnv()).PAYMENT_PROVIDER).toBe("sumopod");
+  });
+  it("leaves inactive LIVE activation validation to the selected payment adapter", async () => {
+    vi.stubEnv("PAYMENT_PROVIDER", "doku");
+    vi.stubEnv("SUMOPOD_LIVE_ENABLED", "invalid");
+    expect((await readEnv()).SUMOPOD_LIVE_ENABLED).toBe("invalid");
+  });
   it("validates the runtime indexing switch", async () => {
     vi.stubEnv("SITE_INDEXING_ENABLED", "false");
     expect((await readEnv()).SITE_INDEXING_ENABLED).toBe("false");

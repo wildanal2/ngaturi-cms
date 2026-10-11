@@ -5,6 +5,18 @@ import {
   reconcileDokuRefund,
 } from "./refund-reconcile";
 
+function localDatabase(provider: string | null = "doku") {
+  return {
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => (provider ? [{ id: "payment-1", provider }] : []),
+        }),
+      }),
+    }),
+  } as unknown as Database;
+}
+
 describe("reconcileDokuRefund", () => {
   it("does not apply a provider status that is not REFUNDED", async () => {
     const checkStatus = vi.fn().mockResolvedValue({
@@ -14,12 +26,12 @@ describe("reconcileDokuRefund", () => {
     });
 
     await expect(
-      reconcileDokuRefund("NGUNL-test", {} as Database, checkStatus),
+      reconcileDokuRefund("NGUNL-test", localDatabase(), checkStatus),
     ).resolves.toEqual({ outcome: "not_refunded", providerStatus: "SUCCESS" });
   });
 
   it("routes a verified provider refund through the shared refund transaction", async () => {
-    const database = {} as Database;
+    const database = localDatabase();
     const providerResult = {
       invoiceNumber: "NGUNL-test",
       amount: 49_000,
@@ -43,15 +55,28 @@ describe("reconcileDokuRefund", () => {
     });
     expect(applyResult).toHaveBeenCalledWith(
       providerResult,
-      { source: "refund_reconciliation" },
+      { source: "refund_reconciliation", paymentId: "payment-1" },
       database,
     );
   });
+
+  it.each([null, "sumopod"])(
+    "rejects unsupported or unknown local payments before querying DOKU (%s)",
+    async (provider) => {
+      const checkStatus = vi.fn();
+      await expect(
+        reconcileDokuRefund("reference", localDatabase(provider), checkStatus),
+      ).rejects.toMatchObject({
+        code: provider ? "unsupported_refund" : "unknown_payment",
+      });
+      expect(checkStatus).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("reconcileDokuPaymentReference", () => {
   it("applies a fresh signed status through the shared payment transaction", async () => {
-    const database = {} as Database;
+    const database = localDatabase();
     const providerResult = {
       invoiceNumber: "NGUNL-test",
       amount: 49_000,
@@ -76,7 +101,7 @@ describe("reconcileDokuPaymentReference", () => {
     ).resolves.toMatchObject({ status: "paid", fulfilled: true });
     expect(applyResult).toHaveBeenCalledWith(
       providerResult,
-      { source: "operator_reconciliation" },
+      { source: "operator_reconciliation", paymentId: "payment-1" },
       database,
     );
   });
