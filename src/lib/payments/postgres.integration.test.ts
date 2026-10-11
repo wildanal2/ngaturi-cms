@@ -73,6 +73,7 @@ let invitationId: string;
 const originalEnv = {
   PAYMENT_PROVIDER: env.PAYMENT_PROVIDER,
   SUMOPOD_BASE_URL: env.SUMOPOD_BASE_URL,
+  SUMOPOD_LIVE_ENABLED: env.SUMOPOD_LIVE_ENABLED,
   SUMOPOD_API_KEY: env.SUMOPOD_API_KEY,
   SUMOPOD_WEBHOOK_TOKEN: env.SUMOPOD_WEBHOOK_TOKEN,
   SUMOPOD_WEBHOOK_SECRET: env.SUMOPOD_WEBHOOK_SECRET,
@@ -234,6 +235,7 @@ suite(
       invitationId = invitation.id;
       env.PAYMENT_PROVIDER = "sumopod";
       env.SUMOPOD_BASE_URL = "https://api-pay-sandbox.sumopod.com";
+      env.SUMOPOD_LIVE_ENABLED = undefined;
       env.SUMOPOD_API_KEY = "test-sandbox-key";
       env.SUMOPOD_WEBHOOK_TOKEN = "test-webhook-token";
       env.SUMOPOD_WEBHOOK_SECRET = undefined;
@@ -398,52 +400,70 @@ suite(
       ).toBe("paid");
       expect(await quota()).toBe(1);
     });
-    it("persists Sumopod reference without resetting settlement when webhook precedes create response", async () => {
-      const paymentId = randomUUID();
-      let release: (response: Response) => void = () => {};
-      let reference = "";
-      vi.stubGlobal(
-        "fetch",
-        vi.fn(async (_url, init) => {
-          reference = JSON.parse(init.body).order_id;
-          return new Promise<Response>((resolve) => {
-            release = resolve;
-          });
-        }),
-      );
-      const creation = createPayment(checkoutRequest());
-      await vi.waitFor(() => expect(reference).not.toBe(""));
-      const [pending] = await database
-        .select()
-        .from(schema.payments)
-        .where(eq(schema.payments.providerOrderId, reference));
-      expect(pending.provider).toBe("sumopod");
-      expect(pending.amount).toBe("49000.00");
-      expect(
-        (
-          await sumopodWebhook(
-            sumopodEvent({ ...pending, providerPaymentId: paymentId }),
-          )
-        ).status,
-      ).toBe(200);
-      const paidAt = (await row(pending.id)).paidAt;
-      release(
-        Response.json({
-          payment_id: paymentId,
-          order_id: reference,
-          amount: 49_000,
-          status: "pending",
-          payment_link_url: `https://pay.sumopod.com/pay/${paymentId}`,
-        }),
-      );
-      expect((await creation).status).toBe(200);
-      expect(await row(pending.id)).toMatchObject({
-        providerPaymentId: paymentId,
-        status: "paid",
-        paidAt,
-      });
-      expect(await quota()).toBe(1);
-    });
+    it.each([
+      "https://api-pay-sandbox.sumopod.com",
+      "https://api-pay.sumopod.com",
+    ])(
+      "persists %s reference without resetting settlement when webhook precedes create response",
+      async (baseUrl) => {
+        env.SUMOPOD_BASE_URL = baseUrl;
+        env.SUMOPOD_LIVE_ENABLED =
+          baseUrl === "https://api-pay.sumopod.com" ? "true" : undefined;
+        const paymentId = randomUUID();
+        let release: (response: Response) => void = () => {};
+        let reference = "";
+        vi.stubGlobal(
+          "fetch",
+          vi.fn(async (url, init) => {
+            expect(url).toBe(`${baseUrl}/api/v1/payments`);
+            reference = JSON.parse(init.body).order_id;
+            return new Promise<Response>((resolve) => {
+              release = resolve;
+            });
+          }),
+        );
+        const creation = createPayment(checkoutRequest());
+        await vi.waitFor(() => expect(reference).not.toBe(""));
+        const [pending] = await database
+          .select()
+          .from(schema.payments)
+          .where(eq(schema.payments.providerOrderId, reference));
+        expect(pending.provider).toBe("sumopod");
+        expect(pending.amount).toBe("49000.00");
+        expect(
+          (
+            await sumopodWebhook(
+              sumopodEvent({ ...pending, providerPaymentId: paymentId }),
+            )
+          ).status,
+        ).toBe(200);
+        const paidAt = (await row(pending.id)).paidAt;
+        release(
+          Response.json({
+            payment_id: paymentId,
+            order_id: reference,
+            amount: 49_000,
+            status: "pending",
+            payment_link_url: `https://pay.sumopod.com/pay/${paymentId}`,
+          }),
+        );
+        expect((await creation).status).toBe(200);
+        expect(await row(pending.id)).toMatchObject({
+          providerPaymentId: paymentId,
+          status: "paid",
+          paidAt,
+        });
+        expect(await quota()).toBe(1);
+        expect(
+          (
+            await sumopodWebhook(
+              sumopodEvent({ ...pending, providerPaymentId: paymentId }),
+            )
+          ).status,
+        ).toBe(200);
+        expect(await quota()).toBe(1);
+      },
+    );
     it("persists a late DOKU create reference after settlement even when webhook has no provider ID", async () => {
       const payment = await storedPayment({
         provider: "doku",
@@ -677,35 +697,44 @@ suite(
         (await row(b.id)).grantUntil,
       );
     });
-    it("leaves a create timeout pending and blocks all replacement providers", async () => {
-      const create = vi
-        .spyOn(resolvePaymentProvider("sumopod"), "createPayment")
-        .mockRejectedValue(new PaymentProviderError("provider_timeout"));
-      expect((await createPayment(checkoutRequest())).status).toBe(502);
-      const [pending] = await database
-        .select()
-        .from(schema.payments)
-        .where(eq(schema.payments.invitationId, invitationId));
-      expect(pending.status).toBe("pending");
-      env.PAYMENT_PROVIDER = "doku";
-      expect((await createPayment(checkoutRequest())).status).toBe(409);
-      expect(create).toHaveBeenCalledOnce();
-      expect(fetch).not.toHaveBeenCalled();
-      const summary = await reconcilePayments({
-        database,
-        now: new Date(Date.now() + 3 * 60_000),
-      });
-      expect(summary).toMatchObject({
-        checked: 0,
-        unavailableProvider: 1,
-        reviewRequired: 1,
-        errors: 1,
-      });
-      expect((await row(pending.id)).status).toBe("pending");
-      expect((await row(pending.id)).rawWebhook).toMatchObject({
-        reconciliation: { category: "sumopod_status_contract_missing" },
-      });
-    });
+    it.each([
+      "https://api-pay-sandbox.sumopod.com",
+      "https://api-pay.sumopod.com",
+    ])(
+      "leaves %s create timeout pending and blocks all replacement providers",
+      async (baseUrl) => {
+        env.SUMOPOD_BASE_URL = baseUrl;
+        env.SUMOPOD_LIVE_ENABLED =
+          baseUrl === "https://api-pay.sumopod.com" ? "true" : undefined;
+        const create = vi
+          .spyOn(resolvePaymentProvider("sumopod"), "createPayment")
+          .mockRejectedValue(new PaymentProviderError("provider_timeout"));
+        expect((await createPayment(checkoutRequest())).status).toBe(502);
+        const [pending] = await database
+          .select()
+          .from(schema.payments)
+          .where(eq(schema.payments.invitationId, invitationId));
+        expect(pending.status).toBe("pending");
+        env.PAYMENT_PROVIDER = "doku";
+        expect((await createPayment(checkoutRequest())).status).toBe(409);
+        expect(create).toHaveBeenCalledOnce();
+        expect(fetch).not.toHaveBeenCalled();
+        const summary = await reconcilePayments({
+          database,
+          now: new Date(Date.now() + 3 * 60_000),
+        });
+        expect(summary).toMatchObject({
+          checked: 0,
+          unavailableProvider: 1,
+          reviewRequired: 1,
+          errors: 1,
+        });
+        expect((await row(pending.id)).status).toBe("pending");
+        expect((await row(pending.id)).rawWebhook).toMatchObject({
+          reconciliation: { category: "sumopod_status_contract_missing" },
+        });
+      },
+    );
     it("rotates stuck oldest rows so newer and never-attempted payments reach the next bounded batch", async () => {
       const refs: string[] = [];
       for (let i = 0; i < 56; i++)

@@ -1,5 +1,12 @@
 # Sumopod sandbox acceptance continuation — 2026-10-09
 
+Production policy update (2026-10-11): the initial launch now deliberately accepts
+manual handling for ambiguous transactions without a Sumopod status-query API.
+The previous live-readiness verdict below is historical sandbox evidence, not
+the current activation policy. See [controlled production configuration and
+limitations](payment-providers-sumopod.md). No LIVE charge was performed by the
+sandbox acceptance or the configuration implementation.
+
 ## Scope and takeover
 
 - Branch: `feat/payment-provider-sumopod`.
@@ -119,7 +126,7 @@ of the public runtime's configured Svix verification.
   acceptance documentation, preserving the implementation already validated in
   the [implementation report](payment-providers-sumopod.md).
 
-## Readiness
+## Historical readiness (2026-10-09)
 
 **READY FOR SANDBOX BUT LIVE BLOCKED**
 

@@ -38,14 +38,12 @@ afterEach(() => {
 
 describe("Sumopod official Managed Payment contract", () => {
   it("sends exact QRIS sandbox creation and validates documented hosted response", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        Response.json({
-          ...data,
-          payment_link_url: `https://pay.sumopod.com/pay/${id}`,
-        }),
-      );
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        ...data,
+        payment_link_url: `https://pay.sumopod.com/pay/${id}`,
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     await expect(
       new SumopodProvider(config).createPayment(input),
@@ -117,15 +115,13 @@ describe("Sumopod official Managed Payment contract", () => {
     async (override) => {
       vi.stubGlobal(
         "fetch",
-        vi
-          .fn()
-          .mockResolvedValue(
-            Response.json({
-              ...data,
-              payment_link_url: `https://pay.sumopod.com/pay/${id}`,
-              ...override,
-            }),
-          ),
+        vi.fn().mockResolvedValue(
+          Response.json({
+            ...data,
+            payment_link_url: `https://pay.sumopod.com/pay/${id}`,
+            ...override,
+          }),
+        ),
       );
       await expect(
         new SumopodProvider(config).createPayment(input),
@@ -202,6 +198,70 @@ describe("Sumopod official Managed Payment contract", () => {
     ).rejects.toMatchObject({ outcome: "unavailable" });
     expect(fetch).not.toHaveBeenCalled();
   });
+  it("allows one explicitly enabled LIVE create with the existing QRIS contract", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        ...data,
+        payment_link_url: `https://pay.sumopod.com/pay/${id}`,
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    const live = new SumopodProvider({
+      ...config,
+      baseUrl: SUMOPOD_LIVE_BASE_URL,
+      liveEnabled: true,
+    });
+    expect(live.isSandbox()).toBe(false);
+    await expect(live.createPayment(input)).resolves.toMatchObject({
+      providerPaymentId: id,
+    });
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls[0][0]).toBe(
+      `${SUMOPOD_LIVE_BASE_URL}/api/v1/payments`,
+    );
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
+      order_id: input.merchantReference,
+      amount: 49_000,
+      payment_method_type_code: "QRIS",
+    });
+    fetch.mockClear();
+    await expect(
+      live.getPaymentStatus({
+        providerOrderId: input.merchantReference,
+        providerPaymentId: id,
+      }),
+    ).rejects.toMatchObject({
+      code: "sumopod_status_contract_missing",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it.each([
+    { apiKey: undefined },
+    { apiKey: " " },
+    { webhookToken: undefined },
+    { webhookToken: " " },
+    { webhookSecret: "invalid-secret" },
+    { baseUrl: "https://untrusted.example" },
+    { baseUrl: `${SUMOPOD_LIVE_BASE_URL}/` },
+    { liveEnabled: false },
+  ])(
+    "fails closed for incomplete/invalid LIVE settings %j",
+    async (override) => {
+      const live = new SumopodProvider({
+        ...config,
+        baseUrl: SUMOPOD_LIVE_BASE_URL,
+        liveEnabled: true,
+        ...override,
+      });
+      const fetch = vi.fn();
+      vi.stubGlobal("fetch", fetch);
+      expect(live.isConfigured()).toBe(false);
+      await expect(live.createPayment(input)).rejects.toMatchObject({
+        outcome: "unavailable",
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("Sumopod verified webhooks", () => {
@@ -219,6 +279,22 @@ describe("Sumopod verified webhooks", () => {
       "svix-signature": `v1,${signature}`,
     });
   }
+  it("verifies signed LIVE settlement even when new LIVE creation is disabled", () => {
+    const raw = JSON.stringify({
+      event_type: "payment.completed",
+      data: { ...data, status: "completed" },
+    });
+    const live = new SumopodProvider({
+      baseUrl: SUMOPOD_LIVE_BASE_URL,
+      liveEnabled: false,
+      webhookSecret: secret,
+    });
+    expect(live.isConfigured()).toBe(false);
+    expect(
+      live.parseVerifiedWebhook(signed(raw), raw, "/payment/webhook/sumopod")
+        .observation,
+    ).toMatchObject({ status: "paid", provider: "sumopod" });
+  });
   it("verifies the official Svix known-answer vector", () => {
     const timestamp = "1731705121";
     const headers = new Headers({
@@ -326,20 +402,27 @@ describe("Sumopod verified webhooks", () => {
 });
 
 describe("bounded provider requests", () => {
-  it("times out creation without retry or provider fallback", async () => {
-    vi.useFakeTimers();
-    const fetch = vi.fn().mockImplementation(() => new Promise(() => {}));
-    vi.stubGlobal("fetch", fetch);
-    const request = new SumopodProvider(config).createPayment(input);
-    const rejected = expect(request).rejects.toMatchObject({
-      code: "provider_timeout",
-      outcome: "unknown",
-    });
-    await vi.advanceTimersByTimeAsync(PROVIDER_REQUEST_TIMEOUT_MS);
-    await rejected;
-    expect(fetch).toHaveBeenCalledOnce();
-    expect(fetch.mock.calls[0][1].signal.aborted).toBe(true);
-  });
+  it.each([SUMOPOD_SANDBOX_BASE_URL, SUMOPOD_LIVE_BASE_URL])(
+    "times out %s creation without retry or provider fallback",
+    async (baseUrl) => {
+      vi.useFakeTimers();
+      const fetch = vi.fn().mockImplementation(() => new Promise(() => {}));
+      vi.stubGlobal("fetch", fetch);
+      const request = new SumopodProvider({
+        ...config,
+        baseUrl,
+        liveEnabled: true,
+      }).createPayment(input);
+      const rejected = expect(request).rejects.toMatchObject({
+        code: "provider_timeout",
+        outcome: "unknown",
+      });
+      await vi.advanceTimersByTimeAsync(PROVIDER_REQUEST_TIMEOUT_MS);
+      await rejected;
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(fetch.mock.calls[0][1].signal.aborted).toBe(true);
+    },
+  );
   it("bounds response-body reading as well as connection time", async () => {
     vi.useFakeTimers();
     vi.stubGlobal(

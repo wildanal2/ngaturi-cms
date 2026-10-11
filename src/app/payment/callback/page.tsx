@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { resolvePaymentCallback } from "@/lib/payments/callback";
 import { PaymentSandboxNotice } from "@/components/payment-sandbox-notice";
+import { PAYMENT_PENDING_MESSAGE } from "@/lib/payments/checkout-feedback";
 
 /**
  * Where the provider returns the buyer after checkout. The
@@ -57,7 +58,7 @@ export default async function PaymentCallbackPage({
           ? "Undangan kamu sudah diaktifkan."
           : result === "refunded"
             ? "Status finansial refund sudah tercatat."
-            : "Kami akan memperbarui status begitu pembayaran dikonfirmasi."}
+            : PAYMENT_PENDING_MESSAGE}
       </p>
       <Link href="/invitations" className="mt-2 text-forest underline">
         Ke daftar undangan

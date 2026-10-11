@@ -16,6 +16,10 @@ import {
   recordProviderReferenceFailure,
 } from "@/lib/payments/reference";
 import { env } from "@/lib/env";
+import {
+  PAYMENT_PENDING_CODE,
+  PAYMENT_PENDING_MESSAGE,
+} from "@/lib/payments/checkout-feedback";
 
 const Body = z.object({
   invitationId: z.string(),
@@ -38,6 +42,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json(
       {
+        code: "payment_unavailable",
         error:
           "Pembayaran online belum aktif. Hubungi tim kami untuk upgrade manual.",
       },
@@ -70,14 +75,19 @@ export async function POST(req: Request) {
         400,
         "Hanya undangan berbayar yang dapat diperpanjang.",
       ],
-      payment_in_progress: [
-        409,
-        "Pembayaran untuk undangan ini masih diproses.",
-      ],
+      payment_in_progress: [409, PAYMENT_PENDING_MESSAGE],
     };
     if (Object.hasOwn(errors, code)) {
       const [status, message] = errors[code];
-      return NextResponse.json({ error: message }, { status });
+      return NextResponse.json(
+        {
+          error: message,
+          ...(code === "payment_in_progress"
+            ? { code: PAYMENT_PENDING_CODE }
+            : {}),
+        },
+        { status },
+      );
     }
     throw error;
   }
@@ -115,7 +125,7 @@ export async function POST(req: Request) {
         );
     }
     console.error(
-      "Payment creation failed",
+      "Payment creation outcome",
       JSON.stringify({
         paymentId: payment.id,
         provider: provider.name,
@@ -123,7 +133,12 @@ export async function POST(req: Request) {
       }),
     );
     return NextResponse.json(
-      { error: "Gagal membuat transaksi pembayaran." },
+      {
+        code: rejected ? "payment_rejected" : PAYMENT_PENDING_CODE,
+        error: rejected
+          ? "Penyedia menolak transaksi pembayaran."
+          : PAYMENT_PENDING_MESSAGE,
+      },
       { status: 502 },
     );
   }
@@ -152,7 +167,7 @@ export async function POST(req: Request) {
         }),
       );
       return NextResponse.json(
-        { error: "Transaksi sedang diverifikasi. Jangan ulangi pembayaran." },
+        { code: PAYMENT_PENDING_CODE, error: PAYMENT_PENDING_MESSAGE },
         { status: 502 },
       );
     }

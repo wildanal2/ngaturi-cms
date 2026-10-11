@@ -78,6 +78,8 @@ const schema = z.object({
   TURNSTILE_SECRET_KEY: z.string().optional(),
   PAYMENT_PROVIDER: z.string().optional(),
   SUMOPOD_BASE_URL: z.string().optional(),
+  // Payment activation/credentials are checked by the selected adapter, not at startup.
+  SUMOPOD_LIVE_ENABLED: z.string().optional(),
   SUMOPOD_API_KEY: z.string().optional(),
   SUMOPOD_WEBHOOK_SECRET: z.string().optional(),
   SUMOPOD_WEBHOOK_TOKEN: z.string().optional(),

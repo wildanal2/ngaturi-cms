@@ -24,6 +24,10 @@ vi.mock("@/lib/payments/reference", () => ({
 }));
 import { POST } from "./route";
 import { PaymentProviderError } from "@/lib/payments/provider";
+import {
+  PAYMENT_PENDING_CODE,
+  PAYMENT_PENDING_MESSAGE,
+} from "@/lib/payments/checkout-feedback";
 
 const provider = {
   name: "sumopod",
@@ -199,19 +203,27 @@ describe("POST /api/payments/create", () => {
         { id: "old-doku-payment", provider: "doku", createdAt },
       ]);
       mocks.transaction.mockImplementation(async (callback) => callback(tx));
-      expect((await POST(request(purchase))).status).toBe(409);
+      const response = await POST(request(purchase));
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({
+        code: PAYMENT_PENDING_CODE,
+        error: PAYMENT_PENDING_MESSAGE,
+      });
       expect(mocks.createPayment).not.toHaveBeenCalled();
       expect(tx.insertValues).not.toHaveBeenCalled();
     },
   );
   it("marks only authenticated definitive rejection failed", async () => {
+    provider.name = "doku";
     mocks.transaction.mockImplementation(async (callback) =>
       callback(checkoutTransaction()),
     );
     mocks.createPayment.mockRejectedValue(
       new PaymentProviderError("provider_rejected", "rejected"),
     );
-    expect((await POST(request(purchase))).status).toBe(502);
+    const response = await POST(request(purchase));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({ code: "payment_rejected" });
     expect(mocks.updateSet).toHaveBeenCalledWith(
       expect.objectContaining({ status: "failed" }),
     );
@@ -223,7 +235,12 @@ describe("POST /api/payments/create", () => {
     mocks.createPayment.mockRejectedValue(
       new PaymentProviderError("provider_timeout"),
     );
-    expect((await POST(request(purchase))).status).toBe(502);
+    const response = await POST(request(purchase));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      code: PAYMENT_PENDING_CODE,
+      error: PAYMENT_PENDING_MESSAGE,
+    });
     expect(mocks.update).not.toHaveBeenCalled();
     expect(mocks.createPayment).toHaveBeenCalledOnce();
   });
@@ -241,6 +258,9 @@ describe("POST /api/payments/create", () => {
       expect.anything(),
     );
     expect(mocks.updateSet).not.toHaveBeenCalled();
-    expect(await response.json()).not.toHaveProperty("redirectUrl");
+    expect(await response.json()).toEqual({
+      code: PAYMENT_PENDING_CODE,
+      error: PAYMENT_PENDING_MESSAGE,
+    });
   });
 });

@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { toast, Toaster } from "sonner";
 import { RENEWAL_DAYS, RENEWAL_PRICE } from "@/lib/payments/plans";
+import {
+  checkoutFailureFeedback,
+  PAYMENT_PENDING_MESSAGE,
+} from "@/lib/payments/checkout-feedback";
 
 export function RenewalOption({
   invitationId,
@@ -16,6 +20,7 @@ export function RenewalOption({
   providerLabel?: string;
 }) {
   const [busy, setBusy] = useState(false);
+  const [verificationPending, setVerificationPending] = useState(false);
   const expiry = expiresAt ? new Date(expiresAt) : null;
 
   async function renew() {
@@ -30,14 +35,20 @@ export function RenewalOption({
         }),
       });
       const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error ?? "Pembayaran gagal dibuat");
-      if (!data.redirectUrl) throw new Error("URL pembayaran tidak diterima");
+      if (!response.ok) {
+        const feedback = checkoutFailureFeedback(data, response.status);
+        setVerificationPending(feedback.pending);
+        if (feedback.pending) toast.info(feedback.message);
+        else toast.error(feedback.message);
+        setBusy(false);
+        return;
+      }
+      if (typeof data.redirectUrl !== "string" || !data.redirectUrl)
+        throw new Error("URL pembayaran tidak diterima");
       window.location.assign(data.redirectUrl);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Pembayaran gagal dibuat",
-      );
+    } catch {
+      setVerificationPending(true);
+      toast.info(PAYMENT_PENDING_MESSAGE);
       setBusy(false);
     }
   }
@@ -74,13 +85,26 @@ export function RenewalOption({
           </p>
         ) : null}
 
+        {verificationPending ? (
+          <p
+            role="status"
+            className="mt-4 rounded-xl border border-gold/40 bg-gold/10 p-3 text-sm"
+          >
+            {PAYMENT_PENDING_MESSAGE}
+          </p>
+        ) : null}
+
         <button
           type="button"
           onClick={renew}
-          disabled={!configured || busy}
+          disabled={!configured || busy || verificationPending}
           className="mt-4 w-full rounded-full bg-forest py-2.5 text-sm font-medium text-cream hover:bg-forest-600 disabled:opacity-60"
         >
-          {busy ? "Mengalihkan ke pembayaran…" : "Perpanjang 90 hari"}
+          {verificationPending
+            ? "Menunggu verifikasi"
+            : busy
+              ? "Mengalihkan ke pembayaran…"
+              : "Perpanjang 90 hari"}
         </button>
         <p className="mt-3 text-xs text-muted">
           Pembayaran diproses melalui {providerLabel || "penyedia pembayaran"}.

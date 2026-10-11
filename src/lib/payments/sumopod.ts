@@ -22,6 +22,7 @@ const SIGNATURE_TOLERANCE_SECONDS = 300;
 
 export interface SumopodConfiguration {
   baseUrl: string;
+  liveEnabled?: boolean;
   apiKey?: string;
   webhookSecret?: string;
   webhookToken?: string;
@@ -30,6 +31,7 @@ export interface SumopodConfiguration {
 function configuration(): SumopodConfiguration {
   return {
     baseUrl: env.SUMOPOD_BASE_URL ?? SUMOPOD_SANDBOX_BASE_URL,
+    liveEnabled: env.SUMOPOD_LIVE_ENABLED === "true",
     apiKey: env.SUMOPOD_API_KEY,
     webhookSecret: env.SUMOPOD_WEBHOOK_SECRET,
     webhookToken: env.SUMOPOD_WEBHOOK_TOKEN,
@@ -212,13 +214,16 @@ export class SumopodProvider implements PaymentProvider {
 
   isConfigured(): boolean {
     const config = this.config();
-    // Live creation is gated until an authoritative status/recovery contract is verified.
+    // Live requires two explicit settings. Missing/invalid flags never enable it.
+    // No status-query API exists: accepted live settlement remains webhook-driven.
     return (
-      this.isSandbox() &&
-      Boolean(config.apiKey) &&
+      (config.baseUrl === SUMOPOD_SANDBOX_BASE_URL ||
+        (config.baseUrl === SUMOPOD_LIVE_BASE_URL &&
+          config.liveEnabled === true)) &&
+      Boolean(config.apiKey?.trim()) &&
       (config.webhookSecret
         ? validSigningSecret(config.webhookSecret)
-        : Boolean(config.webhookToken))
+        : Boolean(config.webhookToken?.trim()))
     );
   }
 
@@ -228,7 +233,7 @@ export class SumopodProvider implements PaymentProvider {
     if (input.currency !== "IDR")
       throw new PaymentProviderError("unsupported_currency", "unavailable");
     const config = this.config();
-    // The local durable reference is reused by recovery; never retry this POST automatically.
+    // The durable reference supports webhook/manual review; never retry this POST.
     const { response, rawBody } = await providerRequest(
       `${config.baseUrl}/api/v1/payments`,
       {

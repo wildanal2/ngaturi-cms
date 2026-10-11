@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/db";
 import type { PaymentObservation, PaymentProvider } from "./provider";
+import { SumopodProvider, SUMOPOD_LIVE_BASE_URL } from "./sumopod";
 import {
   reconcilePayments,
   RECONCILIATION_BATCH_SIZE,
@@ -54,6 +55,46 @@ function resolver(
 const recordAttempt = vi.fn().mockResolvedValue(undefined);
 
 describe("mixed-provider reconciliation", () => {
+  it("leaves aged LIVE Sumopod pending and reviewable without querying or inferring expiration", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetch = vi.spyOn(globalThis, "fetch");
+    const applyResult = vi.fn();
+    const record = vi.fn().mockResolvedValue(undefined);
+    try {
+      const summary = await reconcilePayments({
+        loadCandidates: async () => [candidate(1, "sumopod")],
+        resolveProvider: () =>
+          new SumopodProvider({
+            baseUrl: SUMOPOD_LIVE_BASE_URL,
+            liveEnabled: true,
+            apiKey: "test-live",
+            webhookToken: "test-token",
+          }),
+        applyResult,
+        recordAttempt: record,
+      });
+      expect(summary).toMatchObject({
+        aged: 1,
+        checked: 0,
+        transitioned: 0,
+        fulfilled: 0,
+        reviewRequired: 1,
+        unavailableProvider: 1,
+        errors: 1,
+      });
+      expect(applyResult).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
+      expect(record).toHaveBeenLastCalledWith(
+        expect.objectContaining({ status: "pending", provider: "sumopod" }),
+        expect.any(Date),
+        "sumopod_status_contract_missing",
+        expect.anything(),
+      );
+    } finally {
+      fetch.mockRestore();
+      warning.mockRestore();
+    }
+  });
   it("keeps an initial delay, bounded batch, and no maximum age cutoff", async () => {
     const now = new Date("2026-09-22T12:00:00Z");
     const database = {} as Database;

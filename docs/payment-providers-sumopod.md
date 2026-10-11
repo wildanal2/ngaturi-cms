@@ -1,10 +1,37 @@
-# Payment providers and Sumopod sandbox acceptance
+# Payment providers and controlled Sumopod production use
 
 `PAYMENT_PROVIDER` selects **new creation only**. An absent selector defaults to
 `doku`; an unsupported selector or incomplete selected-provider configuration
 returns safe checkout HTTP 503. Existing callbacks, webhooks, and reconciliation
 resolve the adapter from `payments.provider`. There is no automatic provider
 fallback or automatic retry of payment creation.
+
+## Accepted production limitation (2026-10-11)
+
+Sumopod is the selected provider for the initial controlled production launch.
+DOKU remains implemented but does not receive new creation when
+`PAYMENT_PROVIDER=sumopod`. Sumopod has no status-query/recovery API. This is an
+accepted operational limitation, with manual handling for rare ambiguous
+transactions; enabling LIVE does not add automatic recovery.
+
+Automatic Sumopod settlement is driven by verified webhooks. Creation timeouts,
+lost responses, malformed responses, HTTP failures, and checkout-link/reference
+validation failures remain PENDING. Never automatically retry a create POST or
+fail over to DOKU. The customer is told not to create another transaction or pay
+again while verification is pending. Upgrade and renewal controls show a
+persistent pending notice and disable replacement actions after uncertainty;
+the database protection continues to block unresolved purchases across reloads
+and provider switches.
+
+Monitor unresolved payments and their stored merchant references/provider IDs.
+Reconciliation records `sumopod_status_contract_missing` for operator review;
+neither age nor the requested checkout expiry establishes FAILED/EXPIRED.
+Check ambiguous transactions against authoritative merchant-dashboard/provider
+evidence, including reference, amount, and currency. Request manual redelivery
+of the authentic webhook where available. If it cannot be redelivered, escalate
+for audited operator handling and leave the attempt unresolved until its outcome
+is established. Do not manufacture a completed webhook, reuse a create request,
+or manually grant entitlement based only on a customer return URL.
 
 ## Architecture and financial safety
 
@@ -88,8 +115,9 @@ Quick Start establishes optional expiry with a 24-hour maximum, but the exact
 failed/cancelled/completed ordering is not an API recovery specification.
 
 `SumopodProvider.getPaymentStatus` therefore explicitly reports
-`sumopod_status_contract_missing`; it makes no guessed request. Live creation is
-disabled until recovery is implemented and accepted. Callback can display stored
+`sumopod_status_contract_missing`; it makes no guessed request. Controlled LIVE
+creation is permitted only by the explicit configuration below, with the
+accepted manual-review limitation. Callback can display stored
 trusted webhook state, but cannot independently recover Sumopod success. QRIS is
 requested by the API; the UI does not advertise other unverified Sumopod methods.
 
@@ -98,15 +126,35 @@ requested by the API; the UI does not advertise other unverified Sumopod methods
 Server-only configuration names:
 
 - `PAYMENT_PROVIDER`
-- `SUMOPOD_BASE_URL`, `SUMOPOD_API_KEY`
+- `SUMOPOD_BASE_URL`, `SUMOPOD_LIVE_ENABLED`, `SUMOPOD_API_KEY`
 - `SUMOPOD_WEBHOOK_SECRET` **or** `SUMOPOD_WEBHOOK_TOKEN`
 - Existing `DOKU_CLIENT_ID`, `DOKU_SECRET_KEY`, `DOKU_BASE_URL`, `DOKU_CALLBACK_URL`
 
 Provider credentials are validated lazily. Missing inactive-provider credentials
-do not prevent startup. Sumopod checkout currently requires the exact sandbox
-base, API key, and valid webhook authentication configuration. Historical DOKU
+do not prevent startup. Sumopod checkout requires a pinned API base, a non-empty
+API key, and valid webhook authentication configuration. LIVE also requires
+literal `SUMOPOD_LIVE_ENABLED=true`; absent, false, or other spellings never
+activate LIVE. The default base remains sandbox, and the LIVE flag alone cannot
+change it. Unknown URLs fail closed. Historical DOKU
 processing still needs its own credentials even when Sumopod is selected.
 Historical Sumopod webhook authentication is independent of the creation selector.
+
+Explicit LIVE activation, using credentials from the production merchant account:
+
+```dotenv
+PAYMENT_PROVIDER=sumopod
+SUMOPOD_BASE_URL=https://api-pay.sumopod.com
+SUMOPOD_LIVE_ENABLED=true
+SUMOPOD_API_KEY=<production API key>
+SUMOPOD_WEBHOOK_SECRET=<production whsec_ signing secret>
+```
+
+Alternatively, configure the production `SUMOPOD_WEBHOOK_TOKEN` and leave the
+signing secret unset. A configured signing secret always requires valid Svix
+verification; it cannot downgrade to token authentication. Register the fixed
+`/payment/webhook/sumopod` endpoint on the production application origin. Use
+separate credentials for sandbox and LIVE. No LIVE credentials or activation
+were written to a runtime by this implementation task.
 
 `.env.sumopod.sandbox.local` is ignored. The explicit sandbox probe reads that
 file; Next does not automatically load its custom filename. Inject its server
@@ -140,8 +188,10 @@ Deployment sequence after manual review:
 2. Apply and **commit** migration 0008 using the established migration operator.
 3. Deploy the provider-capable application, configure its server credentials and
    fixed webhook endpoints, and then enable the accepted provider for creation.
-4. Sumopod live creation additionally requires the missing recovery contract,
-   implementation, and deliberate sandbox/live acceptance.
+4. Enable Sumopod LIVE only with the explicit production variables above and
+   the accepted manual-review process. Verify an initial controlled payment's
+   authentic webhook, persisted PAID state, and exactly-once entitlement before
+   increasing transaction volume. A lost webhook still has no API recovery path.
 
 No production database migration was run. During the continuation acceptance run,
 the existing DEV runtime's database identity and all eight applied migration
@@ -212,7 +262,10 @@ the completed webhook, pending-to-paid transition, exactly-once initial grant,
 callbacks before/after settlement, and controlled duplicate financial delivery.
 Pending-safe reconciliation was also exercised on that DEV payment. Authoritative
 status/recovery, automatic provider retries, and failed/expired simulation remain
-unverified. Completed sandbox acceptance does not establish live readiness.
+unverified. Completed sandbox acceptance does not establish a real LIVE charge
+or provider delivery. The 2026-10-11 decision accepts the absent status-query
+capability for controlled production use; local tests do not prove LIVE merchant
+credentials, checkout delivery, or the production webhook endpoint.
 
 Validation results for this working tree:
 
@@ -246,5 +299,6 @@ cancellation API. The continuation Ngaturi sandbox order is now paid following a
 actual verified provider webhook. Its test payment and owned invitation are
 retained for manual review and possible legitimate delivery retries; no local
 expiry or cleanup was used to change financial state.
-Manual review and the remaining official recovery contract are required before
-live acceptance.
+The 2026-10-11 controlled-launch decision accepts manual review without an API
+recovery contract. Real LIVE acceptance still requires a controlled production
+payment and its authentic webhook; this implementation did not perform one.

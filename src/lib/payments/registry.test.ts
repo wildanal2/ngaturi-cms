@@ -13,6 +13,7 @@ const original = {
   SUMOPOD_API_KEY: env.SUMOPOD_API_KEY,
   SUMOPOD_WEBHOOK_TOKEN: env.SUMOPOD_WEBHOOK_TOKEN,
   SUMOPOD_BASE_URL: env.SUMOPOD_BASE_URL,
+  SUMOPOD_LIVE_ENABLED: env.SUMOPOD_LIVE_ENABLED,
   SUMOPOD_WEBHOOK_SECRET: env.SUMOPOD_WEBHOOK_SECRET,
 };
 beforeEach(() => {
@@ -22,6 +23,7 @@ beforeEach(() => {
   env.SUMOPOD_API_KEY = undefined;
   env.SUMOPOD_WEBHOOK_TOKEN = undefined;
   env.SUMOPOD_BASE_URL = undefined;
+  env.SUMOPOD_LIVE_ENABLED = undefined;
   env.SUMOPOD_WEBHOOK_SECRET = undefined;
 });
 afterEach(() => Object.assign(env, original));
@@ -66,5 +68,51 @@ describe("payment provider selection", () => {
     expect(resolvePaymentProvider("doku").name).toBe("doku");
     env.PAYMENT_PROVIDER = "doku";
     expect(resolvePaymentProvider("sumopod").name).toBe("sumopod");
+  });
+  it.each([undefined, "false", "", "1", "TRUE"])(
+    "does not implicitly enable LIVE with flag %s",
+    (flag) => {
+      env.PAYMENT_PROVIDER = "sumopod";
+      env.SUMOPOD_BASE_URL = "https://api-pay.sumopod.com";
+      env.SUMOPOD_LIVE_ENABLED = flag;
+      env.SUMOPOD_API_KEY = "test-live-key";
+      env.SUMOPOD_WEBHOOK_TOKEN = "test-live-token";
+      expect(paymentAvailability().configured).toBe(false);
+    },
+  );
+  it("keeps the default sandbox URL even when the LIVE flag alone is set", () => {
+    env.PAYMENT_PROVIDER = "sumopod";
+    env.SUMOPOD_LIVE_ENABLED = "true";
+    env.SUMOPOD_API_KEY = "test-key";
+    env.SUMOPOD_WEBHOOK_TOKEN = "test-token";
+    expect(paymentAvailability()).toEqual({
+      configured: true,
+      label: "Sumopod",
+      sandbox: true,
+    });
+  });
+  it("requires literal LIVE activation only for selected Sumopod and retains historical DOKU", () => {
+    env.PAYMENT_PROVIDER = "sumopod";
+    env.SUMOPOD_BASE_URL = "https://api-pay.sumopod.com";
+    env.SUMOPOD_LIVE_ENABLED = "true";
+    env.SUMOPOD_API_KEY = "test-live-key";
+    env.SUMOPOD_WEBHOOK_SECRET = `whsec_${Buffer.from("test-signing-secret").toString("base64")}`;
+    expect(paymentAvailability()).toEqual({
+      configured: true,
+      label: "Sumopod",
+      sandbox: false,
+    });
+    expect(resolveCheckoutProvider().name).toBe("sumopod");
+    expect(resolvePaymentProvider("doku").name).toBe("doku");
+    env.PAYMENT_PROVIDER = "doku";
+    env.DOKU_CLIENT_ID = "doku-client";
+    env.DOKU_SECRET_KEY = "doku-secret";
+    env.SUMOPOD_API_KEY = undefined;
+    env.SUMOPOD_LIVE_ENABLED = "invalid";
+    expect(paymentAvailability()).toEqual({
+      configured: true,
+      label: "DOKU",
+      sandbox: true,
+    });
   });
 });
