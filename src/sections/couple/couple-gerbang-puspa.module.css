@@ -1,0 +1,87 @@
+.couple {
+  min-height: 1109px;
+}
+.coupleFrame {
+  min-height: 1049px;
+  padding: 38px 0 26px;
+}
+.couple h2 {
+  color: var(--gp-maroon);
+  font:
+    400 30px/45px var(--gp-font-display),
+    serif;
+  margin-bottom: 35px;
+  overflow-wrap: anywhere;
+}
+.eyebrow {
+  margin: 0 12px 8px !important;
+}
+.person {
+  position: relative;
+}
+.portrait {
+  width: 50%;
+  height: 240px;
+  border-radius: 160px;
+  border: 3px solid var(--gp-maroon);
+  margin: 0 auto;
+  overflow: hidden;
+}
+.portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+}
+.person h3 {
+  font-size: 25px;
+  line-height: 30px;
+  color: var(--gp-maroon);
+  margin: 27px 0 8px;
+  padding: 0 4px;
+  overflow-wrap: anywhere;
+}
+.person p {
+  font-size: 14px;
+  line-height: 21px;
+  color: black;
+  white-space: pre-line;
+  padding: 0 12px;
+  overflow-wrap: anywhere;
+}
+.person .extra {
+  margin-top: 8px;
+}
+.social {
+  display: inline-block;
+  max-width: calc(100% - 24px);
+  margin-top: 20px;
+  border: 1px solid #c77e66;
+  border-radius: 20px;
+  background: var(--gp-maroon);
+  color: white;
+  padding: 4px 8px;
+  font-size: 14px;
+  line-height: 21px;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.ampersand {
+  display: block;
+  margin: 17px 0 18px;
+  color: var(--gp-maroon);
+  font:
+    40px/48px var(--gp-font-script),
+    cursive;
+}
+@media (max-width: 374px) {
+  .couple {
+    min-height: 1184px;
+  }
+  .coupleFrame {
+    min-height: 1124px;
+  }
+  .person h3 {
+    margin-top: 38px;
+  }
+}

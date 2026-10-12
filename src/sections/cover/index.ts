@@ -3,7 +3,12 @@ import { CoverCinematicVintage } from "./cover-cinematic-vintage";
 export { CoverCinematicVintage };
 import { CoverProps } from "../schema";
 import { dummyHero } from "../dummy";
-import { coverDefaults, coverFields, coverPhotoField, sCoverOverlay } from "../fields";
+import {
+  coverDefaults,
+  coverFields,
+  coverPhotoField,
+  sCoverOverlay,
+} from "../fields";
 import { CoverClassic } from "./cover-classic";
 import { CoverPhoto } from "./cover-photo";
 import { CoverBotanical } from "./cover-botanical";
@@ -13,6 +18,7 @@ import { CoverFloating17 } from "./cover-floating17";
 import { CoverWaxSeal } from "./cover-wax-seal";
 import { CoverSekarJawa3D } from "./cover-sekar-jawa-3d";
 import { CoverSerambiDelima } from "./cover-serambi-delima";
+import { CoverGerbangPuspa } from "./cover-gerbang-puspa";
 
 export {
   CoverClassic,
@@ -24,6 +30,7 @@ export {
   CoverWaxSeal,
   CoverSekarJawa3D,
   CoverSerambiDelima,
+  CoverGerbangPuspa,
 };
 
 export const coverSection: SectionDefinition = {
@@ -37,12 +44,25 @@ export const coverSection: SectionDefinition = {
       variantKey !== "minimal" &&
       variantKey !== "sekar-jawa-3d" &&
       variantKey !== "serambi-delima" &&
+      variantKey !== "gerbang-puspa" &&
       !base.background_image
     ) {
       base.background_image = dummyHero(`cover-${variantKey}`);
     }
   },
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      description: "Sampul botani berbingkai kapsul dalam alur undangan",
+      component: CoverGerbangPuspa,
+      propsSchema: CoverProps,
+      fields: coverFields,
+      defaultProps: {
+        ...coverDefaults,
+        note: "Kepada Yth.",
+      },
+      isPremium: true,
+    },
     "serambi-delima": {
       name: "Serambi Delima",
       description: "Portal gading, dedaunan delima, dan kartu tamu personal",
@@ -123,14 +143,23 @@ export const coverSection: SectionDefinition = {
       propsSchema: CoverProps,
       fields: [
         ...coverFields,
-        { kind: "image", key: "background_image", label: "Tekstur latar (opsional)" },
-        { kind: "image", key: "divider_image", label: "Gambar divider (opsional)" },
+        {
+          kind: "image",
+          key: "background_image",
+          label: "Tekstur latar (opsional)",
+        },
+        {
+          kind: "image",
+          key: "divider_image",
+          label: "Gambar divider (opsional)",
+        },
       ],
       defaultProps: { ...coverDefaults },
     },
     floating17: {
       name: "Gerbang Foto Sage",
-      description: "Foto gelap responsif, monogram floral emas, dan tombol berdenyut",
+      description:
+        "Foto gelap responsif, monogram floral emas, dan tombol berdenyut",
       component: CoverFloating17,
       propsSchema: CoverProps,
       fields: [
@@ -138,7 +167,11 @@ export const coverSection: SectionDefinition = {
         { kind: "text", key: "initials", label: "Inisial monogram" },
         { kind: "text", key: "event_date", label: "Tanggal tampil" },
         { kind: "image", key: "background_image", label: "Foto sampul mobile" },
-        { kind: "image", key: "background_desktop_image", label: "Foto sampul desktop" },
+        {
+          kind: "image",
+          key: "background_desktop_image",
+          label: "Foto sampul desktop",
+        },
         { kind: "image", key: "floral_left_image", label: "Floral kiri" },
         { kind: "image", key: "floral_right_image", label: "Floral kanan" },
         { kind: "image", key: "divider_image", label: "Garis dekoratif" },
@@ -150,7 +183,8 @@ export const coverSection: SectionDefinition = {
         initials: "HH",
         event_date: "27 Januari 2024",
         background_image: "/themes/sage-hijau-melayang/gate-mobile.jpg",
-        background_desktop_image: "/themes/sage-hijau-melayang/gate-desktop.jpg",
+        background_desktop_image:
+          "/themes/sage-hijau-melayang/gate-desktop.jpg",
         floral_left_image: "/themes/sage-hijau-melayang/gate-floral-left.svg",
         floral_right_image: "/themes/sage-hijau-melayang/gate-floral-right.svg",
         divider_image: "/themes/sage-hijau-melayang/gate-line.svg",
@@ -158,7 +192,8 @@ export const coverSection: SectionDefinition = {
     },
     "wax-seal": {
       name: "Amplop + Segel Lilin",
-      description: "Amplop kain gelap dengan lipatan diagonal & segel lilin diklik",
+      description:
+        "Amplop kain gelap dengan lipatan diagonal & segel lilin diklik",
       component: CoverWaxSeal,
       propsSchema: CoverProps,
       fields: [
@@ -166,7 +201,11 @@ export const coverSection: SectionDefinition = {
         { kind: "text", key: "seal_label", label: "Teks di bawah segel" },
         { kind: "color", key: "envelope_color", label: "Warna amplop" },
         { kind: "color", key: "accent_color", label: "Warna teks emas" },
-        { kind: "image", key: "texture_image", label: "Tekstur amplop (opsional)" },
+        {
+          kind: "image",
+          key: "texture_image",
+          label: "Tekstur amplop (opsional)",
+        },
         { kind: "image", key: "seal_image", label: "Gambar segel (opsional)" },
       ],
       defaultProps: {

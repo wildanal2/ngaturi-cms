@@ -1,6 +1,7 @@
 import { GuestbookCinematicVintage } from "./guestbook-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { GuestbookProps } from "../schema";
+import { GuestbookGerbangPuspa } from "./guestbook-gerbang-puspa";
 import { GuestbookCards } from "./guestbook-cards";
 import { GuestbookChat } from "./guestbook-chat";
 import { GuestbookSerambiDelima } from "./guestbook-serambi-delima";
@@ -19,7 +20,11 @@ export const guestbookSection: SectionDefinition = {
       component: GuestbookCards,
       propsSchema: GuestbookProps,
       fields: [
-        { kind: "boolean", key: "require_approval", label: "Ucapan perlu disetujui dulu" },
+        {
+          kind: "boolean",
+          key: "require_approval",
+          label: "Ucapan perlu disetujui dulu",
+        },
       ],
       defaultProps: { require_approval: true },
     },
@@ -29,11 +34,23 @@ export const guestbookSection: SectionDefinition = {
       component: GuestbookChat,
       propsSchema: GuestbookProps,
       fields: [
-        { kind: "boolean", key: "require_approval", label: "Ucapan perlu disetujui dulu" },
+        {
+          kind: "boolean",
+          key: "require_approval",
+          label: "Ucapan perlu disetujui dulu",
+        },
       ],
       defaultProps: { require_approval: true },
     },
   },
+};
+
+guestbookSection.variants["gerbang-puspa"] = {
+  ...guestbookSection.variants.chat,
+  name: "Gerbang Puspa",
+  description: "Ucapan mandiri dan daftar tamu dalam permukaan dialog bersama",
+  component: GuestbookGerbangPuspa,
+  isPremium: true,
 };
 
 guestbookSection.variants["cinematic-vintage"] = {

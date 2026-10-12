@@ -1,0 +1,128 @@
+.events {
+  background-color: var(--gp-cream);
+  background-image:
+    linear-gradient(rgba(255, 251, 243, 0.78), rgba(255, 244, 224, 0.78)),
+    url("/themes/gerbang-puspa/stationery-background.svg");
+  padding-top: 120px;
+}
+.events h2 {
+  color: var(--gp-maroon);
+  font:
+    400 24px/28.8px var(--gp-font-display),
+    serif;
+  margin-bottom: 74px;
+}
+.intro {
+  margin: -42px auto 66px !important;
+  max-width: 320px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.eventCard {
+  position: relative;
+  z-index: 1;
+  min-height: 315px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: 16px;
+  padding: 24px;
+  background: var(--gp-cream)
+    url("/themes/gerbang-puspa/stationery-background.svg") center / cover;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  color: #271d1c;
+}
+.eventCard + .eventCard {
+  margin-top: 84px;
+}
+.eventCard h3 {
+  font:
+    400 24px/28.8px var(--gp-font-body),
+    serif;
+  margin: 16px 0 8px;
+  color: var(--gp-maroon);
+  overflow-wrap: anywhere;
+}
+.rings {
+  position: absolute;
+  top: -44.1px;
+  left: 50%;
+  margin-left: -28.8px;
+  width: 57.6px;
+  height: 57.6px;
+  border-radius: 50%;
+  color: white;
+  background: var(--gp-maroon);
+  display: grid;
+  place-items: center;
+}
+.dateRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.dateRow strong {
+  font-size: 50px;
+  line-height: 50px;
+  font-weight: 400;
+  border-left: 1px solid #8c716f;
+  border-right: 1px solid #8c716f;
+  padding: 0 12px;
+}
+.dateRow span {
+  font-size: 13px;
+  line-height: 19.5px;
+}
+.eventCard p {
+  font-size: 13px;
+  line-height: 19.5px;
+  overflow-wrap: anywhere;
+}
+.dateText {
+  margin-bottom: 8px !important;
+}
+.timeLine {
+  position: relative;
+}
+.calendar {
+  position: absolute;
+  right: -19px;
+  top: 0;
+  width: 19px;
+  height: 19.5px;
+  display: grid;
+  place-items: center;
+  color: var(--gp-maroon);
+}
+.venue {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 19.5px;
+  overflow-wrap: anywhere;
+}
+.address {
+  font-size: 12px !important;
+  line-height: 18px !important;
+  white-space: pre-line;
+}
+.mapSlot {
+  height: 46px;
+}
+.mapButton {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  display: block;
+  border: 1px solid var(--gp-maroon);
+  border-radius: 9.6px;
+  background: var(--gp-maroon);
+  color: white;
+  font-size: 16px;
+  line-height: 24px;
+  padding: 6px 12px;
+  text-decoration: none;
+}

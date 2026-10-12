@@ -2,15 +2,20 @@ import { canonicalTemplateId } from "./identity";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 
 export type TemplateComposition =
-  | "standard"
-  | "cinematic-vintage"
-  | "sekar-jawa-3d";
+  "standard" | "cinematic-vintage" | "sekar-jawa-3d";
 
 export interface TemplatePreset {
   id: string;
   name: string;
   description: string;
-  category: "wedding" | "khitan" | "tahlil" | "aqiqah" | "engagement" | "birthday" | "generic";
+  category:
+    | "wedding"
+    | "khitan"
+    | "tahlil"
+    | "aqiqah"
+    | "engagement"
+    | "birthday"
+    | "generic";
   tier: "free" | "basic" | "premium";
   composition?: TemplateComposition;
   thumbnail: string;
@@ -25,7 +30,8 @@ const s = (
   props: Record<string, unknown> = {},
 ): Omit<SectionData, "id"> => ({ type, variant, order, visible: true, props });
 
-const inDays = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+const inDays = (d: number) =>
+  new Date(Date.now() + d * 86_400_000).toISOString();
 
 type ThemeAssets = {
   bg: string;
@@ -56,6 +62,41 @@ const themeDecor = (theme: ThemeAssets) => ({
 });
 
 export const TEMPLATES: TemplatePreset[] = [
+  {
+    id: "gerbang-puspa",
+    name: "Gerbang Puspa",
+    description:
+      "Gerbang botani krem, merah marun, dan kertas berbingkai dengan perjalanan undangan lengkap.",
+    category: "wedding",
+    tier: "premium",
+    composition: "standard",
+    thumbnail: "/templates/gerbang-puspa/card",
+    global_settings: {
+      font_family: "Fraunces",
+      color_primary: "#74131c",
+      color_secondary: "#f1ded7",
+      color_background: "#fffbf3",
+      animation: "none",
+    },
+    // Standard sections retain independent contracts; Closing ends the content flow.
+    sections: [
+      s("loading", "gerbang-puspa", 0),
+      s("cover", "gerbang-puspa", 1),
+      s("hero", "gerbang-puspa", 2),
+      s("quote", "gerbang-puspa", 3),
+      s("couple-intro", "gerbang-puspa", 4),
+      s("event-details", "gerbang-puspa", 5),
+      s("map-location", "gerbang-puspa", 6),
+      s("gallery", "gerbang-puspa", 7),
+      s("story", "gerbang-puspa", 8),
+      s("countdown", "gerbang-puspa", 9),
+      s("rsvp", "gerbang-puspa", 10),
+      s("guestbook", "gerbang-puspa", 11),
+      s("gift", "gerbang-puspa", 12),
+      s("closing", "gerbang-puspa", 13),
+      s("music", "gerbang-puspa", 14),
+    ],
+  },
   {
     id: "serambi-delima",
     name: "Serambi Delima",
@@ -135,7 +176,8 @@ export const TEMPLATES: TemplatePreset[] = [
   {
     id: "cinematic-vintage",
     name: "Cinematic Vintage",
-    description: "Perjalanan sinematik melewati bingkai kenangan, janji akad, dan perayaan. Burgundy, emas lembut, serta kedalaman yang mengikuti setiap guliran Anda.",
+    description:
+      "Perjalanan sinematik melewati bingkai kenangan, janji akad, dan perayaan. Burgundy, emas lembut, serta kedalaman yang mengikuti setiap guliran Anda.",
     category: "wedding",
     tier: "premium",
     composition: "cinematic-vintage",
@@ -226,12 +268,14 @@ export const TEMPLATES: TemplatePreset[] = [
           {
             year: "2024",
             title: "Menetapkan Hati",
-            description: "Kami bertumbuh, saling mengenal keluarga, dan menjaga komitmen.",
+            description:
+              "Kami bertumbuh, saling mengenal keluarga, dan menjaga komitmen.",
           },
           {
             year: "2026",
             title: "Menuju Hari Bahagia",
-            description: "Dengan restu keluarga, kami melangkah menuju pernikahan.",
+            description:
+              "Dengan restu keluarga, kami melangkah menuju pernikahan.",
           },
         ],
       }),
@@ -543,13 +587,15 @@ export const TEMPLATES: TemplatePreset[] = [
           {
             year: "2020",
             title: "Pertemuan Pertama",
-            description: "Kami pertama bertemu di kampus, tak menyangka akan sejauh ini.",
+            description:
+              "Kami pertama bertemu di kampus, tak menyangka akan sejauh ini.",
             image: "/themes/navy-elegan/story-2020.jpg",
           },
           {
             year: "2022",
             title: "Menjalin Komitmen",
-            description: "Kami memutuskan untuk menjalani hubungan yang lebih serius.",
+            description:
+              "Kami memutuskan untuk menjalani hubungan yang lebih serius.",
             image: "/themes/navy-elegan/gallery-1.jpg",
           },
           {
@@ -588,9 +634,18 @@ export const TEMPLATES: TemplatePreset[] = [
       s("family", "party", 7, {}),
       s("gallery", "spotlight", 8, {
         images: [
-          { url: "/themes/navy-elegan/story-2020.jpg", caption: "Awal perjalanan kami" },
-          { url: "/themes/navy-elegan/gallery-1.jpg", caption: "Momen kebersamaan" },
-          { url: "/themes/navy-elegan/couple-illustration.webp", caption: "Menuju hari bahagia" },
+          {
+            url: "/themes/navy-elegan/story-2020.jpg",
+            caption: "Awal perjalanan kami",
+          },
+          {
+            url: "/themes/navy-elegan/gallery-1.jpg",
+            caption: "Momen kebersamaan",
+          },
+          {
+            url: "/themes/navy-elegan/couple-illustration.webp",
+            caption: "Menuju hari bahagia",
+          },
         ],
       }),
       s("countdown", "rings", 9, {}),
@@ -612,7 +667,8 @@ export const TEMPLATES: TemplatePreset[] = [
   {
     id: "kana-noir",
     name: "Elegan Hijau Emas",
-    description: "Hijau tua mewah dengan aksen emas — kesan berkelas untuk resepsi malam.",
+    description:
+      "Hijau tua mewah dengan aksen emas — kesan berkelas untuk resepsi malam.",
     category: "wedding",
     tier: "premium",
     thumbnail: "/templates/kana-noir/card",
@@ -624,7 +680,11 @@ export const TEMPLATES: TemplatePreset[] = [
       animation: "fade-up",
     },
     sections: [
-      s("cover", "botanical", 0, { names: "Kana & Arya", tagline: "The Wedding Of", s_palette: "noir" }),
+      s("cover", "botanical", 0, {
+        names: "Kana & Arya",
+        tagline: "The Wedding Of",
+        s_palette: "noir",
+      }),
       s("hero", "botanical", 0, {
         couple_names: "Kana & Arya",
         tagline: "The Wedding Of",
@@ -636,8 +696,16 @@ export const TEMPLATES: TemplatePreset[] = [
         source: "Doa pernikahan",
       }),
       s("couple-intro", "stacked", 2, {
-        bride: { name: "Kana", full_name: "Kana Maheswari", child_order: "Putri pertama" },
-        groom: { name: "Arya", full_name: "Arya Danendra", child_order: "Putra kedua" },
+        bride: {
+          name: "Kana",
+          full_name: "Kana Maheswari",
+          child_order: "Putri pertama",
+        },
+        groom: {
+          name: "Arya",
+          full_name: "Arya Danendra",
+          child_order: "Putra kedua",
+        },
         s_photo_shape: "arch",
       }),
       s("countdown", "elegant", 3, { s_sep: "dot" }),
@@ -713,7 +781,8 @@ export const TEMPLATES: TemplatePreset[] = [
             end_time: "11:00",
             venue_name: "Kediaman Mempelai Wanita",
             address: "Jl. Pajajaran No. 57, Baranangsiang, Bogor",
-            maps_url: "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
           },
           {
             name: "Resepsi",
@@ -722,22 +791,40 @@ export const TEMPLATES: TemplatePreset[] = [
             end_time: "14:00",
             venue_name: "Kediaman Mempelai Wanita",
             address: "Jl. Pajajaran No. 57, Baranangsiang, Bogor",
-            maps_url: "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
           },
         ],
         ...themeDecor(FLOATING_EMAS),
       }),
       s("map-location", "embed", 4, {
         venue_name: "Kediaman Mempelai Wanita",
-        address: "Jl. Pajajaran No. 57, Baranangsiang, Kec. Bogor Timur, Kota Bogor",
+        address:
+          "Jl. Pajajaran No. 57, Baranangsiang, Kec. Bogor Timur, Kota Bogor",
       }),
       s("story", "timeline", 5, {
         eyebrow: "Cerita kami berawal dari sini",
         title: "Kisah Kami",
         items: [
-          { year: "21 Juli 2020", title: "Pertemuan Pertama", description: "Sebuah pertemuan sederhana menjadi awal perjalanan kami.", image: "/themes/floating-emas/story-1.png" },
-          { year: "23 September 2020", title: "Menjalin Hubungan", description: "Kami memutuskan untuk saling mengenal lebih jauh.", image: "/themes/floating-emas/story-2.png" },
-          { year: "19 November 2021", title: "Lamaran", description: "Awal dari perjalanan bersama kedua keluarga.", image: "/themes/floating-emas/story-3.png" },
+          {
+            year: "21 Juli 2020",
+            title: "Pertemuan Pertama",
+            description:
+              "Sebuah pertemuan sederhana menjadi awal perjalanan kami.",
+            image: "/themes/floating-emas/story-1.png",
+          },
+          {
+            year: "23 September 2020",
+            title: "Menjalin Hubungan",
+            description: "Kami memutuskan untuk saling mengenal lebih jauh.",
+            image: "/themes/floating-emas/story-2.png",
+          },
+          {
+            year: "19 November 2021",
+            title: "Lamaran",
+            description: "Awal dari perjalanan bersama kedua keluarga.",
+            image: "/themes/floating-emas/story-3.png",
+          },
         ],
         section_icon: "/themes/floating-emas/icon-kisah.svg",
         ...themeDecor(FLOATING_EMAS),
@@ -745,9 +832,18 @@ export const TEMPLATES: TemplatePreset[] = [
       s("gallery", "spotlight", 6, {
         images: [
           { url: "/themes/floating-emas/gallery-1.png", caption: "Prewedding" },
-          { url: "/themes/floating-emas/gallery-2.png", caption: "Momen berdua" },
-          { url: "/themes/floating-emas/gallery-3.png", caption: "Menuju hari bahagia" },
-          { url: "/themes/floating-emas/gallery-4.png", caption: "Bersama keluarga" },
+          {
+            url: "/themes/floating-emas/gallery-2.png",
+            caption: "Momen berdua",
+          },
+          {
+            url: "/themes/floating-emas/gallery-3.png",
+            caption: "Menuju hari bahagia",
+          },
+          {
+            url: "/themes/floating-emas/gallery-4.png",
+            caption: "Bersama keluarga",
+          },
         ],
         section_icon: "/themes/floating-emas/icon-galeri.svg",
         ...themeDecor(FLOATING_EMAS),
@@ -759,7 +855,8 @@ export const TEMPLATES: TemplatePreset[] = [
         ...themeDecor(FLOATING_EMAS),
       }),
       s("gift", "cards", 8, {
-        intro: "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
+        intro:
+          "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
         section_icon: "/themes/floating-emas/icon-hadiah.svg",
         ...themeDecor(FLOATING_EMAS),
       }),
@@ -770,7 +867,8 @@ export const TEMPLATES: TemplatePreset[] = [
       }),
       s("closing", "thankyou", 11, {
         names: "Naura & Fajar",
-        message: "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
+        message:
+          "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
         ...themeDecor(FLOATING_EMAS),
       }),
       s("music", "disc", 12, {}),
@@ -828,7 +926,8 @@ export const TEMPLATES: TemplatePreset[] = [
         ...themeDecor(FLOATING_TERRACOTTA),
       }),
       s("event-details", "formal", 3, {
-        intro: "Merupakan suatu kehormatan dan kebahagiaan bagi kami atas kehadiran Bapak/Ibu/Saudara/i untuk memberikan doa restu kepada putra-putri kami.",
+        intro:
+          "Merupakan suatu kehormatan dan kebahagiaan bagi kami atas kehadiran Bapak/Ibu/Saudara/i untuk memberikan doa restu kepada putra-putri kami.",
         events: [
           {
             name: "Akad Nikah",
@@ -837,7 +936,8 @@ export const TEMPLATES: TemplatePreset[] = [
             end_time: "12:00",
             venue_name: "Kediaman Mempelai Wanita",
             address: "Jl. Pajajaran No. 57, Baranangsiang, Bogor",
-            maps_url: "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
           },
           {
             name: "Resepsi",
@@ -846,32 +946,61 @@ export const TEMPLATES: TemplatePreset[] = [
             end_time: "14:00",
             venue_name: "Kediaman Mempelai Wanita",
             address: "Jl. Pajajaran No. 57, Baranangsiang, Bogor",
-            maps_url: "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
+            maps_url:
+              "https://www.google.com/maps/search/?api=1&query=-6.597147,106.806039",
           },
         ],
         ...themeDecor(FLOATING_TERRACOTTA),
       }),
       s("map-location", "embed", 4, {
         venue_name: "Kediaman Mempelai Wanita",
-        address: "Jl. Pajajaran No. 57, Baranangsiang, Kec. Bogor Timur, Kota Bogor",
+        address:
+          "Jl. Pajajaran No. 57, Baranangsiang, Kec. Bogor Timur, Kota Bogor",
       }),
       s("story", "timeline", 5, {
         eyebrow: "Cerita kami berawal dari sini",
         title: "Kisah Kami",
         items: [
-          { year: "21 Juli 2020", title: "Pertemuan Pertama", description: "Kami bertemu dan mulai saling mengenal.", image: "/themes/floating-terracotta/story-1.png" },
-          { year: "23 September 2020", title: "Menjalin Hubungan", description: "Kami menjalani hubungan yang lebih serius.", image: "/themes/floating-terracotta/story-2.png" },
-          { year: "19 November 2021", title: "Lamaran", description: "Lamaran sederhana bersama kedua keluarga.", image: "/themes/floating-terracotta/story-3.png" },
+          {
+            year: "21 Juli 2020",
+            title: "Pertemuan Pertama",
+            description: "Kami bertemu dan mulai saling mengenal.",
+            image: "/themes/floating-terracotta/story-1.png",
+          },
+          {
+            year: "23 September 2020",
+            title: "Menjalin Hubungan",
+            description: "Kami menjalani hubungan yang lebih serius.",
+            image: "/themes/floating-terracotta/story-2.png",
+          },
+          {
+            year: "19 November 2021",
+            title: "Lamaran",
+            description: "Lamaran sederhana bersama kedua keluarga.",
+            image: "/themes/floating-terracotta/story-3.png",
+          },
         ],
         section_icon: "/themes/floating-terracotta/icon-kisah.svg",
         ...themeDecor(FLOATING_TERRACOTTA),
       }),
       s("gallery", "spotlight", 6, {
         images: [
-          { url: "/themes/floating-terracotta/gallery-1.png", caption: "Prewedding" },
-          { url: "/themes/floating-terracotta/gallery-2.png", caption: "Momen berdua" },
-          { url: "/themes/floating-terracotta/gallery-3.png", caption: "Menuju hari bahagia" },
-          { url: "/themes/floating-terracotta/gallery-4.png", caption: "Bersama keluarga" },
+          {
+            url: "/themes/floating-terracotta/gallery-1.png",
+            caption: "Prewedding",
+          },
+          {
+            url: "/themes/floating-terracotta/gallery-2.png",
+            caption: "Momen berdua",
+          },
+          {
+            url: "/themes/floating-terracotta/gallery-3.png",
+            caption: "Menuju hari bahagia",
+          },
+          {
+            url: "/themes/floating-terracotta/gallery-4.png",
+            caption: "Bersama keluarga",
+          },
         ],
         section_icon: "/themes/floating-terracotta/icon-galeri.svg",
         ...themeDecor(FLOATING_TERRACOTTA),
@@ -883,7 +1012,8 @@ export const TEMPLATES: TemplatePreset[] = [
         ...themeDecor(FLOATING_TERRACOTTA),
       }),
       s("gift", "cards", 8, {
-        intro: "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
+        intro:
+          "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
         section_icon: "/themes/floating-terracotta/icon-hadiah.svg",
         ...themeDecor(FLOATING_TERRACOTTA),
       }),
@@ -894,7 +1024,8 @@ export const TEMPLATES: TemplatePreset[] = [
       }),
       s("closing", "thankyou", 11, {
         names: "Gani & Mikha",
-        message: "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
+        message:
+          "Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan hadir dan memberikan doa restu.",
         ...themeDecor(FLOATING_TERRACOTTA),
       }),
       s("music", "disc", 12, {}),

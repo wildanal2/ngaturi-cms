@@ -1,0 +1,60 @@
+.closing {
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.closingFrame {
+  width: 100%;
+  max-width: 350px;
+  min-height: 607px;
+  padding: 30px;
+  border-radius: 16px;
+}
+.closingFrame p {
+  font-size: 14.4px;
+  line-height: 21.6px;
+  color: black;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.closingFrame .thanks {
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+.names {
+  font:
+    500 35px/42px var(--gp-font-display),
+    serif;
+  color: var(--gp-maroon);
+  display: flex;
+  flex-direction: column;
+  padding-top: 8px;
+  overflow-wrap: anywhere;
+}
+.names > div {
+  margin-bottom: 8px;
+}
+.names span {
+  display: block;
+}
+.names .ampersand {
+  font:
+    400 24px/28.8px var(--gp-font-script),
+    cursive;
+}
+.flowers {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  width: 100%;
+  height: 175px;
+  object-fit: fill;
+  z-index: 2;
+  pointer-events: none;
+}
+@media (min-width: 425px) {
+  .closingFrame {
+    min-height: 585.4px;
+  }
+}

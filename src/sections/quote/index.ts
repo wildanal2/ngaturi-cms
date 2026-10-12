@@ -5,8 +5,9 @@ import { QuoteProps } from "../schema";
 import { QuoteCentered } from "./quote-centered";
 import { QuoteBordered } from "./quote-bordered";
 import { QuoteSerambiDelima } from "./quote-serambi-delima";
+import { QuoteGerbangPuspa } from "./quote-gerbang-puspa";
 
-export { QuoteCentered, QuoteBordered, QuoteSerambiDelima };
+export { QuoteCentered, QuoteBordered, QuoteSerambiDelima, QuoteGerbangPuspa };
 
 const quoteFields = [
   { kind: "textarea", key: "text", label: "Teks kutipan" },
@@ -25,6 +26,23 @@ export const quoteSection: SectionDefinition = {
   icon: "Quote",
   category: "content",
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      description: "Kutipan seremonial dan sambutan berbingkai botani",
+      component: QuoteGerbangPuspa,
+      propsSchema: QuoteProps,
+      fields: [
+        {
+          kind: "textarea",
+          key: "text",
+          label: "Kutipan dan sambutan",
+          help: "Paragraf pertama menjadi kutipan. Pisahkan dengan baris kosong untuk judul sambutan, lalu isi sambutan.",
+        },
+        { kind: "text", key: "source", label: "Sumber kutipan (opsional)" },
+      ],
+      defaultProps: { text: "", source: "" },
+      isPremium: true,
+    },
     "cinematic-vintage": {
       name: "Sinematik Vintage",
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",

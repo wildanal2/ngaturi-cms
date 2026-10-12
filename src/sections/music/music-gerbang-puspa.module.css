@@ -1,0 +1,32 @@
+.music {
+  position: fixed;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  right: max(20px, env(safe-area-inset-right));
+  z-index: 100;
+}
+.music button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(203, 128, 104, 0.8);
+  color: #3e0c12;
+  cursor: pointer;
+}
+.music button:disabled {
+  cursor: default;
+}
+.music button:focus-visible {
+  outline: 2px solid #74131c;
+  outline-offset: 4px;
+}
+.music.inline {
+  position: relative;
+  inset: auto;
+  margin: 8px 16px 8px auto;
+  width: max-content;
+}

@@ -1,0 +1,115 @@
+.centeredFrame {
+  min-height: 620px;
+  padding: 30px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.gift h2 {
+  color: var(--gp-maroon);
+  font:
+    400 24px/28.8px var(--gp-font-display),
+    serif;
+  margin-bottom: 8px;
+}
+.gift p {
+  font-size: 14.4px;
+  line-height: 21.6px;
+  color: black;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.centeredFrame > div + div {
+  margin-top: 24px;
+}
+.giftCards {
+  border: 1px solid #dabbb0;
+  border-radius: 8px;
+  padding: 12px 10px;
+  max-width: 300px;
+  width: 100%;
+  margin: 0 auto;
+  color: #000;
+}
+.giftAccount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.giftAccount:last-child {
+  margin-bottom: 0;
+}
+.bankMark {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  min-height: 50px;
+  border-radius: 8px;
+  background: #246797;
+  color: white;
+  font:
+    700 15px system-ui,
+    sans-serif;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+.bankMark span {
+  font-size: 24px;
+}
+.bankLogo {
+  width: 80px;
+  height: 50px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: contain;
+}
+.accountDetails {
+  min-width: 0;
+  text-align: left;
+}
+.accountDetails .accountNumber {
+  margin: 0 0 8px;
+  font:
+    700 18px/21.6px var(--gp-font-body),
+    serif;
+  overflow-wrap: anywhere;
+}
+.copyButton {
+  display: block;
+  border: 1px solid #c77e66;
+  border-radius: 4px;
+  padding: 4px 8px;
+  background: #cb8068;
+  color: #3e0c12;
+  font:
+    14px/21px -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    "Noto Sans",
+    "Liberation Sans",
+    sans-serif;
+  cursor: pointer;
+}
+.copyButton:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+.accountDetails .accountName {
+  font:
+    14.4px/21.6px var(--gp-font-body),
+    serif;
+  margin: 8px 0 0;
+}
+.feedback {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

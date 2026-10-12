@@ -1,0 +1,67 @@
+.centeredFrame {
+  min-height: 620px;
+  padding: 30px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.countdown h2 {
+  color: var(--gp-maroon);
+  font:
+    400 35px/42px var(--gp-font-script),
+    cursive;
+  margin-bottom: 24px;
+}
+.timer {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.timer > div {
+  background: var(--gp-maroon);
+  border: 1px solid #c38487;
+  border-radius: 5px;
+  color: white;
+  width: 64px;
+  min-width: 0;
+  height: 59px;
+  padding: 0 3px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  font-family: var(--gp-font-body), serif;
+}
+.timer strong {
+  font:
+    400 25px/30px var(--gp-font-display),
+    serif;
+}
+.timer span {
+  font-size: 14px;
+  line-height: 21px;
+}
+.countdown p {
+  margin-bottom: 16px;
+  color: black;
+  overflow-wrap: anywhere;
+}
+.countdown .button {
+  border-color: #c77e66;
+  padding: 6px 12px;
+  line-height: 21px;
+  margin-bottom: 24px;
+  max-width: 100%;
+}
+.calendar {
+  color: var(--gp-maroon);
+  font-size: 14px;
+}
+@media (max-width: 374px) {
+  .timer {
+    gap: 6px;
+  }
+  .timer > div {
+    width: 58px;
+  }
+}

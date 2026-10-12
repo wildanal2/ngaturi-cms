@@ -39,6 +39,13 @@ export async function GET(
   const t = getTemplate(id);
   if (!t) return new Response("not found", { status: 404 });
 
+  if (t.id === "gerbang-puspa") {
+    return Response.redirect(
+      new URL("/themes/gerbang-puspa/stationery-background.svg", _req.url),
+      307,
+    );
+  }
+
   // Keep the catalog card contract while serving this template's original vector art.
   if (t.id === "serambi-delima") {
     return Response.redirect(
@@ -62,21 +69,20 @@ export async function GET(
     "Nama Mempelai",
   );
   const tagline = safe(
-    (cover?.props?.tagline as string) ??
-      (hero?.props?.tagline as string) ??
-      "",
+    (cover?.props?.tagline as string) ?? (hero?.props?.tagline as string) ?? "",
     "The Wedding Of",
   );
   const origin = canonicalApplicationOrigin();
   const visual = getCardVisual(sections);
   const cardBackground = compositionCardBackground[t.id];
-  const [background, foreground, ornamentLeft, ornamentRight, seal] = await Promise.all([
-    fetchOgImageData(cardBackground ?? visual.background, origin),
-    fetchOgImageData(visual.foreground, origin),
-    fetchOgImageData(visual.ornamentLeft, origin),
-    fetchOgImageData(visual.ornamentRight, origin),
-    fetchOgImageData(visual.seal, origin),
-  ]);
+  const [background, foreground, ornamentLeft, ornamentRight, seal] =
+    await Promise.all([
+      fetchOgImageData(cardBackground ?? visual.background, origin),
+      fetchOgImageData(visual.foreground, origin),
+      fetchOgImageData(visual.ornamentLeft, origin),
+      fetchOgImageData(visual.ornamentRight, origin),
+      fetchOgImageData(visual.seal, origin),
+    ]);
 
   // Match the existing picker crop so the split gate is visible in full.
   if (t.id === "sekar-jawa-3d" && background) {
@@ -143,178 +149,197 @@ export async function GET(
     );
   }
 
-
   return new ImageResponse(
-    (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: g.color_background,
+        position: "relative",
+        fontFamily: "Georgia, serif",
+      }}
+    >
+      {background ? (
+        <img
+          src={background}
+          alt=""
+          width={W}
+          height={H}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: cardBackground ? 1 : 0.72,
+          }}
+        />
+      ) : null}
+      {cardBackground ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgb(8 5 3 / 18%), rgb(8 5 3 / 42%))",
+          }}
+        />
+      ) : null}
+      {ornamentLeft ? (
+        <img
+          src={ornamentLeft}
+          alt=""
+          width={180}
+          height={320}
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            width: 180,
+            height: 320,
+            objectFit: "contain",
+          }}
+        />
+      ) : null}
+      {ornamentRight ? (
+        <img
+          src={ornamentRight}
+          alt=""
+          width={180}
+          height={320}
+          style={{
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+            width: 180,
+            height: 320,
+            objectFit: "contain",
+          }}
+        />
+      ) : null}
+      {seal ? (
+        <img
+          src={seal}
+          alt=""
+          width={88}
+          height={88}
+          style={{
+            position: "absolute",
+            top: 56,
+            right: 56,
+            width: 88,
+            height: 88,
+            objectFit: "contain",
+          }}
+        />
+      ) : null}
+      {/* ornamental frame */}
       <div
         style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          background: g.color_background,
-          position: "relative",
-          fontFamily: "Georgia, serif",
+          position: "absolute",
+          inset: 34,
+          border: `2px solid ${g.color_secondary}`,
+          opacity: 0.5,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: 44,
+          border: `1px solid ${g.color_secondary}`,
+          opacity: 0.35,
+        }}
+      />
+
+      <div
+        style={{
+          fontSize: 22,
+          letterSpacing: 7,
+          textTransform: "uppercase",
+          color: cardBackground ? "#ead6a5" : g.color_secondary,
+          textShadow: cardBackground ? "0 2px 14px #000" : "none",
         }}
       >
-        {background ? (
-          <img
-            src={background}
-            alt=""
-            width={W}
-            height={H}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              opacity: cardBackground ? 1 : 0.72,
-            }}
-          />
-        ) : null}
-        {cardBackground ? (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "linear-gradient(180deg, rgb(8 5 3 / 18%), rgb(8 5 3 / 42%))",
-            }}
-          />
-        ) : null}
-        {ornamentLeft ? (
-          <img
-            src={ornamentLeft}
-            alt=""
-            width={180}
-            height={320}
-            style={{ position: "absolute", bottom: 0, left: 0, width: 180, height: 320, objectFit: "contain" }}
-          />
-        ) : null}
-        {ornamentRight ? (
-          <img
-            src={ornamentRight}
-            alt=""
-            width={180}
-            height={320}
-            style={{ position: "absolute", bottom: 0, right: 0, width: 180, height: 320, objectFit: "contain" }}
-          />
-        ) : null}
-        {seal ? (
-          <img
-            src={seal}
-            alt=""
-            width={88}
-            height={88}
-            style={{ position: "absolute", top: 56, right: 56, width: 88, height: 88, objectFit: "contain" }}
-          />
-        ) : null}
-        {/* ornamental frame */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 34,
-            border: `2px solid ${g.color_secondary}`,
-            opacity: 0.5,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            inset: 44,
-            border: `1px solid ${g.color_secondary}`,
-            opacity: 0.35,
-          }}
-        />
-
-        <div
-          style={{
-            fontSize: 22,
-            letterSpacing: 7,
-            textTransform: "uppercase",
-            color: cardBackground ? "#ead6a5" : g.color_secondary,
-            textShadow: cardBackground ? "0 2px 14px #000" : "none",
-          }}
-        >
-          {tagline}
-        </div>
-
-        {foreground && !cardBackground ? (
-          <div
-            style={{
-              width: 270,
-              height: 270,
-              margin: "34px 0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <img
-              src={foreground}
-              alt=""
-              width={270}
-              height={270}
-              style={{ width: 270, height: 270, objectFit: "contain" }}
-            />
-          </div>
-        ) : cardBackground ? (
-          <div style={{ width: 1, height: 190, margin: "24px 0" }} />
-        ) : (
-          <div
-            style={{
-              width: 190,
-              height: 190,
-              borderRadius: 999,
-              margin: "34px 0",
-              border: `5px solid ${g.color_secondary}`,
-              background: `linear-gradient(135deg, ${g.color_primary}, ${g.color_secondary})`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontSize: 40,
-            }}
-          >
-            ♥
-          </div>
-        )}
-
-        <div
-          style={{
-            fontSize: 58,
-            lineHeight: 1.05,
-            color: cardBackground ? "#fff8e8" : g.color_primary,
-            textAlign: "center",
-            padding: "0 40px",
-            textShadow: cardBackground ? "0 3px 18px #000" : "none",
-          }}
-        >
-          {names}
-        </div>
-
-        <div
-          style={{
-            width: 90,
-            height: 2,
-            background: g.color_secondary,
-            margin: "26px 0",
-          }}
-        />
-        <div
-          style={{
-            fontSize: 22,
-            color: cardBackground ? "#ead6a5" : g.color_primary,
-            opacity: 0.9,
-            textShadow: cardBackground ? "0 2px 12px #000" : "none",
-          }}
-        >
-          {t.name}
-        </div>
+        {tagline}
       </div>
-    ),
+
+      {foreground && !cardBackground ? (
+        <div
+          style={{
+            width: 270,
+            height: 270,
+            margin: "34px 0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <img
+            src={foreground}
+            alt=""
+            width={270}
+            height={270}
+            style={{ width: 270, height: 270, objectFit: "contain" }}
+          />
+        </div>
+      ) : cardBackground ? (
+        <div style={{ width: 1, height: 190, margin: "24px 0" }} />
+      ) : (
+        <div
+          style={{
+            width: 190,
+            height: 190,
+            borderRadius: 999,
+            margin: "34px 0",
+            border: `5px solid ${g.color_secondary}`,
+            background: `linear-gradient(135deg, ${g.color_primary}, ${g.color_secondary})`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            fontSize: 40,
+          }}
+        >
+          ♥
+        </div>
+      )}
+
+      <div
+        style={{
+          fontSize: 58,
+          lineHeight: 1.05,
+          color: cardBackground ? "#fff8e8" : g.color_primary,
+          textAlign: "center",
+          padding: "0 40px",
+          textShadow: cardBackground ? "0 3px 18px #000" : "none",
+        }}
+      >
+        {names}
+      </div>
+
+      <div
+        style={{
+          width: 90,
+          height: 2,
+          background: g.color_secondary,
+          margin: "26px 0",
+        }}
+      />
+      <div
+        style={{
+          fontSize: 22,
+          color: cardBackground ? "#ead6a5" : g.color_primary,
+          opacity: 0.9,
+          textShadow: cardBackground ? "0 2px 12px #000" : "none",
+        }}
+      >
+        {t.name}
+      </div>
+    </div>,
     {
       width: W,
       height: H,

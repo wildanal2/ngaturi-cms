@@ -1,0 +1,213 @@
+.hero {
+  position: relative;
+  width: 100%;
+  height: 817.1875px;
+  min-height: 817.1875px;
+  padding: 0;
+  overflow: hidden;
+  color: #74131c;
+  font:
+    14.4px/1.5 "GP Marcellus",
+    serif;
+  text-align: center;
+}
+
+.hero p,
+.hero h1 {
+  margin: 0;
+  font-weight: 400;
+}
+
+.hero:focus {
+  outline: none;
+}
+
+.gardenFilm {
+  position: absolute;
+  inset: 0;
+  animation: gardenFilm 20s linear both;
+}
+
+.gardenFilm img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroFrame {
+  position: absolute;
+  top: 84px;
+  right: 20px;
+  bottom: 60px;
+  left: 20px;
+  z-index: 1;
+  border: 4px solid #74131c;
+  border-radius: 240px;
+  background: rgb(255 245 231 / 78%);
+}
+
+.initials {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  width: 130px;
+  height: 150px;
+  margin-left: -65px;
+  animation: fadeUp 3s ease 12s both;
+}
+
+.bismillah {
+  position: absolute;
+  top: 225px;
+  width: 100%;
+  padding-inline: 10px;
+  font-size: 14px;
+  line-height: 20px;
+  animation: fadeDown 3s ease 11s both;
+}
+
+.heroText {
+  position: absolute;
+  top: 247px;
+  left: 0;
+  width: 100%;
+}
+
+.heroText .eyebrow {
+  margin-bottom: 24px;
+  font-size: 20px;
+  line-height: 24px;
+}
+
+.heroText > p,
+.names {
+  animation: fadeDown 3s ease 11s both;
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font:
+    400 45px/54px "GP Fraunces",
+    serif;
+  overflow-wrap: anywhere;
+}
+
+.ampersand {
+  font:
+    45px/54px "GP Parisienne",
+    cursive;
+}
+
+.heroText .date {
+  margin-top: 24px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.scrollCue {
+  display: block;
+  margin-top: 23px;
+  color: #242424;
+  font:
+    48px/48px Arial,
+    sans-serif;
+  animation: cue 1.8s ease-in-out infinite;
+}
+
+.scrollCue svg {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.hero[data-hero-started="false"] .gardenFilm,
+.hero[data-hero-started="false"] .initials,
+.hero[data-hero-started="false"] .bismillah,
+.hero[data-hero-started="false"] .heroText > p,
+.hero[data-hero-started="false"] .names {
+  animation-play-state: paused;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gardenFilm {
+  from {
+    opacity: 1;
+    transform: scale(1.07);
+  }
+
+  55% {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+}
+
+@keyframes cue {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+.hero[data-desktop="true"] .heroFrame {
+  top: 88px;
+  bottom: 7px;
+  max-width: 360px;
+  margin-inline: auto;
+}
+
+.hero[data-in-canvas="true"] .gardenFilm,
+.hero[data-in-canvas="true"] .initials,
+.hero[data-in-canvas="true"] .bismillah,
+.hero[data-in-canvas="true"] .heroText > p,
+.hero[data-in-canvas="true"] .names,
+.hero[data-in-canvas="true"] .scrollCue {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gardenFilm,
+  .initials,
+  .bismillah,
+  .heroText > p,
+  .names,
+  .scrollCue {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

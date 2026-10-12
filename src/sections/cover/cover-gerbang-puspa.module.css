@@ -1,0 +1,72 @@
+.cover {
+  position: relative;
+  width: 100%;
+  height: max(var(--gp-viewport-height, 100vh), 500px);
+  padding: 30px;
+  background: #f1ded7 url("/themes/gerbang-puspa/stationery-background.svg")
+    center / cover;
+}
+
+.frame {
+  height: 100%;
+  border: 3px solid #74131c;
+  border-radius: 260px;
+  background: rgba(255, 245, 231, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.composition {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  transform: translateY(-1px);
+}
+
+.monogram {
+  width: 128px;
+  height: 148px;
+  margin-bottom: 38px;
+}
+
+.eyebrow {
+  color: #74131c;
+  font-size: 16px;
+  line-height: 16px;
+  margin-bottom: 12px !important;
+}
+
+.recipient {
+  margin-top: 42px;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.recipient strong {
+  display: block;
+  margin-top: 8px;
+  color: #74131c;
+  font:
+    700 16px/19.2px "GP Marcellus",
+    serif;
+}
+
+.button {
+  border: 1px solid #b86d72;
+  border-radius: 22px;
+  margin-top: 26px;
+  padding: 8px 12px;
+  background: #74131c;
+  color: white;
+  font:
+    16px/20px "GP Marcellus",
+    serif;
+  cursor: pointer;
+}
+
+.button:focus-visible {
+  outline: 2px solid #74131c;
+  outline-offset: 4px;
+}

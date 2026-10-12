@@ -1,0 +1,314 @@
+@font-face {
+  font-family: "GP Marcellus";
+  src: url("/themes/gerbang-puspa/fonts/Marcellus-Regular.ttf")
+    format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GP Fraunces";
+  src: url("/themes/gerbang-puspa/fonts/Fraunces.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GP Parisienne";
+  src: url("/themes/gerbang-puspa/fonts/Parisienne.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+.scope {
+  --gp-cream: #fffbf3;
+  --gp-pink: #f1ded7;
+  --gp-maroon: #74131c;
+  --gp-ink: #534b53;
+  --gp-surface: rgba(255, 245, 231, 0.82);
+  --gp-font-body: "GP Marcellus";
+  --gp-font-display: "GP Fraunces";
+  --gp-font-script: "GP Parisienne";
+  color: var(--gp-ink);
+  font:
+    14.4px/1.5 "GP Marcellus",
+    serif;
+  text-align: center;
+}
+.scope *,
+.scope *::before,
+.scope *::after {
+  box-sizing: border-box;
+}
+.scope h1,
+.scope h2,
+.scope h3,
+.scope p {
+  margin: 0;
+  font-weight: 400;
+}
+.scope img {
+  display: block;
+  max-width: 100%;
+}
+.scope button,
+.scope a {
+  -webkit-tap-highlight-color: transparent;
+}
+.presentation {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 100dvh;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: #e9e5d0 url("/themes/gerbang-puspa/pastoral-desktop.svg") center /
+    cover no-repeat;
+  pointer-events: none;
+}
+.presentation[data-in-canvas="true"] {
+  min-height: 100%;
+}
+.presentation[data-in-canvas="true"] .backdrop {
+  position: sticky;
+  top: 0;
+  height: var(--gp-viewport-height);
+  margin-bottom: calc(-1 * var(--gp-viewport-height));
+}
+.column {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--gp-cream);
+}
+.scene {
+  position: relative;
+  width: 100%;
+  min-height: 680px;
+  padding: 30px;
+  overflow: hidden;
+  background: #fffbf3 url("/themes/gerbang-puspa/stationery-background.svg")
+    center / 100% 100%;
+}
+.frame {
+  position: relative;
+  z-index: 1;
+  border: 3px solid var(--gp-maroon);
+  border-radius: 24px;
+  background: var(--gp-surface);
+}
+.portrait {
+  display: block;
+  width: 50%;
+  height: 240px;
+  border: 3px solid var(--gp-maroon);
+  border-radius: 160px;
+  object-fit: cover;
+  object-position: center 20%;
+}
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--gp-maroon);
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid currentColor;
+  opacity: 0.45;
+}
+.button {
+  border: 1px solid #b86d72;
+  border-radius: 22px;
+  padding: 8px 12px;
+  background: var(--gp-maroon);
+  color: white;
+  font:
+    14px/20px "GP Marcellus",
+    serif;
+  cursor: pointer;
+}
+.scope :focus-visible {
+  outline: 2px solid var(--gp-maroon);
+  outline-offset: 4px;
+}
+.names {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--gp-maroon);
+  font:
+    400 45px/54px "GP Fraunces",
+    serif;
+}
+.name {
+  display: block;
+}
+.ampersand {
+  font:
+    400 45px/54px "GP Parisienne",
+    cursive;
+}
+.compact {
+  font-size: 35px;
+  line-height: 42px;
+}
+.monogram {
+  width: 128px;
+  height: 148px;
+  color: var(--gp-maroon);
+  overflow: visible;
+  font-family: "GP Fraunces", serif;
+}
+.ornaments {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.topLeft {
+  position: absolute;
+  top: -25px;
+  left: -24px;
+  width: 140px;
+  height: 370px;
+  object-fit: fill;
+  transform-origin: top left;
+  animation: waveLeft 2.5s ease-in-out infinite alternate;
+}
+.topRight {
+  position: absolute;
+  top: -18px;
+  right: -32px;
+  width: 140px;
+  height: 370px;
+  object-fit: fill;
+  transform-origin: top right;
+  animation: waveRight 3s ease-in-out infinite alternate;
+}
+.bottomRight {
+  position: absolute;
+  right: -59px;
+  bottom: -45px;
+  width: 210px;
+  height: 210px;
+  object-fit: contain;
+  transform-origin: bottom right;
+  animation: waveLeft 4.2s ease-in-out infinite alternate;
+}
+.heroFlowers {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  width: 100%;
+  height: 190px;
+  object-fit: fill;
+  transform-origin: bottom center;
+  animation: waveLeft 2.3s ease-in-out infinite alternate;
+}
+.reveal {
+  opacity: 0;
+  animation-duration: 3s;
+  animation-timing-function: ease;
+  animation-fill-mode: both;
+}
+.up {
+  animation-name: fadeUp;
+}
+.down {
+  animation-name: fadeDown;
+}
+.zoom {
+  animation-name: zoom;
+}
+.left {
+  animation-name: fadeLeft;
+}
+.right {
+  animation-name: fadeRight;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes fadeRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes waveLeft {
+  from {
+    transform: rotate(-2deg);
+  }
+  to {
+    transform: rotate(2deg);
+  }
+}
+@keyframes waveRight {
+  from {
+    transform: rotate(2deg);
+  }
+  to {
+    transform: rotate(-2deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    animation: none !important;
+  }
+  .topLeft,
+  .topRight,
+  .bottomRight,
+  .heroFlowers {
+    animation: none;
+  }
+}

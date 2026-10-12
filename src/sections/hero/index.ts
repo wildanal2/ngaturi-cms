@@ -13,6 +13,7 @@ import { HeroGarland } from "./hero-garland";
 import { HeroFloating17 } from "./hero-floating17";
 import { HeroSekarJawa3D } from "./hero-sekar-jawa-3d";
 import { HeroSerambiDelima } from "./hero-serambi-delima";
+import { HeroGerbangPuspa } from "./hero-gerbang-puspa";
 
 export {
   HeroCentered,
@@ -24,6 +25,7 @@ export {
   HeroFloating17,
   HeroSekarJawa3D,
   HeroSerambiDelima,
+  HeroGerbangPuspa,
 };
 
 const baseDefaults = {
@@ -39,13 +41,37 @@ export const heroSection: SectionDefinition = {
   icon: "Sparkles",
   category: "hero",
   dummyProps: (variantKey, base) => {
-    if (variantKey === "serambi-delima") return;
+    if (variantKey === "serambi-delima" || variantKey === "gerbang-puspa")
+      return;
     if (!base.background_image) base.background_image = dummyHero(variantKey);
   },
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      description: "Gerbang botani dengan pembuka sinematik bertempo panjang",
+      component: HeroGerbangPuspa,
+      propsSchema: HeroProps,
+      fields: [
+        ...heroBase,
+        { kind: "text", key: "bismillah", label: "Teks seremonial (opsional)" },
+        {
+          kind: "image",
+          key: "background_image",
+          label: "Media latar pembuka (opsional)",
+        },
+        {
+          kind: "image",
+          key: "couple_image",
+          label: "Foto untuk sambutan (opsional)",
+        },
+      ],
+      defaultProps: { ...baseDefaults, bismillah: "", has_countdown: false },
+      isPremium: true,
+    },
     "serambi-delima": {
       name: "Serambi Delima",
-      description: "Potret berbingkai portal, kertas gading, dan aksen botani delima",
+      description:
+        "Potret berbingkai portal, kertas gading, dan aksen botani delima",
       component: HeroSerambiDelima,
       propsSchema: HeroProps,
       fields: [
@@ -72,7 +98,10 @@ export const heroSection: SectionDefinition = {
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
       component: HeroCinematicVintage,
       propsSchema: HeroProps,
-      fields: [...heroBase, { kind: "image", key: "background_image", label: "Foto pasangan" }],
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Foto pasangan" },
+      ],
       defaultProps: { ...baseDefaults },
       isPremium: true,
     },
@@ -81,7 +110,10 @@ export const heroSection: SectionDefinition = {
       description: "Foto memenuhi layar, teks di atasnya",
       component: HeroCentered,
       propsSchema: HeroProps,
-      fields: [...heroBase, { kind: "image", key: "background_image", label: "Foto latar" }],
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Foto latar" },
+      ],
       styleOptions: [sOverlay, sTextPos],
       defaultProps: { ...baseDefaults, has_countdown: true },
     },
@@ -90,7 +122,10 @@ export const heroSection: SectionDefinition = {
       description: "Foto di satu sisi, teks di sisi lain",
       component: HeroSplit,
       propsSchema: HeroProps,
-      fields: [...heroBase, { kind: "image", key: "background_image", label: "Foto" }],
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Foto" },
+      ],
       styleOptions: [
         {
           key: "photo_side",
@@ -125,7 +160,8 @@ export const heroSection: SectionDefinition = {
     },
     garland: {
       name: "Garland Navy",
-      description: "Watercolor biru, garland bunga, dan ilustrasi pasangan penuh",
+      description:
+        "Watercolor biru, garland bunga, dan ilustrasi pasangan penuh",
       component: HeroGarland,
       propsSchema: HeroProps,
       fields: [
@@ -134,9 +170,17 @@ export const heroSection: SectionDefinition = {
         { kind: "image", key: "background_image", label: "Latar watercolor" },
         { kind: "image", key: "couple_image", label: "Ilustrasi pasangan" },
         { kind: "image", key: "garland_left_image", label: "Bunga atas kiri" },
-        { kind: "image", key: "garland_right_image", label: "Bunga atas kanan" },
+        {
+          kind: "image",
+          key: "garland_right_image",
+          label: "Bunga atas kanan",
+        },
         { kind: "image", key: "flower_left_image", label: "Bunga bawah kiri" },
-        { kind: "image", key: "flower_right_image", label: "Bunga bawah kanan" },
+        {
+          kind: "image",
+          key: "flower_right_image",
+          label: "Bunga bawah kanan",
+        },
       ],
       defaultProps: {
         ...baseDefaults,
@@ -151,11 +195,31 @@ export const heroSection: SectionDefinition = {
       fields: [
         ...heroBase,
         { kind: "image", key: "background_image", label: "Foto" },
-        { kind: "image", key: "background_texture", label: "Tekstur latar (opsional)" },
-        { kind: "image", key: "garland_left_image", label: "Bunga atas kiri (opsional)" },
-        { kind: "image", key: "garland_right_image", label: "Bunga atas kanan (opsional)" },
-        { kind: "image", key: "flower_left_image", label: "Bunga bawah kiri (opsional)" },
-        { kind: "image", key: "flower_right_image", label: "Bunga bawah kanan (opsional)" },
+        {
+          kind: "image",
+          key: "background_texture",
+          label: "Tekstur latar (opsional)",
+        },
+        {
+          kind: "image",
+          key: "garland_left_image",
+          label: "Bunga atas kiri (opsional)",
+        },
+        {
+          kind: "image",
+          key: "garland_right_image",
+          label: "Bunga atas kanan (opsional)",
+        },
+        {
+          kind: "image",
+          key: "flower_left_image",
+          label: "Bunga bawah kiri (opsional)",
+        },
+        {
+          kind: "image",
+          key: "flower_right_image",
+          label: "Bunga bawah kanan (opsional)",
+        },
       ],
       styleOptions: [
         {
@@ -172,7 +236,8 @@ export const heroSection: SectionDefinition = {
     },
     floating17: {
       name: "Sage Melayang",
-      description: "Nama bertumpuk, partikel emas, dan ornamen dua lapis bergerak",
+      description:
+        "Nama bertumpuk, partikel emas, dan ornamen dua lapis bergerak",
       component: HeroFloating17,
       propsSchema: HeroProps,
       fields: [
@@ -200,7 +265,10 @@ export const heroSection: SectionDefinition = {
       description: "Foto arch dengan bingkai sudut",
       component: HeroArch,
       propsSchema: HeroProps,
-      fields: [...heroBase, { kind: "image", key: "background_image", label: "Foto" }],
+      fields: [
+        ...heroBase,
+        { kind: "image", key: "background_image", label: "Foto" },
+      ],
       styleOptions: [
         {
           key: "frame",

@@ -3,6 +3,7 @@ import { EventCinematicVintage } from "./event-cinematic-vintage";
 export { EventCinematicVintage };
 import { EventDetailsProps } from "../schema";
 import { eventsArray, nowPlus } from "../fields";
+import { EventGerbangPuspa } from "./event-gerbang-puspa";
 import { EventTimeline } from "./event-timeline";
 import { EventCards } from "./event-cards";
 import { EventFormal } from "./event-formal";
@@ -23,12 +24,37 @@ const introField = {
   label: "Kalimat pembuka (opsional)",
 };
 
-const maps = "https://www.google.com/maps/search/?api=1&query=-6.914744,107.609810";
+const maps =
+  "https://www.google.com/maps/search/?api=1&query=-6.914744,107.609810";
 
 const sampleEvents = [
-  { name: "Akad Nikah", date: nowPlus(45), start_time: "08:00", end_time: "10:00", venue_name: "Masjid Al-Falah", address: "Jl. Melati No. 10, Bandung", maps_url: maps },
-  { name: "Resepsi", date: nowPlus(45), start_time: "11:00", end_time: "14:00", venue_name: "Gedung Serbaguna Graha Melati", address: "Jl. Melati No. 12, Bandung", maps_url: maps },
-  { name: "Unduh Mantu", date: nowPlus(46), start_time: "10:00", end_time: "13:00", venue_name: "Kediaman Mempelai Pria", address: "Jl. Kenanga No. 5, Bandung", maps_url: maps },
+  {
+    name: "Akad Nikah",
+    date: nowPlus(45),
+    start_time: "08:00",
+    end_time: "10:00",
+    venue_name: "Masjid Al-Falah",
+    address: "Jl. Melati No. 10, Bandung",
+    maps_url: maps,
+  },
+  {
+    name: "Resepsi",
+    date: nowPlus(45),
+    start_time: "11:00",
+    end_time: "14:00",
+    venue_name: "Gedung Serbaguna Graha Melati",
+    address: "Jl. Melati No. 12, Bandung",
+    maps_url: maps,
+  },
+  {
+    name: "Unduh Mantu",
+    date: nowPlus(46),
+    start_time: "10:00",
+    end_time: "13:00",
+    venue_name: "Kediaman Mempelai Pria",
+    address: "Jl. Kenanga No. 5, Bandung",
+    maps_url: maps,
+  },
 ];
 
 export const eventsSection: SectionDefinition = {
@@ -38,6 +64,26 @@ export const eventsSection: SectionDefinition = {
   icon: "CalendarClock",
   category: "content",
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      description: "Rangkaian acara berbingkai taman dengan tanggal utama",
+      component: EventGerbangPuspa,
+      propsSchema: EventDetailsProps,
+      fields: [introField, eventsArray],
+      defaultProps: {
+        intro: "",
+        events: [
+          sampleEvents[0],
+          {
+            ...sampleEvents[1],
+            date: sampleEvents[0].date,
+            venue_name: sampleEvents[0].venue_name,
+            address: sampleEvents[0].address,
+          },
+        ],
+      },
+      isPremium: true,
+    },
     "sekar-jawa-3d": {
       name: "Kartu Pendopo",
       description: "Kartu acara ringkas dengan aksen kayu dan emas",
@@ -45,7 +91,8 @@ export const eventsSection: SectionDefinition = {
       propsSchema: EventDetailsProps,
       fields: [introField, eventsArray],
       defaultProps: {
-        intro: "Dengan penuh syukur, kami mengundang Anda merayakan hari bahagia kami.",
+        intro:
+          "Dengan penuh syukur, kami mengundang Anda merayakan hari bahagia kami.",
         events: [sampleEvents[0], sampleEvents[1]],
       },
       isPremium: true,
@@ -56,7 +103,11 @@ export const eventsSection: SectionDefinition = {
       component: EventCinematicVintage,
       propsSchema: EventDetailsProps,
       fields: [introField, eventsArray],
-      defaultProps: { events: [sampleEvents[0], sampleEvents[1]], intro: "Dengan penuh syukur, kami mengundang Anda merayakan hari bahagia kami." },
+      defaultProps: {
+        events: [sampleEvents[0], sampleEvents[1]],
+        intro:
+          "Dengan penuh syukur, kami mengundang Anda merayakan hari bahagia kami.",
+      },
       isPremium: true,
     },
     timeline: {

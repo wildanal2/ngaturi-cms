@@ -17,6 +17,8 @@ import {
 } from "@/sections/cinematic/content";
 import { SekarJawa3DComposition } from "@/sections/sekar-jawa-3d/composition";
 import { sekarJawa3DContent } from "@/sections/sekar-jawa-3d/content";
+import { GerbangPuspaPresentation } from "@/sections/gerbang-puspa/opening";
+import { hasGerbangPuspa } from "@/sections/gerbang-puspa/content";
 
 const OVERLAY_TYPES = new Set(["music", "navigation"]);
 
@@ -53,6 +55,7 @@ export function Canvas({ invitationId }: { invitationId: string }) {
     ? cinematicContent(ordered, true).siblingTypes
     : ordered.map((s) => s.type);
   const flow = getBuilderFlow(ordered, composition);
+  const gerbangPuspa = composition === "standard" && hasGerbangPuspa(ordered);
   // music + navigation float over the device viewport (pinned, non-scrolling)
   // exactly like the live page. In the section flow they get a slim
   // placeholder block so they stay visible & selectable.
@@ -152,154 +155,168 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   return (
     <div className="min-h-full px-6 py-8">
       <DeviceFrame preset={preset} overlay={floatingOverlay}>
-        <div
-          ref={scrollRef}
-          className={
-            cinematicVintage
-              ? `cinematic-invitation mx-auto max-w-lg ${cinematicStyles.invitationRoot}`
-              : undefined
-          }
-          style={invitationRootStyle(global)}
+        <GerbangPuspaPresentation
+          enabled={gerbangPuspa}
+          sections={ordered}
+          inCanvas
         >
-          {ordered.length === 0 ? (
-            <div className="p-12 text-center text-sm text-muted">
-              Belum ada bagian. Tambahkan dari panel kiri atau tombol di bawah.
-            </div>
-          ) : null}
+          <div
+            ref={scrollRef}
+            className={
+              cinematicVintage
+                ? `cinematic-invitation mx-auto max-w-lg ${cinematicStyles.invitationRoot}`
+                : undefined
+            }
+            style={invitationRootStyle(global)}
+          >
+            {ordered.length === 0 ? (
+              <div className="p-12 text-center text-sm text-muted">
+                Belum ada bagian. Tambahkan dari panel kiri atau tombol di
+                bawah.
+              </div>
+            ) : null}
 
-          {cinematicVintage
-            ? ordered
-                .filter((s) => (s.type === "loading" || s.type === "cover") && s.visible !== false)
-                .sort((a, b) => Number(a.type === "cover") - Number(b.type === "cover"))
-                .map((section) => {
-                  const Component = getVariant(
-                    section.type,
-                    section.variant,
-                  )?.component;
-                  return Component ? (
-                    <div
-                      key={section.id}
-                      data-section-id={section.id}
-                      onClickCapture={selectHandler(section.id)}
-                    >
-                      <Component
-                        props={section.props}
-                        global={global}
-                        invitationId={invitationId}
-                        isPreview
-                        inCanvas
-                        siblingTypes={siblingTypes}
-                      />
-                    </div>
-                  ) : null;
-                })
-            : null}
-          {cinematicVintage ? (
-            <CinematicComposition
-              sections={ordered}
-              global={global}
-              invitationId={invitationId}
-              isPreview
-              inCanvas
-              siblingTypes={siblingTypes}
-              selectedId={selectedId}
-              onSelect={(id) => {
-                clickInCanvas.current = true;
-                select(id);
-              }}
-              compositionActive
-            />
-          ) : null}
-          {sekarJawa3D ? (
-            <SekarJawa3DComposition
-              sections={ordered}
-              global={global}
-              invitationId={invitationId}
-              isPreview
-              inCanvas
-              siblingTypes={siblingTypes}
-              selectedId={selectedId}
-              onSelect={(id) => {
-                clickInCanvas.current = true;
-                select(id);
-              }}
-            />
-          ) : null}
-          {flow.map((section) => {
-            const variant = getVariant(
-              section.type,
-              cinematicVintage ? cinematicVariant(section) : section.variant,
-            );
-            const def = SectionRegistry[section.type];
-            const selected = selectedId === section.id;
-            if (!variant) return null;
-            const Component = variant.component;
+            {cinematicVintage
+              ? ordered
+                  .filter(
+                    (s) =>
+                      (s.type === "loading" || s.type === "cover") &&
+                      s.visible !== false,
+                  )
+                  .sort(
+                    (a, b) =>
+                      Number(a.type === "cover") - Number(b.type === "cover"),
+                  )
+                  .map((section) => {
+                    const Component = getVariant(
+                      section.type,
+                      section.variant,
+                    )?.component;
+                    return Component ? (
+                      <div
+                        key={section.id}
+                        data-section-id={section.id}
+                        onClickCapture={selectHandler(section.id)}
+                      >
+                        <Component
+                          props={section.props}
+                          global={global}
+                          invitationId={invitationId}
+                          isPreview
+                          inCanvas
+                          siblingTypes={siblingTypes}
+                        />
+                      </div>
+                    ) : null;
+                  })
+              : null}
+            {cinematicVintage ? (
+              <CinematicComposition
+                sections={ordered}
+                global={global}
+                invitationId={invitationId}
+                isPreview
+                inCanvas
+                siblingTypes={siblingTypes}
+                selectedId={selectedId}
+                onSelect={(id) => {
+                  clickInCanvas.current = true;
+                  select(id);
+                }}
+                compositionActive
+              />
+            ) : null}
+            {sekarJawa3D ? (
+              <SekarJawa3DComposition
+                sections={ordered}
+                global={global}
+                invitationId={invitationId}
+                isPreview
+                inCanvas
+                siblingTypes={siblingTypes}
+                selectedId={selectedId}
+                onSelect={(id) => {
+                  clickInCanvas.current = true;
+                  select(id);
+                }}
+              />
+            ) : null}
+            {flow.map((section) => {
+              const variant = getVariant(
+                section.type,
+                cinematicVintage ? cinematicVariant(section) : section.variant,
+              );
+              const def = SectionRegistry[section.type];
+              const selected = selectedId === section.id;
+              if (!variant) return null;
+              const Component = variant.component;
 
-            if (OVERLAY_TYPES.has(section.type)) {
-              const isMusic = section.type === "music";
+              if (OVERLAY_TYPES.has(section.type)) {
+                const isMusic = section.type === "music";
+                return (
+                  <div
+                    key={section.id}
+                    data-section-id={section.id}
+                    onClickCapture={selectHandler(section.id)}
+                    className={`relative cursor-pointer border-y border-dashed px-4 py-3 text-center transition-colors ${
+                      selected
+                        ? "border-forest bg-forest/5"
+                        : "border-black/15 bg-black/[0.02] hover:border-forest/40"
+                    } ${section.visible === false ? "opacity-40" : ""}`}
+                  >
+                    <p className="text-[11px] font-medium text-black/55">
+                      {isMusic ? "🎵" : "🧭"} {def?.name ?? section.type} ·{" "}
+                      {variant.name}
+                    </p>
+                    <p className="text-[10px] text-black/40">
+                      {isMusic
+                        ? (section.props?.track_title as string) ||
+                          "Belum ada lagu dipilih"
+                        : "Menu mengambang"}{" "}
+                      — tampil mengambang di atas undangan
+                    </p>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={section.id}
                   data-section-id={section.id}
                   onClickCapture={selectHandler(section.id)}
-                  className={`relative cursor-pointer border-y border-dashed px-4 py-3 text-center transition-colors ${
-                    selected
-                      ? "border-forest bg-forest/5"
-                      : "border-black/15 bg-black/[0.02] hover:border-forest/40"
-                  } ${section.visible === false ? "opacity-40" : ""}`}
+                  className={`group relative cursor-pointer ${
+                    section.visible ? "" : "opacity-40"
+                  }`}
                 >
-                  <p className="text-[11px] font-medium text-black/55">
-                    {isMusic ? "🎵" : "🧭"} {def?.name ?? section.type} ·{" "}
-                    {variant.name}
-                  </p>
-                  <p className="text-[10px] text-black/40">
-                    {isMusic
-                      ? (section.props?.track_title as string) ||
-                        "Belum ada lagu dipilih"
-                      : "Menu mengambang"}{" "}
-                    — tampil mengambang di atas undangan
-                  </p>
+                  <div
+                    className={`pointer-events-none absolute inset-0 z-10 border-2 transition-colors ${
+                      selected
+                        ? "border-forest"
+                        : "border-transparent group-hover:border-forest/40"
+                    }`}
+                  />
+                  {selected ? (
+                    <span className="absolute top-1 left-1 z-20 rounded bg-forest px-1.5 py-0.5 text-[10px] text-cream">
+                      {def?.name ?? section.type}
+                    </span>
+                  ) : null}
+                  <Component
+                    props={section.props}
+                    global={global}
+                    invitationId={invitationId}
+                    isPreview
+                    inCanvas
+                    siblingTypes={siblingTypes}
+                  />
                 </div>
               );
-            }
+            })}
 
-            return (
-              <div
-                key={section.id}
-                data-section-id={section.id}
-                onClickCapture={selectHandler(section.id)}
-                className={`group relative cursor-pointer ${
-                  section.visible ? "" : "opacity-40"
-                }`}
-              >
-                <div
-                  className={`pointer-events-none absolute inset-0 z-10 border-2 transition-colors ${
-                    selected
-                      ? "border-forest"
-                      : "border-transparent group-hover:border-forest/40"
-                  }`}
-                />
-                {selected ? (
-                  <span className="absolute top-1 left-1 z-20 rounded bg-forest px-1.5 py-0.5 text-[10px] text-cream">
-                    {def?.name ?? section.type}
-                  </span>
-                ) : null}
-                <Component
-                  props={section.props}
-                  global={global}
-                  invitationId={invitationId}
-                  isPreview
-                  inCanvas
-                  siblingTypes={siblingTypes}
-                />
-              </div>
-            );
-          })}
-
-          <p className="py-3 text-center text-[11px] text-black/40">
-            Dibuat dengan Ngaturi
-          </p>
-        </div>
+            <p className="py-3 text-center text-[11px] text-black/40">
+              Dibuat dengan Ngaturi
+            </p>
+          </div>
+        </GerbangPuspaPresentation>
       </DeviceFrame>
 
       <div className="mx-auto mt-4 max-w-[400px]">

@@ -1,0 +1,102 @@
+.location {
+  min-height: 0;
+  padding-top: 40px;
+  padding-bottom: 60px;
+  background-image:
+    linear-gradient(rgba(255, 251, 243, 0.78), rgba(255, 244, 224, 0.78)),
+    url("/themes/gerbang-puspa/stationery-background.svg");
+}
+.locationCard {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+  border-radius: 16px;
+  padding: 24px;
+  background: var(--gp-cream)
+    url("/themes/gerbang-puspa/stationery-background.svg") center / cover;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  color: #271d1c;
+  overflow-wrap: anywhere;
+}
+.addressBlock h2 {
+  font:
+    400 24px/28.8px var(--gp-font-display),
+    serif;
+  color: var(--gp-maroon);
+  margin-bottom: 16px;
+}
+.addressBlock strong {
+  display: block;
+  font-size: 13px;
+  line-height: 19.5px;
+}
+.addressBlock p {
+  font-size: 12px;
+  line-height: 18px;
+  white-space: pre-line;
+}
+.map {
+  display: block;
+  width: 100%;
+  height: 240px;
+  margin-top: 20px;
+  border: 1px solid var(--gp-maroon);
+  border-radius: 10px;
+}
+.fallback {
+  margin-top: 20px !important;
+  font-size: 13px;
+}
+.mapButton {
+  display: block;
+  border: 1px solid var(--gp-maroon);
+  border-radius: 9.6px;
+  background: var(--gp-maroon);
+  color: white;
+  font-size: 16px;
+  line-height: 24px;
+  padding: 6px 12px;
+  text-decoration: none;
+  margin-top: 16px;
+}
+.joined {
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  background: none;
+}
+.joined .locationCard {
+  position: absolute;
+  top: var(--gp-map-top);
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--gp-map-width);
+  max-width: none;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+.joined .mapButton {
+  margin: 0;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+/* Both native public and Builder section wrappers retain independent ownership. */
+:global([data-section]):has([data-gerbang-puspa-events]):has(+ div .joined)
+  :global([data-gp-event-map]),
+:global(div):has(> div[data-section="event-details"]):has(+ div .joined)
+  :global([data-gp-event-map]),
+:global([data-section-id]):has([data-gerbang-puspa-events]):has(+ div .joined)
+  :global([data-gp-event-map]) {
+  visibility: hidden;
+  pointer-events: none;
+}

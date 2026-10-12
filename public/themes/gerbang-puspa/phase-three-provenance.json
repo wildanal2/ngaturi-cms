@@ -1,0 +1,22 @@
+{
+  "phase": 3,
+  "template_id": "gerbang-puspa",
+  "assets": [
+    {
+      "path": "bank-placeholder.svg",
+      "bytes": 594,
+      "sha256": "d454ffb087459fea4b5a6b9b7ee08d72f6dd1a645f8065b9d6ec30100f5ae110",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    }
+  ],
+  "audio": "No audio shipped; native invitation data only. Local comparison uses original silent WAV outside repository.",
+  "excluded": [
+    "vendor artwork",
+    "vendor photographs",
+    "Against/English111 binaries",
+    "vendor monogram",
+    "blocked audio/video"
+  ]
+}
