@@ -1,9 +1,11 @@
+import { GuestbookCinematicVintage } from "./guestbook-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { GuestbookProps } from "../schema";
 import { GuestbookCards } from "./guestbook-cards";
 import { GuestbookChat } from "./guestbook-chat";
+import { GuestbookSerambiDelima } from "./guestbook-serambi-delima";
 
-export { GuestbookCards, GuestbookChat };
+export { GuestbookCards, GuestbookChat, GuestbookSerambiDelima };
 
 export const guestbookSection: SectionDefinition = {
   type: "guestbook",
@@ -32,4 +34,18 @@ export const guestbookSection: SectionDefinition = {
       defaultProps: { require_approval: true },
     },
   },
+};
+
+guestbookSection.variants["cinematic-vintage"] = {
+  ...guestbookSection.variants["chat"],
+  name: "Cinematic Vintage",
+  component: GuestbookCinematicVintage,
+};
+
+guestbookSection.variants["serambi-delima"] = {
+  ...guestbookSection.variants.chat,
+  name: "Serambi Delima",
+  description: "Ucapan dan doa dalam kartu gading dengan detail emas",
+  component: GuestbookSerambiDelima,
+  isPremium: true,
 };

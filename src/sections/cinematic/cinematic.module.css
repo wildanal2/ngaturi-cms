@@ -5,7 +5,8 @@
 .events {
   color: var(--inv-bg);
   background: var(--inv-primary);
-  font-size: 14px;
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  font-size: 15px;
   line-height: 1.65;
   overflow-wrap: anywhere;
 }
@@ -52,8 +53,8 @@
 .scene {
   position: relative;
   z-index: 2;
-  min-height: 620px;
-  overflow: clip;
+  min-height: min(620px, 100svh);
+  overflow: visible;
 }
 .stage[data-enhanced] .scene {
   position: absolute;
@@ -61,6 +62,10 @@
   min-height: 0;
   display: grid;
   place-items: center;
+}
+.stage[data-enhanced]:not([data-linear]) .scene:not([data-scene="world"]) {
+  /* Keep the bottom of a local reader clear of even a two-line chapter dock. */
+  padding-bottom: 80px;
 }
 .stage[data-enhanced] .body {
   width: 100%;
@@ -74,7 +79,7 @@
   position: relative;
   min-width: 0;
   max-width: 100%;
-  padding: 78px 30px;
+  padding: 58px 24px;
   text-align: center;
 }
 .stage h1,
@@ -113,7 +118,7 @@
 }
 .eyebrow {
   color: var(--cinema-gold-soft, var(--inv-secondary));
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.28em;
   text-transform: uppercase;
@@ -163,6 +168,15 @@
 .frameBody {
   position: relative;
   z-index: 2;
+}
+.coverFrame .frameArt,
+.entranceFrame .frameArt,
+.closingFrame .frameArt {
+  /* Quiet inner scrollwork without cutting the architectural perimeter. */
+  mask-image:
+    url("/themes/cinematic-vintage/frames/heritage.svg"),
+    radial-gradient(ellipse closest-side, transparent 58%, black 95%);
+  mask-composite: intersect;
 }
 .portrait {
   position: relative;
@@ -230,7 +244,7 @@
 }
 .scrollHint {
   margin-top: 24px;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.2em;
   color: var(--cinema-gold-soft, var(--inv-secondary));
   text-transform: uppercase;
@@ -240,7 +254,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   margin-top: 28px;
-  font-size: 11px;
+  font-size: 14px;
 }
 .coupleScene::before {
   content: "";
@@ -259,6 +273,7 @@
   opacity: 0.42;
   transform: translateX(-50%);
 }
+.stage[data-enhanced]:not([data-linear]) .coupleScene::before { display: none; }
 .coupleScene > * {
   position: relative;
   z-index: 1;
@@ -326,8 +341,9 @@
   border: 1px solid var(--cinema-gold-soft, var(--inv-secondary));
   border-radius: 999px;
   color: var(--inv-bg);
-  font-size: 12px;
-  letter-spacing: 0.05em;
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.025em;
   cursor: pointer;
   background: color-mix(in srgb, var(--inv-secondary) 8%, transparent);
   box-shadow:
@@ -371,7 +387,7 @@
   border-top: 1px solid color-mix(in srgb, var(--inv-secondary) 24%, transparent);
 }
 .eventIntro {
-  font-size: 11px;
+  font-size: 14px;
   margin-top: 18px;
 }
 .eventFrame {
@@ -382,7 +398,10 @@
   border-radius: 46% 46% 4px 4px;
 }
 .eventFrame .frameArt {
-  mask-image: url("/themes/cinematic-vintage/frames/event-portal.svg");
+  mask-image:
+    url("/themes/cinematic-vintage/frames/event-portal.svg"),
+    radial-gradient(ellipse closest-side, transparent 58%, black 95%);
+  mask-composite: intersect;
 }
 .akadFrame::before {
   background:
@@ -434,11 +453,11 @@
   padding: 30px;
 }
 .stage[data-enhanced] .eventPanel .frame {
-  width: 78%;
-  padding: 52px 30px 40px;
+  width: 100%;
+  padding: 40px 24px 32px;
 }
 .stage[data-enhanced] .eventPanel {
-  font-size: 11px;
+  font-size: 14px;
 }
 .stage[data-enhanced] .eventPanel h2 {
   font-size: 2rem;
@@ -447,7 +466,7 @@
   font-size: 1.3rem;
 }
 .stage[data-enhanced] .eventPanel .button {
-  font-size: 10px;
+  font-size: 11px;
 }
 .venueArch {
   position: relative;
@@ -460,7 +479,7 @@
   );
   mask: url("/themes/cinematic-vintage/architecture/colonnade.svg") center /
     contain no-repeat;
-  filter: drop-shadow(0 18px 25px color-mix(in srgb, black 38%, transparent));
+  opacity: 0.8;
 }
 .venueScene::before {
   content: "";
@@ -478,6 +497,7 @@
   z-index: 1;
 }
 .closingFrame {
+  z-index: 1;
   padding: 48px 34px 58px;
 }
 .closingFrame .portrait {
@@ -500,91 +520,72 @@
 .backdrop {
   z-index: 0;
   background:
-    radial-gradient(
-      ellipse at 50% 34%,
-      color-mix(in srgb, var(--inv-secondary) 21%, var(--inv-primary)),
-      transparent 48%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--inv-primary) 80%, black),
-      var(--cinema-wine-deep, var(--inv-primary))
-    );
+    radial-gradient(ellipse at 50% 28%, #6a303c44, transparent 56%),
+    linear-gradient(180deg, color-mix(in srgb, var(--inv-primary) 86%, black), var(--cinema-wine-deep, var(--inv-primary)));
 }
 .backdrop::before {
   content: "";
   position: absolute;
   inset: 0;
   background: var(--inv-secondary);
-  mask: url("/themes/cinematic-vintage/backgrounds/damask.svg") center / 150px
-    184px repeat;
-  opacity: 0.07;
+  mask: url("/themes/cinematic-vintage/backgrounds/damask.svg") center / 180px 220px repeat;
+  opacity: 0.09;
 }
 .architecture {
   z-index: 1;
-  inset: 3% 0 0;
+  inset: 18px 4% 24px;
   opacity: 0.24;
-  background: linear-gradient(
-    var(--cinema-gold-soft, var(--inv-secondary)),
-    var(--inv-secondary)
-  );
-  mask: url("/themes/cinematic-vintage/architecture/colonnade.svg") center /
-    cover no-repeat;
+  background: var(--cinema-gold-soft, var(--inv-secondary));
+  mask: url("/themes/cinematic-vintage/architecture/colonnade.svg") center / 100% 100% no-repeat;
 }
 .chandelier {
   z-index: 1;
-  inset: -2% 8% auto;
-  height: 34%;
-  opacity: 0.32;
-  background: linear-gradient(
-    var(--inv-bg),
-    var(--cinema-gold-soft, var(--inv-secondary))
-  );
-  mask: url("/themes/cinematic-vintage/architecture/chandelier.svg") center top /
-    contain no-repeat;
-  filter: drop-shadow(0 10px 18px color-mix(in srgb, var(--inv-bg) 20%, transparent));
+  inset: 0 10% auto;
+  height: clamp(150px, 25vh, 210px);
+  opacity: 0.5;
+  background: var(--cinema-gold-soft, var(--inv-secondary));
+  mask: url("/themes/cinematic-vintage/architecture/chandelier.svg") center top / contain no-repeat;
 }
 .glow {
   z-index: 1;
-  opacity: 0.3;
-  background: color-mix(in srgb, var(--inv-bg) 82%, var(--inv-secondary));
-  mask: url("/themes/cinematic-vintage/effects/glow.svg") center / cover
-    no-repeat;
-  mix-blend-mode: screen;
+  opacity: 0.1;
+  background: var(--inv-secondary);
+  mask: url("/themes/cinematic-vintage/effects/glow.svg") center / cover no-repeat;
 }
 .floralLeft,
 .floralRight {
-  z-index: 4;
-  background: linear-gradient(
-    155deg,
-    var(--cinema-gold-soft, var(--inv-secondary)),
-    color-mix(in srgb, var(--inv-secondary) 62%, var(--inv-primary))
-  );
-  opacity: 0.62;
-  mask: url("/themes/cinematic-vintage/florals/branch.svg") left bottom / 38%
-    76% no-repeat;
-  filter: drop-shadow(0 10px 12px color-mix(in srgb, black 34%, transparent));
+  z-index: 1;
+  background: var(--cinema-gold-soft, var(--inv-secondary));
+  opacity: 0.38;
+  mask: url("/themes/cinematic-vintage/florals/branch.svg") left bottom / clamp(80px, 24cqi, 116px) auto no-repeat;
 }
 .floralRight {
   rotate: 180deg;
 }
 .foregroundFloral {
   z-index: 1;
-  opacity: 0.52;
-  background: linear-gradient(
-    var(--cinema-gold-soft, var(--inv-secondary)),
-    color-mix(in srgb, var(--inv-secondary) 55%, var(--inv-primary))
-  );
-  mask: url("/themes/cinematic-vintage/florals/foreground.svg") center bottom /
-    112% 28% no-repeat;
-  filter: drop-shadow(0 -8px 20px color-mix(in srgb, black 28%, transparent));
+  opacity: 0.4;
+  background: var(--cinema-gold-soft, var(--inv-secondary));
+  mask: url("/themes/cinematic-vintage/florals/foreground.svg") center bottom / 100% auto no-repeat;
 }
 .dust {
-  z-index: 6;
-  opacity: 0.2;
-  background: color-mix(in srgb, var(--inv-secondary) 72%, var(--inv-bg));
-  mask: url("/themes/cinematic-vintage/effects/dust.svg") repeat;
+  z-index: 1;
+  opacity: 0.06;
+  background: var(--inv-secondary);
+  mask: url("/themes/cinematic-vintage/effects/dust.svg") center / 280px 320px repeat;
 }
+/* In linear/reduced-motion mode the architecture keeps viewport proportions;
+   it must not stretch into a single engraving thousands of pixels tall. */
+.stage:not([data-enhanced]) .architecture,
+.stage[data-linear] .architecture {
+  bottom: auto;
+  height: min(900px, 100svh);
+  max-height: calc(100% - 42px);
+}
+.stage:not([data-enhanced]) .chandelier,
+.stage[data-linear] .chandelier { height: 180px; }
+.stage:not([data-enhanced]) .glow,
+.stage[data-linear] .glow { bottom: auto; height: 100svh; max-height: 100%; }
 .cover {
   position: relative;
   isolation: isolate;
@@ -597,7 +598,7 @@
   background: var(--cinema-wine-deep, var(--inv-primary));
 }
 .coverFrame {
-  z-index: 2;
+  z-index: 5;
   padding: 78px 38px;
 }
 .coverFrame::before {
@@ -619,7 +620,7 @@
 }
 .toolbar button {
   min-height: 36px;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.06em;
   border-bottom: 1px solid var(--inv-secondary);
   cursor: pointer;
@@ -674,8 +675,8 @@
     font-size: 1.45rem;
   }
   .foregroundFloral {
-    opacity: 0.4;
-    mask-size: 118% 23%;
+    opacity: 0.34;
+    mask-size: 100% auto;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -698,4 +699,1142 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* One environment, with calmer content-led interaction chapters. */
+.invitationRoot {
+  position: relative;
+  width: 100%;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--inv-primary) 82%, black) !important;
+}
+.invitationRoot[data-cinematic-public]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse at 50% 30%,
+    color-mix(in srgb, var(--inv-secondary) 12%, var(--inv-primary)),
+    color-mix(in srgb, var(--inv-primary) 68%, black)
+  );
+}
+/* The closed gate uses the same document owner as the invitation. Keep the
+   camera out of layout until entry, then dissolve the gate over its first frame. */
+.invitationRoot[data-cinematic-public]:has([data-invitation-cover][data-open="0"]):not(:has(.coverLeaving))
+  > :not(:has([data-invitation-cover])) {
+  display: none;
+}
+.invitationRoot[data-cinematic-public] [data-invitation-cover] {
+  position: relative;
+  inset: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+}
+.invitationRoot[data-cinematic-public] [data-invitation-cover] > div {
+  min-height: 100svh;
+  padding: 0;
+}
+.invitationRoot[data-cinematic-public] [data-invitation-cover]:has(.coverLeaving) {
+  position: fixed;
+  inset: 0;
+}
+.cover {
+  container-type: inline-size;
+  overflow: hidden;
+}
+.coverFrame {
+  max-width: 420px;
+  padding: 62px 34px;
+}
+.coverFrame h1 {
+  font-size: clamp(2.4rem, 11cqi, 4.2rem);
+  line-height: 1.05;
+  text-wrap: balance;
+}
+.coverGreeting {
+  font-size: 14px;
+  opacity: 0.85;
+}
+.coverGuest {
+  margin-top: 8px;
+  font-size: 17px;
+}
+.coverLeaving {
+  animation: openGate 450ms ease-out forwards;
+  pointer-events: none;
+}
+@keyframes openGate {
+  to {
+    opacity: 0;
+    transform: scale(1.025);
+  }
+}
+.heroScene .entranceFrame {
+  overflow: hidden;
+  border-radius: 40% 40% 8px 8px;
+}
+.heroScene .photoCaption {
+  position: relative;
+  inset: auto;
+  padding: 0 0 8px;
+  margin-top: 20px;
+  border-radius: 0;
+  background: none;
+}
+.heroScene [data-hero-photo] {
+  transform-origin: 50% 40%;
+}
+.heroScene h1 {
+  font-size: clamp(2.6rem, 10cqi, 3.7rem);
+  line-height: 1.06;
+}
+.heroScene .portrait {
+  height: clamp(190px, 32svh, 300px);
+}
+.heroDate {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.scrollHint {
+  letter-spacing: 0.12em;
+  margin-top: 12px;
+}
+.coupleGrid {
+  font-size: 14px;
+  gap: 16px;
+}
+.coupleGrid h3 {
+  line-height: 1.12;
+  font-size: 1.9rem;
+}
+.familyLabel {
+  font-size: 13px;
+  opacity: 0.8;
+  margin-top: 6px;
+}
+.familyNames {
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.coupleStacked {
+  grid-template-columns: 1fr;
+  max-width: 330px;
+  margin-inline: auto;
+}
+.coupleStacked .portrait {
+  max-width: 210px;
+  height: 240px;
+  margin-inline: auto;
+}
+.quoteSource {
+  margin-top: 22px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+.quoteFrame {
+  padding: 48px 26px;
+}
+.galleryFrame {
+  max-width: 360px;
+  padding: 28px 22px;
+}
+.galleryCaption {
+  min-height: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.galleryCaption .eyebrow {
+  display: block;
+  margin: 12px 0 8px;
+}
+.memoryImage {
+  position: relative;
+  height: 290px;
+  max-width: 230px;
+  margin-inline: auto;
+  border: 1px solid var(--inv-secondary);
+  overflow: hidden;
+  border-radius: 40% 40% 4px 4px;
+  background: var(--cinema-wine-deep, var(--inv-primary));
+  box-shadow:
+    inset 0 0 0 5px var(--inv-primary),
+    0 16px 30px #0005;
+}
+.memoryPhoto {
+  object-fit: contain;
+}
+.landscapeFrame {
+  max-width: 410px;
+}
+.landscapeImage {
+  height: 220px;
+  max-width: 350px;
+  border-radius: 12% 12% 4px 4px;
+}
+.memoryFallback {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-style: italic;
+  font-size: 28px;
+  color: var(--inv-secondary);
+}
+.eventFrame {
+  max-width: 420px;
+  padding: 42px 26px 32px;
+}
+.stage[data-enhanced] .eventPanel {
+  font-size: 15px;
+}
+.stage[data-enhanced] .eventPanel .button {
+  font-size: 14px;
+}
+.stage[data-enhanced] .galleryPanel,
+.stage[data-enhanced] .eventPanel {
+  padding: 20px;
+}
+.eventSchedule {
+  margin-top: 24px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+.eventSchedule p + p {
+  margin-top: 4px;
+}
+.eventAddress {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.65;
+}
+.eventIntro {
+  font-size: 14px;
+}
+.eventFrame h3 {
+  font-size: 1.55rem;
+}
+.closingScene {
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+.closingFrame {
+  max-width: 400px;
+  padding: 36px 26px 42px;
+}
+.closingScene::after {
+  opacity: 0.25;
+}
+.closingFrame p:not(.eyebrow) {
+  font-size: 15px;
+}
+
+.countdownScene {
+  padding-inline: 18px;
+}
+.countdownFrame {
+  max-width: 440px;
+  padding: 42px 22px;
+}
+.countdownFrame::before {
+  border-radius: 28% 28% 6px 6px;
+  background:
+    radial-gradient(
+      ellipse at 50% 45%,
+      color-mix(in srgb, var(--inv-secondary) 12%, transparent),
+      transparent 70%
+    ),
+    var(--cinema-wine-deep, var(--inv-primary));
+}
+.countdownDate {
+  margin-top: 18px;
+  font-size: 16px;
+}
+.countdownClock {
+  min-height: 94px;
+  display: grid;
+  align-items: center;
+}
+.countdownUnits {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr 0.85fr;
+  align-items: start;
+}
+.countdownUnits > div {
+  min-width: 0;
+  padding: 0 6px;
+}
+.countdownUnits > div + div {
+  border-left: 1px solid
+    color-mix(in srgb, var(--inv-secondary) 30%, transparent);
+}
+.countdownNumber {
+  display: block;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: clamp(2.2rem, 10cqi, 3.5rem);
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1.1;
+}
+.countdownUnit {
+  display: block;
+  margin-top: 9px;
+  font-size: 12px;
+}
+.seconds .countdownNumber {
+  color: color-mix(in srgb, var(--inv-bg) 70%, var(--inv-secondary));
+  font-size: clamp(2rem, 8cqi, 3rem);
+  padding-top: 0.16em;
+}
+.expired {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 28px;
+  line-height: 1.4;
+}
+
+.interactionSequence {
+  --cinema-gold-soft: color-mix(
+    in srgb,
+    var(--inv-secondary) 72%,
+    var(--inv-bg)
+  );
+  --cinema-wine-deep: color-mix(in srgb, var(--inv-primary) 82%, black);
+  position: relative;
+  isolation: isolate;
+  color: var(--inv-bg);
+  background: var(--cinema-wine-deep);
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  overflow-wrap: anywhere;
+}
+.salonEnvironment {
+  position: sticky;
+  top: 0;
+  height: var(--salon-height, 100svh);
+  margin-bottom: calc(-1 * var(--salon-height, 100svh));
+  overflow: clip;
+  pointer-events: none;
+  background: var(--cinema-wine-deep);
+  opacity: var(--salon-light, 1);
+}
+.salonEnvironment::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 70px #16061199, inset 0 -60px 100px #16061177;
+}
+/* One heritage surround here, rather than two competing architectural arches. */
+.interactionSequence .architecture { display: none; }
+.interactionSequence .chandelier { height: 90px; opacity: 0.4; }
+.interactionSequence .floralLeft,
+.interactionSequence .floralRight { opacity: 0.24; mask-size: 86px auto; }
+.interactionSequence .foregroundFloral { opacity: 0.22; mask-size: 100% auto; }
+.interactionSequence .dust { opacity: 0.025; }
+.interactionSequence .architecture,
+.interactionSequence .chandelier,
+.interactionSequence .glow,
+.interactionSequence .floralLeft,
+.interactionSequence .floralRight {
+  translate: 0 var(--interaction-depth, 0px);
+}
+.salonArch {
+  position: absolute;
+  inset: 48px 4% 50px;
+  background: var(--cinema-gold-soft, var(--inv-secondary));
+  mask: url("/themes/cinematic-vintage/frames/heritage.svg") center / 100% 100% no-repeat;
+  opacity: 0.22;
+  translate: 0 var(--interaction-depth, 0px);
+}
+.salonLight {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 26%, #e3c08d0d, transparent 58%);
+  opacity: var(--salon-light, 1);
+  transition: opacity 300ms ease, background-color 400ms ease;
+}
+.interactionSequence[data-salon-chapter="gift"] .salonLight { background-color: #c4a56c06; }
+.interactionSequence[data-salon-chapter="guestbook"] .salonLight { background-color: #2d081511; }
+.interactionScene {
+  position: relative;
+  padding-block: 32px;
+}
+.interactionScene + .interactionScene::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 20%;
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c4a56c60, transparent);
+}
+.interactionScene .chapterHeading { padding-inline: 8px; }
+.interactionScene .chapterHeading::after {
+  content: "";
+  display: block;
+  width: 70px;
+  height: 10px;
+  margin: 22px auto 0;
+  background: var(--inv-secondary);
+  mask: url("/themes/cinematic-vintage/frames/heritage.svg") center / 100% 100% no-repeat;
+  opacity: 0.65;
+}
+.rsvpChapter { padding-top: 100px; }
+.parchment.invitationPaper {
+  border-radius: 3px;
+  border-color: #b89c6766;
+  background: linear-gradient(110deg, #fff9ed66, transparent 65%), var(--inv-bg);
+  box-shadow: 0 4px 0 -1px #d0bfa4, 0 7px 0 -2px #f1e7d5bb, 0 22px 55px #16061188;
+}
+.parchment.giftLetter {
+  max-width: 380px;
+  border-radius: 2px;
+  border-top: 3px double #957747;
+  background: linear-gradient(150deg, #fff9ef88, transparent 30%), var(--inv-bg);
+}
+.parchment.giftLetter::before { width: 36px; margin-bottom: 22px; }
+.interactionScene:last-child { padding-bottom: 100px; }
+@media (prefers-reduced-motion: reduce) {
+  .interactionSequence [data-depth], .salonArch { translate: none; }
+  .salonLight { transition: none; opacity: 1; }
+  .salonEnvironment { opacity: 1; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .salonEnvironment { position: absolute; inset: 0; height: 100%; margin: 0; opacity: 1; }
+  .salonArch, .interactionSequence [data-depth] { translate: none; }
+}
+.interactionContent {
+  position: relative;
+  z-index: 5;
+}
+.interactionChapter {
+  padding: 64px 22px;
+}
+.interactionChapter + .interactionChapter {
+  padding-top: 32px;
+}
+.chapterHeading {
+  text-align: center;
+  max-width: 390px;
+  margin: 0 auto 28px;
+}
+.chapterHeading h2 {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: clamp(2.2rem, 9vw, 3rem);
+  font-weight: 400;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.chapterHeading > p:last-child {
+  margin-top: 18px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+.parchment {
+  position: relative;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 30px 24px;
+  color: #301923;
+  background:
+    linear-gradient(125deg, #fff7e966, transparent 45%), var(--inv-bg);
+  border: 1px solid var(--inv-secondary);
+  border-radius: 28px 28px 3px 3px;
+  box-shadow: 0 20px 40px #0003;
+  text-shadow: none;
+}
+.parchment::before {
+  content: "";
+  display: block;
+  width: 66px;
+  height: 2px;
+  margin: 0 auto 28px;
+  background: linear-gradient(90deg, transparent, #957747, transparent);
+}
+.cinematicForm {
+  display: grid;
+  gap: 22px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.cinematicForm label {
+  display: block;
+  font-weight: 500;
+}
+.cinematicForm input:not([type="radio"]):not([hidden]),
+.cinematicForm textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid #78505b80;
+  border-radius: 5px;
+  background: #fffaf0;
+  color: #301923;
+  font: inherit;
+  font-weight: 400;
+}
+.cinematicForm textarea {
+  resize: none;
+  overflow: hidden;
+}
+.cinematicForm input:focus-visible,
+.cinematicForm textarea:focus-visible {
+  outline: 2px solid var(--inv-primary);
+  outline-offset: 3px;
+}
+.attendance {
+  border: 0;
+  min-width: 0;
+}
+.attendance legend {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.attendance > div {
+  display: grid;
+  gap: 8px;
+}
+.attendance label {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #78505b50;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.attendance label:has(input:checked) {
+  border-color: var(--inv-primary);
+  background: color-mix(in srgb, var(--inv-primary) 7%, var(--inv-bg));
+}
+.attendance input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  accent-color: var(--inv-primary);
+}
+.fieldHelp {
+  display: block;
+  margin-top: 8px;
+  color: #664652;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.optional {
+  font-size: 13px;
+  font-weight: 400;
+}
+.submitButton,
+.paperButton {
+  min-height: 48px;
+  padding: 12px 18px;
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.submitButton {
+  width: 100%;
+  background: var(--inv-primary);
+  border: 1px solid var(--inv-primary);
+  color: #fff8ec;
+}
+.submitButton:hover {
+  background: color-mix(in srgb, var(--inv-primary) 85%, black);
+}
+.submitButton:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.paperButton {
+  border: 1px solid #79565b;
+  color: #521c2b;
+  background: transparent;
+}
+.paperButton:hover {
+  background: #521c2b0c;
+}
+.paperButton:focus-visible,
+.submitButton:focus-visible,
+.giftDisclosure summary:focus-visible {
+  outline: 2px solid var(--inv-secondary);
+  outline-offset: 4px;
+}
+.formError {
+  color: #8a2339;
+  border-left: 2px solid #8a2339;
+  padding-left: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.confirmation {
+  padding: 18px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.confirmation h3 {
+  margin: 12px 0;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 34px;
+}
+.confirmationMark {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #957747;
+  border-radius: 50%;
+}
+.attendanceSummary {
+  margin-top: 20px;
+  font-size: 15px;
+}
+.giftChapter {
+  padding-block: 48px;
+}
+.giftDisclosure {
+  max-width: 420px;
+  margin: auto;
+}
+.giftDisclosure summary {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 18px;
+  border: 1px solid var(--inv-secondary);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  list-style: none;
+}
+.giftDisclosure summary::-webkit-details-marker {
+  display: none;
+}
+.giftDisclosure[open] summary {
+  margin-bottom: 24px;
+}
+.giftDisclosure[open] summary span {
+  rotate: 180deg;
+}
+.giftAccount + .giftAccount {
+  border-top: 1px solid #95774755;
+  padding-top: 24px;
+  margin-top: 16px;
+}
+.giftAccount h3 {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 25px;
+}
+.giftAccount p {
+  margin-top: 4px;
+  font-size: 14px;
+}
+.accountAction {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+.accountNumber {
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.copyFeedback {
+  min-height: 24px;
+  color: #664652;
+}
+.guestbookPage {
+  border-radius: 4px 24px 4px 4px;
+  box-shadow:
+    -5px 0 0 #c4a56c44,
+    0 20px 40px #0003;
+}
+.parchment.guestbookPage {
+  border-radius: 2px 10px 3px 3px;
+  background: linear-gradient(90deg, #cab48d35 0 12px, transparent 12px), var(--inv-bg);
+  box-shadow: -4px 0 0 #ba986144, -7px 0 0 #704b4233, 0 22px 55px #16061188;
+}
+.guestbookEntries {
+  margin-top: 32px;
+  border-top: 1px solid #95774766;
+  padding-top: 24px;
+}
+.guestbookEntries ul {
+  list-style: none;
+  padding: 0;
+}
+.guestbookEntry {
+  padding-bottom: 22px;
+}
+.guestbookEntry + .guestbookEntry {
+  border-top: 1px solid #95774755;
+  padding-top: 22px;
+}
+.guestbookEntry h3 {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 25px;
+  line-height: 1.25;
+}
+.guestbookEntry p {
+  margin-top: 10px;
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.emptyGuestbook {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 24px;
+  font-style: italic;
+  line-height: 1.5;
+  text-align: center;
+  padding-block: 12px;
+}
+.interactionSequence [data-selected="true"] {
+  outline: 1px dashed var(--inv-secondary);
+  outline-offset: -8px;
+}
+
+.cinematicDock {
+  position: fixed;
+  z-index: 40;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  left: 50%;
+  width: min(calc(100% - 24px), 464px);
+  transform: translateX(-50%);
+  color: #faf3e7;
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+}
+.cinematicDock[data-in-canvas] {
+  position: absolute;
+}
+.dockInner {
+  position: relative;
+  display: flex;
+  justify-content: space-around;
+  padding: 6px;
+  border: 1px solid #c4a56c66;
+  border-radius: 22px;
+  background: #38111fef;
+  box-shadow: 0 10px 30px #0005;
+  backdrop-filter: blur(12px);
+}
+.dockInner > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 29%;
+  min-width: 0;
+  min-height: 52px;
+  padding: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 14px;
+  cursor: pointer;
+}
+.dockInner > button span {
+  overflow-wrap: anywhere;
+}
+.dockInner > button svg {
+  flex-shrink: 0;
+}
+.dockInner > button:hover:not(:disabled) {
+  color: #e5c994;
+}
+.dockInner > button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.pagerCurrent {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  color: #e5c994;
+  padding: 4px 6px;
+}
+.pagerCurrent strong {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1.15;
+  text-wrap: balance;
+  letter-spacing: 0.04em;
+}
+.pagerCurrent::after {
+  content: "";
+  width: 32px;
+  height: 1px;
+  margin-top: 7px;
+  background: linear-gradient(90deg, transparent, #c4a56c, transparent);
+}
+.dockInner { --chapter-shift: 8px; border-radius: 18px; }
+.dockInner[data-direction="backward"] { --chapter-shift: -8px; }
+.dockInner > button { --chapter-shift: 4px; color: #f1e7d5bf; }
+.dockInner[data-direction="backward"] > button { --chapter-shift: -4px; }
+.chapterLabel { position: relative; display: inline-block; }
+.labelEntering { display: block; animation: chapterEnter 220ms ease both; }
+.labelLeaving { position: absolute; inset: 0; animation: chapterLeave 220ms ease both; }
+@keyframes chapterEnter { from { opacity: 0; translate: var(--chapter-shift) 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes chapterLeave { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: calc(-1 * var(--chapter-shift)) 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .labelEntering, .labelLeaving { animation: none; }
+  .labelLeaving { display: none; }
+}
+.cinematicDock button:focus-visible,
+.musicButton:focus-visible {
+  outline: 2px solid #e5c994;
+  outline-offset: 2px;
+}
+.musicControl {
+  position: fixed;
+  z-index: 40;
+  bottom: calc(108px + env(safe-area-inset-bottom));
+  right: max(16px, calc((100vw - 512px) / 2 + 16px));
+  color: #faf3e7;
+}
+.musicControl[data-side="left"] {
+  right: auto;
+  left: max(16px, calc((100vw - 512px) / 2 + 16px));
+}
+.musicControl[data-in-canvas] {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  left: auto;
+  transform: translateY(-80px);
+}
+.musicButton {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid #c4a56c;
+  border-radius: 50%;
+  background: #38111f;
+  box-shadow: 0 8px 22px #0005;
+  cursor: pointer;
+}
+.musicButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.record {
+  border-radius: 50%;
+  overflow: hidden;
+  opacity: 0.75;
+}
+.record > span {
+  background: repeating-radial-gradient(
+    circle,
+    #38111f 0 3px,
+    #c4a56c44 4px,
+    #38111f 5px
+  );
+}
+.record > span > span:first-child {
+  opacity: 0;
+}
+.musicGlyph {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  background: #38111f;
+  border: 1px solid #c4a56c88;
+  border-radius: 50%;
+}
+:global(
+    .cinematic-invitation:has(
+      form input:not([type="radio"]):focus,
+      form textarea:focus
+    )
+  )
+  .cinematicDock,
+:global(
+    .cinematic-invitation:has(
+      form input:not([type="radio"]):focus,
+      form textarea:focus
+    )
+  )
+  .musicControl {
+  visibility: hidden;
+}
+
+/* Tall chapters traverse on the owner while their cinematic scene holds. */
+.stage[data-enhanced]:not([data-linear]) .scene[data-cinematic-tall] > .body {
+  justify-content: flex-start;
+}
+.stage[data-enhanced]:not([data-linear]) .scene[data-cinematic-tall] > .body > * {
+  flex-shrink: 0;
+}
+.stage[data-enhanced]:not([data-linear]) .storyMemory[data-cinematic-tall],
+.stage[data-enhanced]:not([data-linear]) .eventPanel[data-cinematic-tall],
+.stage[data-enhanced]:not([data-linear]) .galleryPanel[data-cinematic-tall] {
+  align-self: flex-start;
+}
+.stage[data-enhanced]:not([data-linear]) .scene[data-scene="story"][data-cinematic-tall] .storyMemory {
+  align-self: start;
+}
+
+/* Whole-stage linear fallback is reserved for short landscape viewports. */
+.stage[data-linear] {
+  height: auto !important;
+}
+.stage[data-linear] .viewport {
+  position: relative;
+  height: auto;
+  overflow: visible;
+}
+.stage[data-linear] .scene {
+  position: relative;
+  display: block;
+  min-height: 0;
+  overflow: visible;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.stage[data-linear] .body {
+  height: auto;
+  display: block;
+}
+.stage[data-linear] .closingScene {
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+.stage[data-linear] .scene *,
+.stage[data-linear] [data-depth] {
+  transform: none !important;
+}
+.stage[data-linear] .worldCamera,
+.stage[data-linear] .worldRail {
+  position: relative;
+  height: auto;
+  display: block;
+}
+.stage[data-linear] .galleryPanel,
+.stage[data-linear] .eventPanel {
+  padding: 24px 18px;
+}
+.stage[data-linear] .progress {
+  display: none;
+}
+@container (max-width: 380px) {
+  .coupleGrid {
+    grid-template-columns: 1fr;
+    max-width: 310px;
+    margin-inline: auto;
+  }
+  .coupleGrid .portrait {
+    max-width: 200px;
+    height: 220px;
+    margin-inline: auto;
+  }
+  .countdownFrame {
+    padding-inline: 12px;
+  }
+  .countdownUnits > div {
+    padding-inline: 4px;
+  }
+  .countdownUnit {
+    font-size: 12px;
+  }
+  .frameArt {
+    opacity: 0.85;
+  }
+}
+@media (max-width: 380px) {
+  .interactionChapter {
+    padding-inline: 16px;
+  }
+  .parchment {
+    padding: 26px 18px;
+  }
+}
+@media (max-height: 560px) {
+  .cover,
+  .body {
+    padding-block: 28px;
+  }
+  .coverFrame {
+    padding-block: 32px;
+  }
+  .scene {
+    min-height: 0;
+  }
+  .venueArch {
+    height: 130px;
+    margin-bottom: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coverLeaving,
+  .musicControl * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.body,
+.gallery,
+.events {
+  background: transparent;
+}
+.interactionContent > section + section .interactionChapter {
+  padding-top: 32px;
+}
+.paperButton:focus-visible,
+.submitButton:focus-visible,
+.attendance label:has(input:focus-visible),
+.confirmation:focus-visible {
+  outline: 2px solid var(--inv-primary);
+  outline-offset: 4px;
+}
+
+/* Ornament stays behind photography and reading surfaces. Gallery deliberately
+   uses the quietest environment so framed photographs own the scene. */
+.stage .scene:not([data-scene="world"]),
+.stage[data-active-section="event-details"] .scene[data-scene="world"] {
+  z-index: 5;
+}
+.stage .floralLeft,
+.stage .floralRight,
+.stage .foregroundFloral,
+.stage .chandelier,
+.stage .architecture {
+  transition: opacity 450ms ease-out;
+}
+.cover .floralLeft,
+.cover .floralRight { opacity: 0.3; }
+.stage[data-active-section="gallery"] .floralLeft,
+.stage[data-active-section="gallery"] .floralRight,
+.stage[data-active-section="gallery"] .foregroundFloral { opacity: 0.14; }
+.stage[data-active-section="gallery"] .architecture { opacity: 0.14; }
+.stage[data-active-section="gallery"] .chandelier,
+.stage[data-active-section="couple-intro"] .chandelier,
+.stage[data-active-section="quote"] .chandelier,
+.stage[data-active-section="story"] .chandelier,
+.stage[data-active-section="countdown"] .chandelier { opacity: 0.28; }
+/* Closing has its own smaller bouquet beside the final portrait. */
+.stage[data-active-section="closing"] .foregroundFloral,
+.stage:has([data-scene="closing"]) .foregroundFloral { opacity: 0; }
+@media (max-height: 430px) {
+  .chandelier,
+  .stage:not([data-enhanced]) .chandelier,
+  .stage[data-linear] .chandelier { height: 110px; inset-inline: 22%; opacity: 0.34; }
+  .interactionSequence .chandelier { height: 80px; }
+  .stage:not([data-enhanced]) .coupleScene::before,
+  .stage[data-linear] .coupleScene::before { height: 90px; opacity: 0.24; }
+  .salonArch { bottom: auto; height: calc(100svh - 96px); }
+  .floralLeft, .floralRight { mask-size: 64px auto; }
+  .interactionSequence .floralLeft,
+  .interactionSequence .floralRight { mask-size: 60px auto; }
+  .foregroundFloral { opacity: 0.24; mask-size: 75% auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage .floralLeft, .stage .floralRight, .stage .foregroundFloral,
+  .stage .chandelier, .stage .architecture { transition: none; }
+}
+
+/* Narrative memories share the camera, while their reading surfaces rest. */
+.storyScene {
+  padding: 24px 20px;
+}
+.storyHeading {
+  margin-bottom: 18px;
+}
+.storyHeading .eyebrow {
+  margin: 0 0 8px;
+}
+.storyHeading h2 {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: clamp(2rem, 8cqi, 2.7rem);
+}
+.storyMemories {
+  display: grid;
+  gap: 28px;
+  width: 100%;
+  min-height: 0;
+}
+.stage[data-enhanced]:not([data-linear]) .storyMemory {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+.stage[data-linear] .storyMemory {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.storyFrame {
+  max-width: 420px;
+  padding: 24px;
+}
+.storyFrame::before {
+  border-radius: 18% 18% 4px 4px;
+}
+.storyFrame .frameBody {
+  text-align: left;
+}
+.storyPhoto {
+  position: relative;
+  width: 100%;
+  height: clamp(120px, 20svh, 180px);
+  border: 1px solid var(--cinema-gold-soft, var(--inv-secondary));
+  border-radius: 18% 18% 2px 2px;
+  overflow: hidden;
+  background: #29121d;
+  margin-bottom: 14px;
+}
+.storyImage {
+  object-fit: contain;
+}
+.storyNarrative {
+  padding: 22px 20px;
+  color: #301923;
+  text-shadow: none;
+  background: linear-gradient(120deg, #fff9ee88, transparent), var(--inv-bg);
+  border-top: 1px solid #b89c6788;
+  box-shadow: 0 5px 0 -2px #cdbda488;
+}
+.storyNarrative h3 {
+  margin: 6px 0 12px;
+  color: #521c2b;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: clamp(1.8rem, 7cqi, 2.2rem);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.storyYear {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #694839;
+  letter-spacing: 0.08em;
+}
+.storyDescription {
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.7;
+}
+@container (max-width: 380px) {
+  .storyScene { padding-inline: 14px; }
+  .storyFrame { padding-inline: 18px; }
+  .storyNarrative { padding-inline: 16px; }
 }

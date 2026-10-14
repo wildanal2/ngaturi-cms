@@ -119,6 +119,13 @@ export const useBuilder = create<BuilderState>()(
 
       addSection: (type, variant, atIndex) =>
         set((s) => {
+          // Older Cinematic invitations have no Story row; adding it starts empty.
+          if (
+            s.compositionPolicy.composition === "cinematic-vintage" &&
+            type === "story" &&
+            variant === "timeline"
+          )
+            variant = "cinematic-vintage";
           const sectionDefinition = SectionRegistry[type];
           const def = sectionDefinition?.variants[variant];
           if (

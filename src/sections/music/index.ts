@@ -1,3 +1,4 @@
+import { MusicCinematicVintage } from "./music-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { MusicProps2 } from "../schema";
 import { musicPickerField, sMusicPosition } from "../fields";
@@ -5,8 +6,9 @@ import { MusicDisc } from "./music-disc";
 import { MusicVinyl } from "./music-vinyl";
 import { MusicBar } from "./music-bar";
 import { MusicPill } from "./music-pill";
+import { MusicSerambiDelima } from "./music-serambi-delima";
 
-export { MusicDisc, MusicVinyl, MusicBar, MusicPill };
+export { MusicDisc, MusicVinyl, MusicBar, MusicPill, MusicSerambiDelima };
 
 export const musicSection: SectionDefinition = {
   type: "music",
@@ -51,4 +53,18 @@ export const musicSection: SectionDefinition = {
       defaultProps: { autoplay: true },
     },
   },
+};
+
+musicSection.variants["cinematic-vintage"] = {
+  ...musicSection.variants["disc"],
+  name: "Cinematic Vintage",
+  component: MusicCinematicVintage,
+};
+
+musicSection.variants["serambi-delima"] = {
+  ...musicSection.variants.pill,
+  name: "Serambi Delima",
+  description: "Tombol musik wine dan emas dengan status putar atau jeda",
+  component: MusicSerambiDelima,
+  isPremium: true,
 };

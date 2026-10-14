@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 210" fill="none">
+  <defs>
+    <linearGradient id="stone" x1="240" y1="0" x2="240" y2="210" gradientUnits="userSpaceOnUse"><stop stop-color="#faf5e9"/><stop offset=".55" stop-color="#eee2cc"/><stop offset="1" stop-color="#dfcdaa"/></linearGradient>
+  </defs>
+  <!-- Original seven-lobed ceremonial arch; transparent opening. -->
+  <path d="M0 0H480V210H451V179C451 153 435 143 417 138C419 114 397 102 378 103C380 78 357 63 337 68C329 44 306 38 289 47C283 25 257 21 240 7C223 21 197 25 191 47C174 38 151 44 143 68C123 63 100 78 102 103C83 102 61 114 63 138C45 143 29 153 29 179V210H0Z" fill="url(#stone)"/>
+  <path d="M17 210V175C17 149 31 131 49 127C49 105 70 88 89 89C91 65 112 50 134 54C146 29 169 24 184 33C192 13 222 13 240 0C258 13 288 13 296 33C311 24 334 29 346 54C368 50 389 65 391 89C410 88 431 105 431 127C449 131 463 149 463 175V210" stroke="#b89b62" stroke-width="1.2"/>
+  <path d="M33 210V181C33 157 49 146 68 142C65 120 85 107 107 108C104 83 124 70 147 73C155 50 174 44 194 53C202 31 223 31 240 16C257 31 278 31 286 53C306 44 325 50 333 73C356 70 376 83 373 108C395 107 415 120 412 142C431 146 447 157 447 181V210" stroke="#fffaf0" stroke-width="3"/>
+  <g stroke="#b89b62" stroke-width="1" opacity=".75">
+    <path d="M11 87C35 82 53 63 55 40C38 43 26 54 24 68C35 67 40 58 37 52M11 87C11 55 23 25 48 13M469 87C445 82 427 63 425 40C442 43 454 54 456 68C445 67 440 58 443 52M469 87C469 55 457 25 432 13"/>
+    <path d="m62 16 5 8-5 8-5-8Zm356 0 5 8-5 8-5-8Z"/>
+  </g>
+</svg>

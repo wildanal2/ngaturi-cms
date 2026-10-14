@@ -6,7 +6,8 @@ vi.mock("@/lib/db", () => ({ db: { transaction: mocks.transaction } }));
 
 import { invitations, payments, userProfiles } from "@/lib/db/schema";
 import type { Database } from "@/lib/db";
-import { applyDokuResult, PaymentResultError } from "./grant";
+import { PaymentResultError } from "./grant";
+import { applyDokuResult } from "./legacy-doku";
 
 function payment(overrides: Record<string, unknown> = {}) {
   return {
@@ -84,7 +85,12 @@ function transactionHarness(
           };
         }
         return {
-          where: () => ({ limit: async () => [storedInvitation] }),
+          where: () => ({
+            limit: () =>
+              Object.assign(Promise.resolve([storedInvitation]), {
+                for: async () => [storedInvitation],
+              }),
+          }),
         };
       },
     }),
@@ -168,7 +174,14 @@ describe("applyDokuResult", () => {
   it.each(["expired", "failed"] as const)(
     "keeps the existing %s state terminal for delayed SUCCESS",
     async (status) => {
-      const storedPayment = payment({ status });
+      const storedPayment = payment({
+        status,
+        rawWebhook: {
+          transaction: {
+            status: status === "expired" ? "EXPIRED" : "CANCELLED",
+          },
+        },
+      });
       const harness = useTransactionHarness(storedPayment);
 
       await expect(
@@ -177,9 +190,10 @@ describe("applyDokuResult", () => {
         status,
         transitioned: false,
         fulfilled: false,
+        reviewRequired: true,
       });
       expect(harness.stats()).toEqual({
-        paymentUpdates: 0,
+        paymentUpdates: 1,
         invitationUpdates: 0,
         profileInserts: 0,
       });

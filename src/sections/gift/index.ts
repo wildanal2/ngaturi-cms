@@ -1,8 +1,10 @@
+import { GiftCinematicVintage } from "./gift-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { GiftProps } from "../schema";
 import { bankLogo, giftFields } from "../fields";
 import { GiftCards } from "./gift-cards";
 import { GiftMinimal } from "./gift-minimal";
+import { GiftSerambiDelima } from "./gift-serambi-delima";
 
 export { GiftCards, GiftMinimal };
 
@@ -53,4 +55,17 @@ export const giftSection: SectionDefinition = {
       },
     },
   },
+};
+
+giftSection.variants["cinematic-vintage"] = {
+  ...giftSection.variants["minimal"],
+  name: "Cinematic Vintage",
+  component: GiftCinematicVintage,
+};
+
+giftSection.variants["serambi-delima"] = {
+  ...giftSection.variants.cards,
+  name: "Serambi Delima",
+  component: GiftSerambiDelima,
+  isPremium: true,
 };

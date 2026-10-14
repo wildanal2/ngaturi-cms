@@ -397,6 +397,7 @@ export const paymentProvider = pgEnum("payment_provider", [
   "xendit",
   "doku",
   "manual",
+  "sumopod",
 ]);
 export const purchaseKind = pgEnum("purchase_kind", [
   "invitation_unlock",

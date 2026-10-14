@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 640" fill="none"><rect width="480" height="640" fill="#f6f1e7" /><rect x="32" y="24" width="416" height="592" rx="2" stroke="#ad8950" /><rect x="65" y="52" width="350" height="364" fill="#722735" /><path d="M86 190v208m308-208v208" stroke="#e6d8bc" stroke-width="15" /><path d="M240 140c-55 27-95 45-95 110v40c0 62 51 87 95 105 44-18 95-43 95-105v-40c0-65-40-83-95-110Z" fill="#562433" stroke="#d8be84" /><g stroke="#d8be84" stroke-width="2"><path d="m227 229-4-15 17 7 17-7-4 15M240 232c-45-12-45 49 0 59 45-10 45-71 0-59Z" /><path d="M226 245c-10 10-9 23-1 31M240 207c1-16 14-21 25-18-4 14-13 18-25 18Z" /></g><text x="240" y="452" fill="#722735" font-family="Georgia,serif" font-size="12" letter-spacing="4" text-anchor="middle">NGATURI</text><text x="240" y="493" fill="#421821" font-family="Georgia,serif" font-size="30" text-anchor="middle">Serambi Delima</text><svg viewBox="0 0 480 210" fill="none" x="65" y="52" width="350" height="153.125">
+  <defs>
+    <linearGradient id="stone" x1="240" y1="0" x2="240" y2="210" gradientUnits="userSpaceOnUse"><stop stop-color="#faf5e9" /><stop offset=".55" stop-color="#eee2cc" /><stop offset="1" stop-color="#dfcdaa" /></linearGradient>
+  </defs>
+  
+  <path d="M0 0H480V210H451V179C451 153 435 143 417 138C419 114 397 102 378 103C380 78 357 63 337 68C329 44 306 38 289 47C283 25 257 21 240 7C223 21 197 25 191 47C174 38 151 44 143 68C123 63 100 78 102 103C83 102 61 114 63 138C45 143 29 153 29 179V210H0Z" fill="url(#stone)" />
+  <path d="M17 210V175C17 149 31 131 49 127C49 105 70 88 89 89C91 65 112 50 134 54C146 29 169 24 184 33C192 13 222 13 240 0C258 13 288 13 296 33C311 24 334 29 346 54C368 50 389 65 391 89C410 88 431 105 431 127C449 131 463 149 463 175V210" stroke="#b89b62" stroke-width="1.2" />
+  <path d="M33 210V181C33 157 49 146 68 142C65 120 85 107 107 108C104 83 124 70 147 73C155 50 174 44 194 53C202 31 223 31 240 16C257 31 278 31 286 53C306 44 325 50 333 73C356 70 376 83 373 108C395 107 415 120 412 142C431 146 447 157 447 181V210" stroke="#fffaf0" stroke-width="3" />
+  <g stroke="#b89b62" stroke-width="1" opacity=".75">
+    <path d="M11 87C35 82 53 63 55 40C38 43 26 54 24 68C35 67 40 58 37 52M11 87C11 55 23 25 48 13M469 87C445 82 427 63 425 40C442 43 454 54 456 68C445 67 440 58 443 52M469 87C469 55 457 25 432 13" />
+    <path d="m62 16 5 8-5 8-5-8Zm356 0 5 8-5 8-5-8Z" />
+  </g>
+</svg><g transform="translate(0 0)"><svg viewBox="0 0 220 240" fill="none" x="36" y="510" width="100" height="108">
+  <defs>
+    <linearGradient id="leafl" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ac5452" /><stop offset="1" stop-color="#631e2d" /></linearGradient>
+    <path id="ll" d="M0 0C-19-4-29-21-23-42C-5-33 5-16 0 0Z" fill="url(#leafl)" />
+    <g id="budl"><path d="M-8-2-5-9 0-6 5-9 8-2" stroke="#8d3a42" stroke-width="2" /><path d="M0-3C-21-8-22 21 0 26C22 21 21-8 0-3Z" fill="#85313e" /><path d="M-5 3C-12 8-11 17-4 20" stroke="#cd8d76" stroke-width="1.5" /></g>
+  </defs>
+  
+  <g stroke="#704037" stroke-width="1.6" stroke-linecap="round">
+    <path d="M4 240C56 202 93 159 109 104C119 73 118 47 110 14M38 211C39 170 23 142 10 119M66 182C97 177 151 151 177 111M90 139C78 109 52 86 37 62M106 111C140 86 170 64 176 24M25 225C70 226 120 217 148 198" />
+    <path d="M102 122C137 123 163 131 187 143M51 201C80 197 118 196 139 174" />
+  </g>
+  <use href="#ll" transform="translate(109 56) rotate(15) scale(.75)" /><use href="#ll" transform="translate(114 78) rotate(115) scale(.85)" />
+  <use href="#ll" transform="translate(108 107) rotate(20)" /><use href="#ll" transform="translate(99 134) rotate(120)" />
+  <use href="#ll" transform="translate(86 160) rotate(0)" /><use href="#ll" transform="translate(68 187) rotate(110)" />
+  <use href="#ll" transform="translate(41 196) rotate(-30) scale(.85)" /><use href="#ll" transform="translate(35 171) rotate(105) scale(.72)" />
+  <use href="#ll" transform="translate(24 146) rotate(-25) scale(.7)" /><use href="#ll" transform="translate(13 126) rotate(40) scale(.55)" />
+  <use href="#ll" transform="translate(69 104) rotate(-15) scale(.8)" /><use href="#ll" transform="translate(53 83) rotate(100) scale(.68)" />
+  <use href="#ll" transform="translate(40 68) rotate(5) scale(.62)" />
+  <use href="#ll" transform="translate(136 87) rotate(20) scale(.8)" /><use href="#ll" transform="translate(154 66) rotate(105) scale(.7)" />
+  <use href="#ll" transform="translate(171 44) rotate(50) scale(.65)" />
+  <use href="#ll" transform="translate(123 157) rotate(20) scale(.85)" /><use href="#ll" transform="translate(147 140) rotate(110) scale(.75)" />
+  <use href="#ll" transform="translate(168 121) rotate(55) scale(.62)" />
+  <use href="#ll" transform="translate(91 220) rotate(70) scale(.78)" /><use href="#ll" transform="translate(120 210) rotate(135) scale(.6)" />
+  <use href="#budl" transform="translate(187 143) rotate(-15) scale(.8)" /><use href="#budl" transform="translate(139 174) scale(.6)" />
+  <g fill="#b18d4d"><circle cx="110" cy="12" r="2.6" /><circle cx="177" cy="23" r="2" /><circle cx="36" cy="60" r="2" /><circle cx="150" cy="197" r="2.5" /></g>
+</svg></g><g transform="translate(480 0) scale(-1 1)"><svg viewBox="0 0 220 240" fill="none" x="36" y="510" width="100" height="108">
+  <defs>
+    <linearGradient id="leafr" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ac5452" /><stop offset="1" stop-color="#631e2d" /></linearGradient>
+    <path id="lr" d="M0 0C-19-4-29-21-23-42C-5-33 5-16 0 0Z" fill="url(#leafr)" />
+    <g id="budr"><path d="M-8-2-5-9 0-6 5-9 8-2" stroke="#8d3a42" stroke-width="2" /><path d="M0-3C-21-8-22 21 0 26C22 21 21-8 0-3Z" fill="#85313e" /><path d="M-5 3C-12 8-11 17-4 20" stroke="#cd8d76" stroke-width="1.5" /></g>
+  </defs>
+  
+  <g stroke="#704037" stroke-width="1.6" stroke-linecap="round">
+    <path d="M4 240C56 202 93 159 109 104C119 73 118 47 110 14M38 211C39 170 23 142 10 119M66 182C97 177 151 151 177 111M90 139C78 109 52 86 37 62M106 111C140 86 170 64 176 24M25 225C70 226 120 217 148 198" />
+    <path d="M102 122C137 123 163 131 187 143M51 201C80 197 118 196 139 174" />
+  </g>
+  <use href="#lr" transform="translate(109 56) rotate(15) scale(.75)" /><use href="#lr" transform="translate(114 78) rotate(115) scale(.85)" />
+  <use href="#lr" transform="translate(108 107) rotate(20)" /><use href="#lr" transform="translate(99 134) rotate(120)" />
+  <use href="#lr" transform="translate(86 160) rotate(0)" /><use href="#lr" transform="translate(68 187) rotate(110)" />
+  <use href="#lr" transform="translate(41 196) rotate(-30) scale(.85)" /><use href="#lr" transform="translate(35 171) rotate(105) scale(.72)" />
+  <use href="#lr" transform="translate(24 146) rotate(-25) scale(.7)" /><use href="#lr" transform="translate(13 126) rotate(40) scale(.55)" />
+  <use href="#lr" transform="translate(69 104) rotate(-15) scale(.8)" /><use href="#lr" transform="translate(53 83) rotate(100) scale(.68)" />
+  <use href="#lr" transform="translate(40 68) rotate(5) scale(.62)" />
+  <use href="#lr" transform="translate(136 87) rotate(20) scale(.8)" /><use href="#lr" transform="translate(154 66) rotate(105) scale(.7)" />
+  <use href="#lr" transform="translate(171 44) rotate(50) scale(.65)" />
+  <use href="#lr" transform="translate(123 157) rotate(20) scale(.85)" /><use href="#lr" transform="translate(147 140) rotate(110) scale(.75)" />
+  <use href="#lr" transform="translate(168 121) rotate(55) scale(.62)" />
+  <use href="#lr" transform="translate(91 220) rotate(70) scale(.78)" /><use href="#lr" transform="translate(120 210) rotate(135) scale(.6)" />
+  <use href="#budr" transform="translate(187 143) rotate(-15) scale(.8)" /><use href="#budr" transform="translate(139 174) scale(.6)" />
+  <g fill="#b18d4d"><circle cx="110" cy="12" r="2.6" /><circle cx="177" cy="23" r="2" /><circle cx="36" cy="60" r="2" /><circle cx="150" cy="197" r="2.5" /></g>
+</svg></g><svg viewBox="0 0 240 32" fill="none" stroke="#a08043" stroke-width="1" x="140" y="520" width="200" height="27">
+  <path d="M4 16h77c16 0 21-9 20-13M236 16h-77c-16 0-21-9-20-13M72 20h18c13 0 18 8 30 8s17-8 30-8h18" />
+  <path d="M120 5c-2 5-9 7-9 12a9 9 0 0 0 18 0c0-5-7-7-9-12Z" /><path d="M120 12v11M101 16c-11-12-17 0-7 1M139 16c11-12 17 0 7 1" />
+  <path d="m4 13 3 3-3 3-3-3Zm232 0 3 3-3 3-3-3Z" fill="#a08043" />
+</svg></svg>

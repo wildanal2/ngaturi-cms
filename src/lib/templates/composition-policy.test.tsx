@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import { renderToStaticMarkup, renderToPipeableStream } from "react-dom/server";
+import { PassThrough } from "node:stream";
 import { InvitationRenderer } from "@/lib/invitation/renderer";
 import {
   getTemplate,
@@ -13,6 +14,16 @@ import {
   getCompositionPolicy,
 } from "./composition-policy";
 import { hydrateTemplateSections } from "./hydrate";
+
+// Vitest does not run Next's App Router transform for next/dynamic.
+// Use its documented React.lazy SSR semantics rather than the Pages Router shim.
+vi.mock("next/dynamic", async () => {
+  const { lazy } = await import("react");
+  return {
+    default: (load: () => Promise<import("react").ComponentType>) =>
+      lazy(async () => ({ default: await load() })),
+  };
+});
 
 const cinematicVintage = getTemplate("cinematic-vintage")!;
 const cinematicSections = () => hydrateTemplateSections(cinematicVintage);
@@ -43,7 +54,7 @@ describe("template composition identity", () => {
     );
   });
 
-  it("dispatches only the exact Cinematic Vintage identity to its renderer", () => {
+  it("dispatches only the exact Cinematic Vintage identity to its renderer", async () => {
     const render = (composition: TemplateComposition) =>
       renderToStaticMarkup(
         <InvitationRenderer
@@ -56,7 +67,25 @@ describe("template composition identity", () => {
 
     const cinematic = render("cinematic-vintage");
     const standard = render("standard");
-    const sekar = render("sekar-jawa-3d");
+    // Streaming SSR waits for the optional composition bundle without dropping content.
+    const sekar = await new Promise<string>((resolve, reject) => {
+      const output = new PassThrough();
+      let html = "";
+      output.on("data", (chunk) => {
+        html += chunk.toString();
+      });
+      output.on("end", () => resolve(html));
+      output.on("error", reject);
+      const stream = renderToPipeableStream(
+        <InvitationRenderer
+          sections={cinematicSections()}
+          global={cinematicVintage.global_settings}
+          composition="sekar-jawa-3d"
+          isPreview
+        />,
+        { onAllReady: () => stream.pipe(output), onError: reject },
+      );
+    });
 
     expect(cinematic).toContain("data-cinematic-stage");
     expect(cinematic).not.toContain("data-sekar-jawa-3d-stage");

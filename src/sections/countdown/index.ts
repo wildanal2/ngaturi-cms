@@ -1,3 +1,4 @@
+import { CountdownCinematicVintage } from "./countdown-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { CountdownProps } from "../schema";
 import { countdownFields, nowPlus } from "../fields";
@@ -7,6 +8,7 @@ import { CountdownRings } from "./countdown-rings";
 import { CountdownPill } from "./countdown-pill";
 import { CountdownElegant } from "./countdown-elegant";
 import { CountdownPlain } from "./countdown-plain";
+import { CountdownSerambiDelima } from "./countdown-serambi-delima";
 
 export {
   CountdownMinimal,
@@ -15,6 +17,7 @@ export {
   CountdownPill,
   CountdownElegant,
   CountdownPlain,
+  CountdownSerambiDelima,
 };
 
 const calendarField = {
@@ -91,4 +94,18 @@ export const countdownSection: SectionDefinition = {
       defaultProps: d(),
     },
   },
+};
+
+countdownSection.variants["cinematic-vintage"] = {
+  ...countdownSection.variants["plain"],
+  name: "Cinematic Vintage",
+  component: CountdownCinematicVintage,
+};
+
+countdownSection.variants["serambi-delima"] = {
+  ...countdownSection.variants.plain,
+  name: "Serambi Delima",
+  description: "Hitung mundur serif dalam bingkai seremonial",
+  component: CountdownSerambiDelima,
+  isPremium: true,
 };

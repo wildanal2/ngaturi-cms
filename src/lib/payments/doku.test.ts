@@ -10,6 +10,7 @@ import {
   verifyNotificationSignature,
 } from "./doku";
 import { env } from "@/lib/env";
+import { DokuProvider, normalizeDokuResult } from "./doku-provider";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -162,6 +163,25 @@ describe("DOKU protocol validation", () => {
     expect(checkout.url).toBe(
       "https://sandbox.doku.com/checkout-link-v2/token-id",
     );
+    await expect(
+      new DokuProvider(TEST_DOKU).createPayment({
+        merchantReference: "NGUNL-test",
+        amount: "49000.00",
+        currency: "IDR",
+        itemName: "Basic",
+        customer: { name: "Test", email: "test@example.com" },
+        callbackUrl: "https://example.com/payment/callback",
+      }),
+    ).resolves.toEqual({
+      redirectUrl: checkout.url,
+      providerPaymentId: "session-id",
+    });
+    const adapterBody = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(adapterBody.order.amount).toBe(49_000);
+    expect(adapterBody.order.invoice_number).toBe("NGUNL-test");
+    expect(
+      new URL(adapterBody.order.callback_url).searchParams.get("invoice"),
+    ).toBe("NGUNL-test");
   });
 
   it("rejects checkout responses that do not match the requested amount", async () => {
@@ -481,5 +501,34 @@ describe("DOKU protocol validation", () => {
     expect(
       verifyNotificationSignature(headers, raw, path, clientId, secretKey),
     ).toBe(false);
+  });
+});
+
+describe("DOKU adapter normalization", () => {
+  it("retains FAILED as pending and exact full-refund evidence", () => {
+    expect(
+      normalizeDokuResult({
+        invoiceNumber: "historical",
+        amount: "49000",
+        status: "FAILED",
+      }),
+    ).toMatchObject({
+      provider: "doku",
+      status: "pending",
+      amount: "49000.00",
+      currency: "IDR",
+    });
+    expect(
+      normalizeDokuResult({
+        invoiceNumber: "historical",
+        amount: 49_000,
+        status: "REFUNDED",
+        refund: { id: "refund", amount: "49000" },
+      }),
+    ).toMatchObject({
+      provider: "doku",
+      status: "refunded",
+      refund: { id: "refund", amount: "49000.00" },
+    });
   });
 });

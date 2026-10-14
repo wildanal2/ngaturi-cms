@@ -39,6 +39,14 @@ export async function GET(
   const t = getTemplate(id);
   if (!t) return new Response("not found", { status: 404 });
 
+  // Keep the catalog card contract while serving this template's original vector art.
+  if (t.id === "serambi-delima") {
+    return Response.redirect(
+      new URL("/themes/serambi-delima/thumbnail.svg", _req.url),
+      307,
+    );
+  }
+
   const g = t.global_settings;
   // This preset intentionally keeps its content in registered variant defaults.
   const sections =

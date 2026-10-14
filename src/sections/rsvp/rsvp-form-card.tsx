@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRsvp } from "./use-rsvp";
 import type { SectionRenderProps } from "../types";
 import { SectionShell, SectionTitle } from "../shared";
 import { TurnstileField } from "../turnstile-field";
@@ -15,32 +15,7 @@ export function RsvpFormCard({
     max_guests_per_person?: number;
     require_phone?: boolean;
   };
-  const [state, setState] = useState<"idle" | "sending" | "done" | "error">(
-    "idle",
-  );
-  const [error, setError] = useState<string | null>(null);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (isPreview) return;
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    setState("sending");
-    setError(null);
-    const res = await fetch(`/api/public/${invitationId}/rsvp`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(fd)),
-    });
-    if (res.ok) {
-      setState("done");
-      form.reset();
-    } else {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Gagal mengirim. Coba lagi.");
-      setState("error");
-    }
-  }
+  const { state, error, onSubmit } = useRsvp(invitationId, isPreview);
 
   return (
     <SectionShell muted>

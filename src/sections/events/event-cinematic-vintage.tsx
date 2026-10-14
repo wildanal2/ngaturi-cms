@@ -24,12 +24,16 @@ export function EventCinematicVintage({ props }: SectionRenderProps) {
           >
             <p className={styles.eyebrow}>Janji & perayaan</p>
             <h2>{event.name ?? "Acara"}</h2>
-            <p className={styles.eventIntro}>{p.intro}</p>
-            <p className="mt-5">{formatEventDate(event.date)}</p>
-            <p>{formatTimeRange(event.start_time, event.end_time)}</p>
+            {i === 0 && p.intro ? (
+              <p className={styles.eventIntro}>{p.intro}</p>
+            ) : null}
+            <div className={styles.eventSchedule}>
+              <p>{formatEventDate(event.date)}</p>
+              <p>{formatTimeRange(event.start_time, event.end_time)}</p>
+            </div>
             <div className={styles.rule} />
             <h3>{event.venue_name}</h3>
-            <p>{event.address}</p>
+            <p className={styles.eventAddress}>{event.address}</p>
             <MapsLink href={event.maps_url} />
           </HeritageFrame>
         </article>

@@ -1,3 +1,4 @@
+import { NavigationCinematicVintage } from "./navigation-cinematic-vintage";
 import type { SectionDefinition, StyleOption } from "../types";
 import { NavigationProps } from "../schema";
 import { NavigationBar } from "./navigation-bar";
@@ -49,4 +50,10 @@ export const navigationSection: SectionDefinition = {
       defaultProps: {},
     },
   },
+};
+
+navigationSection.variants["cinematic-vintage"] = {
+  ...navigationSection.variants["bar"],
+  name: "Cinematic Vintage",
+  component: NavigationCinematicVintage,
 };

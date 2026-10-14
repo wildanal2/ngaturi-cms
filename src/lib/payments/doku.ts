@@ -1,5 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env";
+import { providerRequest } from "./http";
+import { exactMoney, integerIdr, moneyMatches } from "./money";
 
 const CHECKOUT_TARGET = "/checkout/v1/payment";
 export const DOKU_CHECKOUT_DUE_MINUTES = 60;
@@ -168,7 +170,7 @@ export async function createCheckout(
 
   const jsonBody = JSON.stringify({
     order: {
-      amount: Math.round(p.amount),
+      amount: integerIdr(p.amount),
       invoice_number: p.orderId,
       currency: "IDR",
       callback_url: p.callbackUrl,
@@ -177,7 +179,7 @@ export async function createCheckout(
         {
           name: sanitizeText(p.itemName),
           quantity: 1,
-          price: Math.round(p.amount),
+          price: integerIdr(p.amount),
         },
       ],
     },
@@ -188,26 +190,28 @@ export async function createCheckout(
     },
   });
 
-  const res = await fetch(configuration.baseUrl + CHECKOUT_TARGET, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Client-Id": configuration.clientId,
-      "Request-Id": requestId,
-      "Request-Timestamp": timestamp,
-      Signature: buildSignature({
-        clientId: configuration.clientId,
-        secretKey: configuration.secretKey,
-        requestId,
-        timestamp,
-        target: CHECKOUT_TARGET,
-        jsonBody,
-      }),
+  const { response: res, rawBody: rawResponse } = await providerRequest(
+    configuration.baseUrl + CHECKOUT_TARGET,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Client-Id": configuration.clientId,
+        "Request-Id": requestId,
+        "Request-Timestamp": timestamp,
+        Signature: buildSignature({
+          clientId: configuration.clientId,
+          secretKey: configuration.secretKey,
+          requestId,
+          timestamp,
+          target: CHECKOUT_TARGET,
+          jsonBody,
+        }),
+      },
+      body: jsonBody,
     },
-    body: jsonBody,
-  });
+  );
 
-  const rawResponse = await res.text();
   if (
     !verifyResponseSignature({
       headers: res.headers,
@@ -250,7 +254,7 @@ export async function createCheckout(
   const payload = responseData.response ?? responseData;
   if (
     payload?.order?.invoice_number !== p.orderId ||
-    Number(payload?.order?.amount) !== Math.round(p.amount) ||
+    !moneyMatches(payload?.order?.amount, p.amount) ||
     payload?.order?.currency !== "IDR"
   ) {
     throw new DokuCheckoutError(
@@ -269,6 +273,7 @@ export async function createCheckout(
   const checkoutUrl = new URL(url);
   if (
     checkoutUrl.protocol !== "https:" ||
+    Boolean(checkoutUrl.username || checkoutUrl.password || checkoutUrl.port) ||
     (checkoutUrl.hostname !== "doku.com" &&
       !checkoutUrl.hostname.endsWith(".doku.com"))
   ) {
@@ -311,13 +316,22 @@ export function isDokuStatus(value: unknown): value is DokuStatus {
 
 export interface DokuPaymentResult {
   invoiceNumber: string;
-  amount?: number;
+  amount?: number | string;
   currency?: string;
   status: DokuStatus;
   refund?: {
     id?: string;
-    amount?: number;
+    amount?: number | string;
   };
+}
+
+function validMoney(value: unknown): boolean {
+  try {
+    exactMoney(value);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Query order status (used by the return/callback page). */
@@ -329,7 +343,7 @@ export async function checkOrderStatus(
   const requestId = crypto.randomUUID();
   const timestamp = makeTimestamp();
 
-  const res = await fetch(
+  const { response: res, rawBody: rawResponse } = await providerRequest(
     `${configuration.baseUrl}${target}?client_id=${encodeURIComponent(configuration.clientId)}`,
     {
       headers: {
@@ -346,7 +360,6 @@ export async function checkOrderStatus(
       },
     },
   );
-  const rawResponse = await res.text();
   if (
     !verifyResponseSignature({
       headers: res.headers,
@@ -367,20 +380,18 @@ export async function checkOrderStatus(
 
   const invoiceNumber = data?.order?.invoice_number;
   const rawAmount = data?.order?.amount;
-  const amount = rawAmount === undefined ? undefined : Number(rawAmount);
+  const amount = rawAmount === undefined ? undefined : rawAmount;
   const status = data?.transaction?.status;
   const currency = data?.order?.currency;
   const rawRefundAmount = data?.refund?.amount;
   const refundAmount =
-    rawRefundAmount === undefined ? undefined : Number(rawRefundAmount);
+    rawRefundAmount === undefined ? undefined : rawRefundAmount;
   if (
     invoiceNumber !== gatewayOrderId ||
     !isDokuStatus(status) ||
-    (status !== "REFUNDED" &&
-      (!Number.isFinite(amount) || (amount ?? 0) <= 0)) ||
-    (amount !== undefined && (!Number.isFinite(amount) || amount <= 0)) ||
-    (refundAmount !== undefined &&
-      (!Number.isFinite(refundAmount) || refundAmount <= 0)) ||
+    (status !== "REFUNDED" && amount === undefined) ||
+    (amount !== undefined && !validMoney(amount)) ||
+    (refundAmount !== undefined && !validMoney(refundAmount)) ||
     (currency !== undefined && currency !== "IDR")
   ) {
     throw new Error("DOKU returned an invalid status response");

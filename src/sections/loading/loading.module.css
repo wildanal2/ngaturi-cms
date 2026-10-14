@@ -1,0 +1,136 @@
+.entry,
+.content {
+  width: 100%;
+}
+.entry {
+  position: relative;
+}
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: max(32px, env(safe-area-inset-top)) 24px
+    max(32px, env(safe-area-inset-bottom));
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    #632c38 0%,
+    #35111e 56%,
+    #190910 100%
+  );
+  color: #faf3e7;
+  touch-action: none;
+  overscroll-behavior: none;
+  outline: none;
+  isolation: isolate;
+  transition: opacity 350ms ease;
+}
+.screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #c4a56c;
+  opacity: 0.085;
+  mask: url("/themes/cinematic-vintage/backgrounds/damask.svg") center / 180px 220px
+    repeat;
+}
+.screen[data-loading-phase="leaving"] {
+  opacity: 0;
+}
+.static {
+  position: relative;
+  min-height: 380px;
+  z-index: auto;
+  touch-action: auto;
+}
+.frame {
+  position: relative;
+  width: min(100%, 370px);
+  padding: 64px 24px;
+  text-align: center;
+}
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: #c4a56c;
+  opacity: 0.4;
+  mask: url("/themes/cinematic-vintage/frames/heritage.svg") center / 100% 100%
+    no-repeat;
+}
+.brand {
+  font:
+    400 14px var(--font-cormorant),
+    Georgia,
+    serif;
+  letter-spacing: 0.25em;
+  color: #dac396;
+}
+.names {
+  margin: 30px 0 24px;
+  font:
+    400 clamp(32px, 7vw, 44px)/1.14 var(--font-cormorant),
+    Georgia,
+    serif;
+  overflow-wrap: anywhere;
+}
+.message {
+  max-width: 26ch;
+  margin: 0 auto;
+  font:
+    400 14px/1.65 var(--font-inter),
+    sans-serif;
+  color: #ead9bc;
+}
+.indicator {
+  display: block;
+  position: relative;
+  width: 80px;
+  height: 1px;
+  margin: 30px auto 0;
+  background: #c4a56c40;
+  overflow: hidden;
+}
+.indicator::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #c4a56c;
+  animation: breathe 1.8s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scaleX(0.3);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scaleX(1);
+  }
+}
+@media (max-height: 430px) {
+  .frame {
+    padding: 30px 24px;
+  }
+  .names {
+    margin: 18px 0 16px;
+    font-size: 32px;
+  }
+  .indicator {
+    margin-top: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .screen {
+    transition: none;
+  }
+  .indicator::after {
+    animation: none;
+    opacity: 0.6;
+  }
+}

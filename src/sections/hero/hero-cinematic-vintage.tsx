@@ -12,13 +12,17 @@ export function HeroCinematicVintage({ props }: SectionRenderProps) {
     background_image?: string;
   };
   return (
-    <SceneBody>
+    <SceneBody className={styles.heroScene}>
       <HeritageFrame className={styles.entranceFrame}>
-        <Portrait src={p.background_image} />
+        <div data-hero-photo>
+          <Portrait src={p.background_image} eager />
+        </div>
         <div className={styles.photoCaption}>
           <p className={styles.eyebrow}>{p.tagline ?? "The Wedding Of"}</p>
-          <h1>{p.couple_names ?? "Nama Mempelai"}</h1>
-          <p>{formatEventDate(p.event_date)}</p>
+          <h1 tabIndex={-1} data-cinematic-opening-focus>
+            {p.couple_names ?? "Nama Mempelai"}
+          </h1>
+          <p className={styles.heroDate}>{formatEventDate(p.event_date)}</p>
         </div>
       </HeritageFrame>
       <p className={styles.scrollHint}>Gulir perlahan · kisah kita dimulai</p>

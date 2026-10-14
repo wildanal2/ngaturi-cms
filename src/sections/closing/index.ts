@@ -7,8 +7,15 @@ import { ClosingSimple } from "./closing-simple";
 import { ClosingPhoto } from "./closing-photo";
 import { ClosingThankYou } from "./closing-thankyou";
 import { ClosingSekarJawa3D } from "./closing-sekar-jawa-3d";
+import { ClosingSerambiDelima } from "./closing-serambi-delima";
 
-export { ClosingSimple, ClosingPhoto, ClosingThankYou, ClosingSekarJawa3D };
+export {
+  ClosingSimple,
+  ClosingPhoto,
+  ClosingThankYou,
+  ClosingSekarJawa3D,
+  ClosingSerambiDelima,
+};
 
 export const closingSection: SectionDefinition = {
   type: "closing",
@@ -77,4 +84,16 @@ export const closingSection: SectionDefinition = {
       defaultProps: { names: "Dinda & Raka" },
     },
   },
+};
+
+closingSection.variants["serambi-delima"] = {
+  ...closingSection.variants.photo,
+  name: "Serambi Delima",
+  description: "Penutup formal dengan potret serambi dan botani delima",
+  component: ClosingSerambiDelima,
+  defaultProps: {
+    ...closingSection.variants.photo.defaultProps,
+    message: "Terima kasih atas doa dan restu Anda.",
+  },
+  isPremium: true,
 };

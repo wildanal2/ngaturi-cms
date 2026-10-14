@@ -5,8 +5,9 @@ import { MapProps } from "../schema";
 import { DUMMY_MAP_EMBED, DUMMY_MAP_LINK } from "../fields";
 import { MapEmbed } from "./map-embed";
 import { MapButton } from "./map-button";
+import { MapSerambiDelima } from "./map-serambi-delima";
 
-export { MapEmbed, MapButton };
+export { MapEmbed, MapButton, MapSerambiDelima };
 
 export const mapSection: SectionDefinition = {
   type: "map-location",
@@ -58,4 +59,16 @@ export const mapSection: SectionDefinition = {
       defaultProps: { venue_name: "Gedung Serbaguna", address: "Jl. Melati No. 12, Bandung" },
     },
   },
+};
+
+mapSection.variants["serambi-delima"] = {
+  ...mapSection.variants.embed,
+  name: "Serambi Delima",
+  description: "Peta berbingkai emas dengan alamat dan tombol arah",
+  component: MapSerambiDelima,
+  fields: [
+    ...mapSection.variants.embed.fields,
+    { kind: "url", key: "maps_url", label: "Link Google Maps" },
+  ],
+  isPremium: true,
 };
