@@ -16,6 +16,7 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     healthcheck:
+      # Recurring liveness must stay DB-free. /api/ready is a deploy/recovery gate only.
       test:
         [
           CMD,
@@ -50,6 +51,8 @@ services:
       app:
         condition: service_healthy
     volumes:
+      # Keep runner + schedule together across image rollback (older runners required three jobs).
+      - ./scheduler.mjs:/app/ops/production/scheduler.mjs:ro
       - ./scheduler.crontab:/app/ops/production/scheduler.crontab:ro
     read_only: true
     cap_drop: [ALL]

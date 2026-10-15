@@ -19,6 +19,13 @@ export async function resolvePaymentCallback(
   let status = payment.status;
   try {
     const provider = resolvePaymentProvider(payment.provider);
+    if (provider.supportsStatusReconciliation !== true) {
+      return {
+        invitationId: payment.invitationId,
+        status,
+        provider: payment.provider,
+      };
+    }
     const observation = await provider.getPaymentStatus({
       providerOrderId: payment.providerOrderId,
       providerPaymentId: payment.providerPaymentId,

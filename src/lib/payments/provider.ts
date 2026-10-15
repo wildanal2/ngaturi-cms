@@ -43,6 +43,7 @@ export interface PaymentProvider {
   readonly name: PaymentProviderName;
   readonly label: string;
   readonly supportsRefundEvidence: boolean;
+  readonly supportsStatusReconciliation: boolean;
   isConfigured(): boolean;
   isSandbox(): boolean;
   createPayment(input: CreatePaymentInput): Promise<CreatedPayment>;

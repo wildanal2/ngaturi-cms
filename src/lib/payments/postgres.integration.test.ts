@@ -724,17 +724,150 @@ suite(
           now: new Date(Date.now() + 3 * 60_000),
         });
         expect(summary).toMatchObject({
+          selected: 0,
           checked: 0,
-          unavailableProvider: 1,
-          reviewRequired: 1,
-          errors: 1,
+          errors: 0,
         });
         expect((await row(pending.id)).status).toBe("pending");
-        expect((await row(pending.id)).rawWebhook).toMatchObject({
-          reconciliation: { category: "sumopod_status_contract_missing" },
-        });
+        expect((await row(pending.id)).rawWebhook).toBeNull();
       },
     );
+    it("does no payment mutation or lookup when only unsupported/legacy permanent work exists", async () => {
+      const pending = await storedPayment({
+        rawWebhook: {
+          reconciliation: {
+            category: "sumopod_status_contract_missing",
+            attemptedAt: "2020-01-01T00:00:00Z",
+          },
+        },
+      });
+      const missing = await storedPayment({
+        provider: "doku",
+        providerOrderId: null,
+      });
+      const permanent = await storedPayment({
+        provider: "doku",
+        rawWebhook: {
+          reconciliation: {
+            category: "payment_not_configured",
+            attemptedAt: "2020-01-01T00:00:00Z",
+          },
+        },
+      });
+      const blocked = await storedPayment({
+        provider: "doku",
+        rawWebhook: {
+          reconciliation: {
+            category: "permanent_provider_rejection",
+            retryable: false,
+          },
+        },
+      });
+      const update = vi.spyOn(database, "update");
+      const lookup = vi.spyOn(
+        resolvePaymentProvider("sumopod"),
+        "getPaymentStatus",
+      );
+      const dokuLookup = vi.spyOn(
+        resolvePaymentProvider("doku"),
+        "getPaymentStatus",
+      );
+      for (let run = 0; run < 2; run++) {
+        expect(await reconcilePayments({ database })).toMatchObject({
+          selected: 0,
+          checked: 0,
+          errors: 0,
+        });
+      }
+      expect(update).not.toHaveBeenCalled();
+      expect(lookup).not.toHaveBeenCalled();
+      expect(dokuLookup).not.toHaveBeenCalled();
+      for (const original of [pending, missing, permanent, blocked]) {
+        expect(await row(original.id)).toEqual(original);
+      }
+    });
+    it("excludes unsupported rows before the batch limit so they cannot starve DOKU", async () => {
+      for (let i = 0; i < 51; i++) await storedPayment();
+      const supported = await storedPayment({ provider: "doku" });
+      const lookup = vi
+        .spyOn(resolvePaymentProvider("doku"), "getPaymentStatus")
+        .mockResolvedValue({
+          ...paidObservation(supported),
+          status: "pending",
+          providerStatus: "PENDING",
+        });
+      expect(await reconcilePayments({ database })).toMatchObject({
+        selected: 1,
+        checked: 1,
+        errors: 0,
+      });
+      expect(lookup).toHaveBeenCalledOnce();
+    });
+    it("persists permanent failures once, excludes future attempts, and still accepts idempotent verified settlement", async () => {
+      const pending = await storedPayment({ provider: "doku" });
+      const lookup = vi
+        .spyOn(resolvePaymentProvider("doku"), "getPaymentStatus")
+        .mockRejectedValue(
+          new PaymentProviderError(
+            "unsupported_payment_provider",
+            "unavailable",
+          ),
+        );
+      const update = vi.spyOn(database, "update");
+      expect(await reconcilePayments({ database })).toMatchObject({
+        permanentFailures: 1,
+        reviewRequired: 1,
+        errors: 0,
+      });
+      const reviewed = await row(pending.id);
+      expect(reviewed.status).toBe("pending");
+      expect(reviewed.rawWebhook).toMatchObject({
+        reconciliation: {
+          category: "unsupported_payment_provider",
+          retryable: false,
+        },
+      });
+      expect(await reconcilePayments({ database })).toMatchObject({
+        selected: 0,
+        errors: 0,
+      });
+      expect(lookup).toHaveBeenCalledOnce();
+      expect(update).toHaveBeenCalledOnce();
+      expect(await row(pending.id)).toEqual(reviewed);
+      expect(
+        (await dokuWebhook(dokuEvent(pending.providerOrderId!))).status,
+      ).toBe(200);
+      expect(
+        (await dokuWebhook(dokuEvent(pending.providerOrderId!))).status,
+      ).toBe(200);
+      expect((await row(pending.id)).status).toBe("paid");
+      expect(await quota()).toBe(1);
+    });
+    it("keeps a transient supported-provider failure pending and retryable", async () => {
+      const pending = await storedPayment({ provider: "doku" });
+      const lookup = vi
+        .spyOn(resolvePaymentProvider("doku"), "getPaymentStatus")
+        .mockRejectedValueOnce(new PaymentProviderError("provider_timeout"))
+        .mockResolvedValue({
+          ...paidObservation(pending),
+          status: "pending",
+          providerStatus: "PENDING",
+        });
+      expect(await reconcilePayments({ database })).toMatchObject({
+        errors: 1,
+        permanentFailures: 0,
+      });
+      expect((await row(pending.id)).rawWebhook).toMatchObject({
+        reconciliation: { retryable: true },
+      });
+      expect(await reconcilePayments({ database })).toMatchObject({
+        checked: 1,
+        errors: 0,
+      });
+      expect(lookup).toHaveBeenCalledTimes(2);
+      expect((await row(pending.id)).status).toBe("pending");
+      expect(await quota()).toBe(0);
+    });
     it("rotates stuck oldest rows so newer and never-attempted payments reach the next bounded batch", async () => {
       const refs: string[] = [];
       for (let i = 0; i < 56; i++)
@@ -844,8 +977,15 @@ suite(
         )[0].isPaid,
       ).toBe(true);
     });
-    it("uses persisted provider on callback and retains webhook-paid Sumopod when lookup is unavailable", async () => {
+    it("uses persisted provider on callback without invoking unsupported Sumopod lookup", async () => {
       const payment = await storedPayment();
+      const lookup = vi.spyOn(
+        resolvePaymentProvider("sumopod"),
+        "getPaymentStatus",
+      );
+      expect(
+        await resolvePaymentCallback(payment.providerOrderId!, database),
+      ).toMatchObject({ provider: "sumopod", status: "pending" });
       await sumopodWebhook(sumopodEvent(payment));
       env.PAYMENT_PROVIDER = "doku";
       expect(
@@ -855,6 +995,62 @@ suite(
         await resolvePaymentCallback("unknown-browser-reference", database),
       ).toBeNull();
       expect(fetch).not.toHaveBeenCalled();
+      expect(lookup).not.toHaveBeenCalled();
+    });
+    it("creates Sumopod checkout and fulfills a verified Svix webhook exactly once", async () => {
+      const secret = Buffer.from("isolated-svix-signing-secret");
+      env.SUMOPOD_WEBHOOK_SECRET = `whsec_${secret.toString("base64")}`;
+      const paymentId = randomUUID();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (_url, init) => {
+          const body = JSON.parse(init.body);
+          return Response.json({
+            payment_id: paymentId,
+            order_id: body.order_id,
+            amount: body.amount,
+            currency: "IDR",
+            status: "pending",
+            payment_link_url: `https://pay.sumopod.com/pay/${paymentId}`,
+          });
+        }),
+      );
+      expect((await createPayment(checkoutRequest())).status).toBe(200);
+      const [pending] = await database
+        .select()
+        .from(schema.payments)
+        .where(eq(schema.payments.invitationId, invitationId));
+      expect(pending).toMatchObject({
+        status: "pending",
+        amount: "49000.00",
+        provider: "sumopod",
+      });
+      // Token auth cannot bypass a configured signing secret.
+      expect((await sumopodWebhook(sumopodEvent(pending))).status).toBe(401);
+      expect((await row(pending.id)).status).toBe("pending");
+      const body = await sumopodEvent(pending).text();
+      const requestId = "msg_isolated_payment";
+      const timestamp = String(Math.floor(Date.now() / 1000));
+      const signature = createHmac("sha256", secret)
+        .update(`${requestId}.${timestamp}.${body}`)
+        .digest("base64");
+      const signed = () =>
+        new Request("https://app.example/payment/webhook/sumopod", {
+          method: "POST",
+          body,
+          headers: {
+            "svix-id": requestId,
+            "svix-timestamp": timestamp,
+            "svix-signature": `v1,${signature}`,
+          },
+        });
+      const responses = await Promise.all(
+        Array.from({ length: 6 }, () => sumopodWebhook(signed())),
+      );
+      expect(responses.every((response) => response.status === 200)).toBe(true);
+      expect((await row(pending.id)).status).toBe("paid");
+      expect(await quota()).toBe(1);
+      expect(fetch).toHaveBeenCalledOnce();
     });
   },
   30_000,

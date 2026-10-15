@@ -12,6 +12,7 @@ export async function GET(req: Request) {
     const summary = await reconcilePayments({ database: getDb() });
     console.info("Payment reconciliation completed", JSON.stringify(summary));
     return NextResponse.json(summary, {
+      // Unsupported providers and permanent reviews are expected HTTP 200 outcomes.
       status: summary.errors > 0 ? 502 : 200,
     });
   } catch {

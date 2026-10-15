@@ -4,6 +4,7 @@ import {
   resolveCheckoutProvider,
   resolvePaymentProvider,
   paymentAvailability,
+  statusReconciliationProviders,
 } from "./registry";
 
 const original = {
@@ -29,6 +30,16 @@ beforeEach(() => {
 afterEach(() => Object.assign(env, original));
 
 describe("payment provider selection", () => {
+  it("exposes status reconciliation only for an explicit provider capability", () => {
+    env.PAYMENT_PROVIDER = "sumopod";
+    expect(resolvePaymentProvider("sumopod").supportsStatusReconciliation).toBe(
+      false,
+    );
+    expect(resolvePaymentProvider("doku").supportsStatusReconciliation).toBe(
+      true,
+    );
+    expect(statusReconciliationProviders()).toEqual(["doku"]);
+  });
   it("defaults only an absent selector to DOKU", () => {
     expect(resolveCheckoutProvider().name).toBe("doku");
   });

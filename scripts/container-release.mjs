@@ -2,6 +2,33 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
+
+export function productionOpsHash() {
+  const names = [
+    "compose.yml",
+    "deploy.sh",
+    "rollback.sh",
+    "release.py",
+    "scheduler.mjs",
+    "scheduler.crontab",
+    "ngaturi-runtime.service",
+    "deploy.env.example",
+    "README.md",
+    "GIT_RELEASE.md",
+  ].sort();
+  const records = names
+    .map(
+      (name) =>
+        `${name}\0${createHash("sha256")
+          .update(
+            readFileSync(new URL(`../ops/production/${name}`, import.meta.url)),
+          )
+          .digest("hex")}\n`,
+    )
+    .join("");
+  return createHash("sha256").update(records).digest("hex");
+}
 
 const VERSION_TAG = /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
 export function publicationFor(event, ref) {
@@ -88,6 +115,7 @@ export function releaseIdentity(tag, image, sha) {
     image,
     sha,
     tag: tag || `sha-${sha}`,
+    ops_sha256: productionOpsHash(),
   };
 }
 
@@ -127,6 +155,7 @@ export function validateImage(config, identity) {
     config.os !== "linux" ||
     config.architecture !== "amd64" ||
     labels["org.opencontainers.image.revision"] !== identity.sha ||
+    labels["com.ngaturi.ops-sha256"] !== identity.ops_sha256 ||
     labels["org.opencontainers.image.source"] !==
       `https://github.com/${identity.image.slice(8)}` ||
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(
@@ -176,6 +205,7 @@ export function prepare(identity, invoke = docker) {
     digest: digest ?? "",
     build: digest ? "false" : "true",
     created,
+    ops_sha256: identity.ops_sha256,
   };
 }
 
@@ -224,6 +254,7 @@ export function publish(identity, digest, invoke = docker) {
     ghcr_image: identity.image,
     image: reference,
     digest,
+    ops_sha256: identity.ops_sha256,
     architecture: "linux/amd64",
     built_at: builtAt,
     tags: identity.kind === "release" ? [...tags, "stable"] : tags,

@@ -228,6 +228,7 @@ export class SumopodProvider implements PaymentProvider {
   readonly name = "sumopod";
   readonly label = "Sumopod";
   readonly supportsRefundEvidence = false;
+  readonly supportsStatusReconciliation = false;
   constructor(private readonly suppliedConfiguration?: SumopodConfiguration) {}
 
   private config() {

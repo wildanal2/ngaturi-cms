@@ -1,10 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-const TASKS = new Set([
-  "lock-expired-edits",
-  "archive-expired",
-  "reconcile-doku-payments",
+const TASKS = new Set(["lock-expired-edits", "archive-expired"]);
+const SCHEDULES = new Map([
+  ["lock-expired-edits", "0 1 * * *"],
+  ["archive-expired", "30 1 * * *"],
 ]);
 
 function field(value, maximum) {
@@ -19,7 +19,7 @@ function field(value, maximum) {
   throw new Error("Unsupported minute/hour in scheduler.crontab");
 }
 
-// Deliberately supports only the daily/every-N-minute schedules used here.
+// Keep the existing limited cron grammar; production config contains only daily jobs.
 export function parseCrontab(source) {
   const jobs = [];
   const seen = new Set();
@@ -34,7 +34,8 @@ export function parseCrontab(source) {
       month !== "*" ||
       weekday !== "*" ||
       !TASKS.has(task) ||
-      seen.has(task)
+      seen.has(task) ||
+      SCHEDULES.get(task) !== [minute, hour, day, month, weekday].join(" ")
     ) {
       throw new Error("Invalid or duplicate task in scheduler.crontab");
     }
@@ -42,7 +43,7 @@ export function parseCrontab(source) {
     jobs.push({ task, minute: field(minute, 59), hour: field(hour, 23) });
   }
   if (seen.size !== TASKS.size)
-    throw new Error("All three maintenance tasks are required");
+    throw new Error("Both daily maintenance tasks are required");
   return jobs;
 }
 

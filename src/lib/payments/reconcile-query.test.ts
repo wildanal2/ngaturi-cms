@@ -11,7 +11,7 @@ vi.mock("@/lib/db", () => ({ db: { select: mocks.select } }));
 import { loadUnresolvedPayments } from "./reconcile";
 
 describe("reconciliation fairness query", () => {
-  it("orders by durable last attempt before creation age, without provider or lower age filters", async () => {
+  it("selects supported, retryable work before applying the batch limit, without a lower age cutoff", async () => {
     mocks.limit.mockResolvedValue([]);
     mocks.orderBy.mockReturnValue({ limit: mocks.limit });
     mocks.where.mockReturnValue({ orderBy: mocks.orderBy });
@@ -26,7 +26,15 @@ describe("reconciliation fairness query", () => {
       "attemptedAt",
     );
     const where = dialect.sqlToQuery(mocks.where.mock.calls[0][0]);
-    expect(where.sql).not.toContain('"payments"."provider"');
+    expect(where.sql).toContain('"payments"."provider" in');
+    expect(where.params).toContain("doku");
+    expect(where.params).not.toContain("sumopod");
+    expect(where.sql).toContain('"payments"."provider_order_id" is not null');
+    expect(where.sql).toContain("retryable");
+    expect(where.sql).toContain("not in");
+    expect(where.params).toContain("sumopod_status_contract_missing");
+    expect(where.params).toContain("unsupported_payment_provider");
+    expect(where.params).toContain("review_required");
     expect(where.sql).not.toContain('"payments"."created_at" >=');
     expect(where.params).toContain("expired");
   });

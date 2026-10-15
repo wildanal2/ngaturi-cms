@@ -21,7 +21,11 @@ const digest = "sha256:" + "b".repeat(64);
 const other = "sha256:" + "c".repeat(64);
 const identity = releaseIdentity("v2.3.4", image, sha);
 const candidate = releaseIdentity("", image, sha);
-function fixture({ tags = {}, revision = sha } = {}) {
+function fixture({
+  tags = {},
+  revision = sha,
+  ops = identity.ops_sha256,
+} = {}) {
   const calls = [];
   const config = {
     os: "linux",
@@ -29,6 +33,7 @@ function fixture({ tags = {}, revision = sha } = {}) {
     config: {
       Labels: {
         "org.opencontainers.image.revision": revision,
+        "com.ngaturi.ops-sha256": ops,
         "org.opencontainers.image.source":
           "https://github.com/wildanal2/ngaturi-cms",
         "org.opencontainers.image.created": "2026-10-01T01:00:00Z",
@@ -230,6 +235,12 @@ test("tag release reuses same-source candidate/retry without version-label/packa
 });
 
 test("incompatible existing version/SHA identities fail before writes", () => {
+  const mismatchedOps = fixture({
+    ops: "0".repeat(64),
+    tags: { [image + ":v2.3.4"]: digest },
+  });
+  assert.throws(() => prepare(identity, mismatchedOps.invoke), /incompatibly/);
+  assert(!mismatchedOps.calls.some((call) => call[0] === "create"));
   for (const tag of ["v2.3.4", "sha-" + sha]) {
     const f = fixture({
       revision: "c".repeat(40),
@@ -307,6 +318,14 @@ test("workflow publishes only Staging/tag pushes after validation; single build;
   assert(builds[0].with.tags.includes(":sha-"));
   assert(!builds[0].with.tags.includes("stable"));
   assert(!builds[0].with.labels.includes("image.version"));
+  assert(builds[0].with.labels.includes("com.ngaturi.ops-sha256"));
+  assert(
+    steps.some((step) =>
+      step.run?.includes(
+        "release.py --package --metadata release-manifest.json",
+      ),
+    ),
+  );
   const upload = steps.findIndex((step) =>
     step.uses?.startsWith("actions/upload-artifact"),
   );
