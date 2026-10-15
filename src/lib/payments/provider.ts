@@ -43,6 +43,7 @@ export interface PaymentProvider {
   readonly name: PaymentProviderName;
   readonly label: string;
   readonly supportsRefundEvidence: boolean;
+  readonly supportsStatusReconciliation: boolean;
   isConfigured(): boolean;
   isSandbox(): boolean;
   createPayment(input: CreatePaymentInput): Promise<CreatedPayment>;
@@ -54,10 +55,22 @@ export interface PaymentProvider {
   ): VerifiedWebhook;
 }
 
+/** Allowlisted diagnostics only. Never attach response bodies, URLs, or credentials. */
+export interface PaymentProviderDiagnostics {
+  upstreamStatus?: number;
+  checkoutHostname?:
+    | "pay.sumopod.com"
+    | "checkout.pymnt.app"
+    | "sumo.sandbox.pymnt.global"
+    | "unrecognized";
+  checkoutPathType?: "pay_uuid" | "payment_links_uuid" | "other";
+}
+
 export class PaymentProviderError extends Error {
   constructor(
     public readonly code: string,
     public readonly outcome: "unavailable" | "rejected" | "unknown" = "unknown",
+    public readonly diagnostics: PaymentProviderDiagnostics = {},
   ) {
     super(code);
     this.name = "PaymentProviderError";

@@ -17,6 +17,8 @@ const config = {
   webhookToken: "test-token",
 };
 const id = "d4f7134c-ef0d-44b6-9e98-745a283221d8";
+const linkId = "34553130-5d90-4262-a29e-edf8a12fface";
+const liveCheckoutUrl = `https://checkout.pymnt.app/payment-links/${linkId}`;
 const data = {
   payment_id: id,
   order_id: "NGUNL-test",
@@ -128,6 +130,74 @@ describe("Sumopod official Managed Payment contract", () => {
       ).rejects.toMatchObject({ outcome: "unknown" });
     },
   );
+  it.each([
+    ["HTTP", `http://checkout.pymnt.app/payment-links/${linkId}`],
+    ["wrong hostname", `https://evil.example/payment-links/${linkId}`],
+    [
+      "hostname suffix",
+      `https://checkout.pymnt.app.evil.com/payment-links/${linkId}`,
+    ],
+    ["subdomain", `https://sub.checkout.pymnt.app/payment-links/${linkId}`],
+    ["wrong path", `https://checkout.pymnt.app/pay/${linkId}`],
+    ["trailing slash", `${liveCheckoutUrl}/`],
+    ["extra path", `${liveCheckoutUrl}/extra`],
+    ["invalid UUID", "https://checkout.pymnt.app/payment-links/not-a-uuid"],
+    [
+      "invalid UUID variant",
+      "https://checkout.pymnt.app/payment-links/34553130-5d90-4262-029e-edf8a12fface",
+    ],
+    [
+      "userinfo",
+      `https://user:password@checkout.pymnt.app/payment-links/${linkId}`,
+    ],
+    ["empty userinfo", `https://@checkout.pymnt.app/payment-links/${linkId}`],
+    [
+      "non-default port",
+      `https://checkout.pymnt.app:8443/payment-links/${linkId}`,
+    ],
+    ["query", `${liveCheckoutUrl}?token=private`],
+    ["empty query", `${liveCheckoutUrl}?`],
+    ["fragment", `${liveCheckoutUrl}#private`],
+    ["empty fragment", `${liveCheckoutUrl}#`],
+    [
+      "normalized path",
+      `https://checkout.pymnt.app/other/../payment-links/${linkId}`,
+    ],
+    ["legacy hostname suffix", `https://pay.sumopod.com.evil.com/pay/${id}`],
+    ["legacy invalid UUID", "https://pay.sumopod.com/pay/not-a-uuid"],
+    ["legacy mismatched ID", `https://pay.sumopod.com/pay/${linkId}`],
+  ])("rejects LIVE checkout URL with %s", (_description, payment_link_url) => {
+    expect(() =>
+      parseSumopodCreatedPayment(
+        input,
+        { ...data, payment_link_url },
+        SUMOPOD_LIVE_BASE_URL,
+      ),
+    ).toThrow("untrusted_checkout_url");
+  });
+  it.each([
+    `https://pay.sumopod.com:443/pay/${id}`,
+    `https://checkout.pymnt.app:443/payment-links/${linkId}`,
+  ])("accepts the default HTTPS port in %s", (payment_link_url) => {
+    expect(
+      parseSumopodCreatedPayment(
+        input,
+        { ...data, payment_link_url },
+        SUMOPOD_LIVE_BASE_URL,
+      ),
+    ).toEqual({
+      providerPaymentId: id,
+      redirectUrl: new URL(payment_link_url).toString(),
+    });
+  });
+  it("does not accept the LIVE-only hostname in sandbox", () => {
+    expect(() =>
+      parseSumopodCreatedPayment(input, {
+        ...data,
+        payment_link_url: liveCheckoutUrl,
+      }),
+    ).toThrow("untrusted_checkout_url");
+  });
   it.each([400, 401, 409, 422, 429, 500])(
     "keeps undocumented HTTP %s rejection recoverable",
     async (status) => {
@@ -137,7 +207,11 @@ describe("Sumopod official Managed Payment contract", () => {
       vi.stubGlobal("fetch", fetch);
       await expect(
         new SumopodProvider(config).createPayment(input),
-      ).rejects.toMatchObject({ outcome: "unknown" });
+      ).rejects.toMatchObject({
+        code: "sumopod_create_outcome_unknown",
+        outcome: "unknown",
+        diagnostics: { upstreamStatus: status },
+      });
       expect(fetch).toHaveBeenCalledOnce();
     },
   );
@@ -198,42 +272,92 @@ describe("Sumopod official Managed Payment contract", () => {
     ).rejects.toMatchObject({ outcome: "unavailable" });
     expect(fetch).not.toHaveBeenCalled();
   });
-  it("allows one explicitly enabled LIVE create with the existing QRIS contract", async () => {
-    const fetch = vi.fn().mockResolvedValue(
-      Response.json({
+  it.each([`https://pay.sumopod.com/pay/${id}`, liveCheckoutUrl])(
+    "allows one explicitly enabled LIVE create returning %s",
+    async (payment_link_url) => {
+      const fetch = vi.fn().mockResolvedValue(
+        Response.json({
+          ...data,
+          payment_link_url,
+        }),
+      );
+      vi.stubGlobal("fetch", fetch);
+      const live = new SumopodProvider({
+        ...config,
+        baseUrl: SUMOPOD_LIVE_BASE_URL,
+        liveEnabled: true,
+      });
+      expect(live.isSandbox()).toBe(false);
+      await expect(live.createPayment(input)).resolves.toMatchObject({
+        providerPaymentId: id,
+        redirectUrl: payment_link_url,
+      });
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(fetch.mock.calls[0][0]).toBe(
+        `${SUMOPOD_LIVE_BASE_URL}/api/v1/payments`,
+      );
+      expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
+        order_id: input.merchantReference,
+        amount: 49_000,
+        payment_method_type_code: "QRIS",
+      });
+      fetch.mockClear();
+      await expect(
+        live.getPaymentStatus({
+          providerOrderId: input.merchantReference,
+          providerPaymentId: id,
+        }),
+      ).rejects.toMatchObject({
+        code: "sumopod_status_contract_missing",
+      });
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    [
+      "malformed JSON",
+      "not-json-private-provider-body",
+      "invalid_provider_response",
+    ],
+    [
+      "invalid schema",
+      JSON.stringify({ private: "provider-body" }),
+      "invalid_provider_response",
+    ],
+    [
+      "mismatched response",
+      JSON.stringify({
         ...data,
-        payment_link_url: `https://pay.sumopod.com/pay/${id}`,
+        order_id: "wrong",
+        payment_link_url: liveCheckoutUrl,
       }),
-    );
+      "provider_response_mismatch",
+    ],
+    [
+      "untrusted link",
+      JSON.stringify({
+        ...data,
+        payment_link_url: `${liveCheckoutUrl}?token=private`,
+      }),
+      "untrusted_checkout_url",
+    ],
+  ])("retains HTTP status for %s", async (_description, body, code) => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(body, { status: 201 }));
     vi.stubGlobal("fetch", fetch);
-    const live = new SumopodProvider({
-      ...config,
-      baseUrl: SUMOPOD_LIVE_BASE_URL,
-      liveEnabled: true,
-    });
-    expect(live.isSandbox()).toBe(false);
-    await expect(live.createPayment(input)).resolves.toMatchObject({
-      providerPaymentId: id,
+    await expect(
+      new SumopodProvider({
+        ...config,
+        baseUrl: SUMOPOD_LIVE_BASE_URL,
+        liveEnabled: true,
+      }).createPayment(input),
+    ).rejects.toMatchObject({
+      code,
+      outcome: "unknown",
+      diagnostics: { upstreamStatus: 201 },
     });
     expect(fetch).toHaveBeenCalledOnce();
-    expect(fetch.mock.calls[0][0]).toBe(
-      `${SUMOPOD_LIVE_BASE_URL}/api/v1/payments`,
-    );
-    expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
-      order_id: input.merchantReference,
-      amount: 49_000,
-      payment_method_type_code: "QRIS",
-    });
-    fetch.mockClear();
-    await expect(
-      live.getPaymentStatus({
-        providerOrderId: input.merchantReference,
-        providerPaymentId: id,
-      }),
-    ).rejects.toMatchObject({
-      code: "sumopod_status_contract_missing",
-    });
-    expect(fetch).not.toHaveBeenCalled();
   });
   it.each([
     { apiKey: undefined },
@@ -417,7 +541,10 @@ describe("bounded provider requests", () => {
         code: "provider_timeout",
         outcome: "unknown",
       });
-      await vi.advanceTimersByTimeAsync(PROVIDER_REQUEST_TIMEOUT_MS);
+      expect(PROVIDER_REQUEST_TIMEOUT_MS).toBe(15_000);
+      await vi.advanceTimersByTimeAsync(PROVIDER_REQUEST_TIMEOUT_MS - 1);
+      expect(fetch.mock.calls[0][1].signal.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
       await rejected;
       expect(fetch).toHaveBeenCalledOnce();
       expect(fetch.mock.calls[0][1].signal.aborted).toBe(true);
@@ -427,12 +554,40 @@ describe("bounded provider requests", () => {
     vi.useFakeTimers();
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({ text: () => new Promise(() => {}) }),
+      vi
+        .fn()
+        .mockResolvedValue({ status: 200, text: () => new Promise(() => {}) }),
     );
     const rejected = expect(
       providerRequest("https://provider.example", {}),
-    ).rejects.toMatchObject({ code: "provider_timeout" });
+    ).rejects.toMatchObject({
+      code: "provider_timeout",
+      diagnostics: { upstreamStatus: 200 },
+    });
     await vi.advanceTimersByTimeAsync(PROVIDER_REQUEST_TIMEOUT_MS);
     await rejected;
   });
+  it.each([false, true])(
+    "classifies transport failure with headers received = %s",
+    async (headersReceived) => {
+      const error = new TypeError("private network failure details");
+      const fetch = headersReceived
+        ? vi.fn().mockResolvedValue({
+            status: 201,
+            text: async () => {
+              throw error;
+            },
+          })
+        : vi.fn().mockRejectedValue(error);
+      vi.stubGlobal("fetch", fetch);
+      await expect(
+        providerRequest("https://provider.example", {}),
+      ).rejects.toMatchObject({
+        code: "provider_transport_error",
+        outcome: "unknown",
+        diagnostics: { upstreamStatus: headersReceived ? 201 : undefined },
+      });
+      expect(fetch).toHaveBeenCalledOnce();
+    },
+  );
 });

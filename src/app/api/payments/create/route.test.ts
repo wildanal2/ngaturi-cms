@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   createPayment: vi.fn(),
   getSession: vi.fn(),
@@ -24,6 +24,7 @@ vi.mock("@/lib/payments/reference", () => ({
 }));
 import { POST } from "./route";
 import { PaymentProviderError } from "@/lib/payments/provider";
+import { SumopodProvider, SUMOPOD_LIVE_BASE_URL } from "@/lib/payments/sumopod";
 import {
   PAYMENT_PENDING_CODE,
   PAYMENT_PENDING_MESSAGE,
@@ -74,6 +75,34 @@ const purchase = {
   plan: "premium",
   amount: 1,
 };
+const sumopodId = "d4f7134c-ef0d-44b6-9e98-745a283221d8";
+const linkId = "34553130-5d90-4262-a29e-edf8a12fface";
+const liveCheckoutUrl = `https://checkout.pymnt.app/payment-links/${linkId}`;
+const liveConfig = {
+  baseUrl: SUMOPOD_LIVE_BASE_URL,
+  liveEnabled: true,
+  apiKey: "live-test-api-key-do-not-log",
+  webhookToken: "test-webhook-token-do-not-log",
+};
+function liveResponse(paymentLinkUrl = liveCheckoutUrl) {
+  mocks.resolve.mockReturnValue(new SumopodProvider(liveConfig));
+  const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+    const payload = JSON.parse(init.body as string);
+    return Response.json(
+      {
+        payment_id: sumopodId,
+        order_id: payload.order_id,
+        amount: payload.amount,
+        status: "pending",
+        payment_link_url: paymentLinkUrl,
+        private_upstream_details: "raw-provider-response-do-not-log",
+      },
+      { status: 201 },
+    );
+  });
+  vi.stubGlobal("fetch", fetch);
+  return fetch;
+}
 beforeEach(() => {
   vi.clearAllMocks();
   provider.name = "sumopod";
@@ -91,8 +120,172 @@ beforeEach(() => {
   mocks.update.mockReturnValue({ set: mocks.updateSet });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("POST /api/payments/create", () => {
+  it("accepts the confirmed LIVE checkout format and persists its distinct provider reference", async () => {
+    const tx = checkoutTransaction();
+    mocks.transaction.mockImplementation(async (callback) => callback(tx));
+    const fetch = liveResponse();
+    const response = await POST(request(purchase));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ redirectUrl: liveCheckoutUrl });
+    const [url, init] = fetch.mock.calls[0];
+    const payload = JSON.parse(init.body as string);
+    expect(url).toBe(`${SUMOPOD_LIVE_BASE_URL}/api/v1/payments`);
+    expect(payload.amount).toBe(99000);
+    expect(mocks.persistReference).toHaveBeenCalledWith(
+      "payment-1",
+      "sumopod",
+      payload.order_id,
+      sumopodId,
+      expect.anything(),
+    );
+    expect(tx.insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "pending" }),
+    );
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
+  });
+  it.each([
+    [
+      "known host",
+      `https://user:private-password@checkout.pymnt.app/payment-links/${linkId}?token=private-query#private-fragment`,
+      "checkout.pymnt.app",
+      "payment_links_uuid",
+    ],
+    [
+      "unrecognized host",
+      `https://private-token.evil.example/payment-links/${linkId}`,
+      "unrecognized",
+      "payment_links_uuid",
+    ],
+    [
+      "sensitive path",
+      "https://checkout.pymnt.app/private-path-token",
+      "checkout.pymnt.app",
+      "other",
+    ],
+  ])(
+    "keeps an invalid checkout URL pending and logs safe metadata for %s",
+    async (_description, link, hostname, pathType) => {
+      mocks.transaction.mockImplementation(async (callback) =>
+        callback(checkoutTransaction()),
+      );
+      const fetch = liveResponse(link);
+      const response = await POST(request(purchase));
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({
+        code: PAYMENT_PENDING_CODE,
+        error: PAYMENT_PENDING_MESSAGE,
+      });
+      expect(mocks.persistReference).not.toHaveBeenCalled();
+      expect(mocks.update).not.toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(console.error).toHaveBeenCalledOnce();
+      const [message, serialized] = vi.mocked(console.error).mock.calls[0];
+      expect(message).toBe("Payment creation outcome");
+      expect(JSON.parse(serialized as string)).toEqual({
+        paymentId: "payment-1",
+        provider: "sumopod",
+        category: "provider_outcome_unknown",
+        errorCode: "untrusted_checkout_url",
+        outcome: "unknown",
+        elapsedMs: expect.any(Number),
+        upstreamStatus: 201,
+        checkoutHostname: hostname,
+        checkoutPathType: pathType,
+      });
+      const logged = JSON.stringify(vi.mocked(console.error).mock.calls);
+      for (const sensitive of [
+        link,
+        linkId,
+        liveConfig.apiKey,
+        liveConfig.webhookToken,
+        "private-password",
+        "private-query",
+        "private-fragment",
+        "private-token",
+        "private-path-token",
+        "raw-provider-response-do-not-log",
+      ]) {
+        expect(logged).not.toContain(sensitive);
+      }
+    },
+  );
+  it.each([
+    "provider_timeout",
+    "provider_transport_error",
+    "sumopod_create_outcome_unknown",
+    "invalid_provider_response",
+    "provider_response_mismatch",
+    "untrusted_checkout_url",
+  ])(
+    "retains safe error code %s without changing the public pending response",
+    async (code) => {
+      mocks.transaction.mockImplementation(async (callback) =>
+        callback(checkoutTransaction()),
+      );
+      const clock = vi.spyOn(performance, "now").mockReturnValue(100);
+      mocks.createPayment.mockImplementationOnce(async () => {
+        clock.mockReturnValue(175);
+        throw Object.assign(
+          new PaymentProviderError(code, "unknown", { upstreamStatus: 503 }),
+          {
+            rawBody: "private-provider-response",
+            apiKey: liveConfig.apiKey,
+          },
+        );
+      });
+      const response = await POST(request(purchase));
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({
+        code: PAYMENT_PENDING_CODE,
+        error: PAYMENT_PENDING_MESSAGE,
+      });
+      expect(mocks.update).not.toHaveBeenCalled();
+      expect(mocks.createPayment).toHaveBeenCalledOnce();
+      expect(mocks.persistReference).not.toHaveBeenCalled();
+      const [, serialized] = vi.mocked(console.error).mock.calls[0];
+      expect(JSON.parse(serialized as string)).toEqual({
+        paymentId: "payment-1",
+        provider: "sumopod",
+        category: "provider_outcome_unknown",
+        errorCode: code,
+        outcome: "unknown",
+        elapsedMs: 75,
+        upstreamStatus: 503,
+      });
+      expect(serialized).not.toContain("private-provider-response");
+      expect(serialized).not.toContain(liveConfig.apiKey);
+    },
+  );
+  it("does not log unexpected error messages or stacks", async () => {
+    mocks.transaction.mockImplementation(async (callback) =>
+      callback(checkoutTransaction()),
+    );
+    mocks.createPayment.mockRejectedValueOnce(
+      new Error(`private-provider-response ${liveConfig.apiKey}`),
+    );
+    const response = await POST(request(purchase));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      code: PAYMENT_PENDING_CODE,
+      error: PAYMENT_PENDING_MESSAGE,
+    });
+    const [, serialized] = vi.mocked(console.error).mock.calls[0];
+    expect(JSON.parse(serialized as string)).toMatchObject({
+      errorCode: "unexpected_provider_error",
+      outcome: "unknown",
+    });
+    expect(serialized).not.toContain("private-provider-response");
+    expect(serialized).not.toContain(liveConfig.apiKey);
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
   it("commits durable Sumopod attempt before HTTP, derives price server-side, and preserves redirect contract", async () => {
     const tx = checkoutTransaction();
     let committed = false;

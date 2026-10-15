@@ -14,30 +14,36 @@ const source = readFileSync(
 const jobs = parseCrontab(source);
 const healthy = () => new Response("ok", { status: 200 });
 
-test("existing schedules run in UTC without invented timings", () => {
+test("only the two daily schedules run in UTC", () => {
   assert.deepEqual(dueTasks(jobs, new Date("2026-10-01T08:00:00+07:00")), [
     "lock-expired-edits",
-    "reconcile-doku-payments",
   ]);
   assert.deepEqual(dueTasks(jobs, new Date("2026-10-01T01:30:00Z")), [
     "archive-expired",
-    "reconcile-doku-payments",
   ]);
   assert.deepEqual(dueTasks(jobs, new Date("2026-10-01T01:31:00Z")), []);
-  assert.deepEqual(dueTasks(jobs, new Date("2026-10-01T12:05:00Z")), [
-    "reconcile-doku-payments",
-  ]);
+  assert.deepEqual(dueTasks(jobs, new Date("2026-10-01T12:05:00Z")), []);
+  for (let minute = 0; minute < 1440; minute++) {
+    assert(
+      !dueTasks(jobs, new Date(Date.UTC(2026, 9, 1, 0, minute))).includes(
+        "reconcile-doku-payments",
+      ),
+    );
+  }
 });
 
 test("configuration fails closed for duplicate/missing/unknown jobs", () => {
   assert.throws(() =>
     parseCrontab(source + "\n*/5 * * * * reconcile-doku-payments"),
   );
+  assert.throws(() => parseCrontab(source + "\n0 1 * * * lock-expired-edits"));
   assert.throws(() => parseCrontab("0 1 * * * lock-expired-edits"));
   assert.throws(() =>
     parseCrontab(source.replace("archive-expired", "arbitrary-shell-command")),
   );
   assert.throws(() => parseCrontab(source.replace("0 1", "60 1")));
+  assert.throws(() => parseCrontab(source.replace("0 1", "*/5 *")));
+  assert.throws(() => parseCrontab(source.replace("30 1", "35 1")));
   assert.throws(() => createRunner({ secret: "" }));
 });
 
@@ -119,7 +125,7 @@ test("unhealthy app skips jobs; HTTP failure is logged with no immediate retry",
         : new Response("", { status: 502 });
     },
   });
-  await failure.run("reconcile-doku-payments");
+  await failure.run("archive-expired");
   assert.equal(calls, 2);
   assert(logs.some((x) => x.includes('"status":502')));
 });
@@ -145,8 +151,8 @@ test("timeout/uncertain completion blocks future invocations until coordinated r
   });
   // AbortSignal.timeout uses an unref'd timer; keep the test event loop alive.
   const keepAlive = setTimeout(() => {}, 100);
-  await runner.run("reconcile-doku-payments");
-  await runner.run("reconcile-doku-payments");
+  await runner.run("archive-expired");
+  await runner.run("archive-expired");
   clearTimeout(keepAlive);
   assert.equal(calls, 2);
   assert(

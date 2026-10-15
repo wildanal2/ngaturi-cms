@@ -1,12 +1,23 @@
 import { env } from "@/lib/env";
 import { DokuProvider } from "./doku-provider";
 import { SumopodProvider } from "./sumopod";
-import { PaymentProviderError, type PaymentProvider } from "./provider";
+import {
+  PaymentProviderError,
+  type PaymentProvider,
+  type PaymentProviderName,
+} from "./provider";
 
 const providers: Record<string, PaymentProvider> = {
   doku: new DokuProvider(),
   sumopod: new SumopodProvider(),
 };
+
+/** Capabilities describe contracts, independently of the NEW-checkout selector. */
+export function statusReconciliationProviders(): PaymentProviderName[] {
+  return Object.values(providers)
+    .filter((provider) => provider.supportsStatusReconciliation === true)
+    .map((provider) => provider.name);
+}
 
 /** Existing payments always resolve by the immutable stored provider. */
 export function resolvePaymentProvider(provider: string): PaymentProvider {

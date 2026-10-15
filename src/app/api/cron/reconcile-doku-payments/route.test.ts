@@ -24,6 +24,9 @@ const success = {
   transitioned: 1,
   fulfilled: 1,
   reviewRequired: 0,
+  skipped: 0,
+  unsupportedProvider: 0,
+  permanentFailures: 0,
   statuses: { paid: 1, expired: 0, failed: 0, pending: 0, refunded: 0 },
   errors: 0,
   truncated: false,
@@ -78,6 +81,28 @@ describe("GET /api/cron/reconcile-doku-payments", () => {
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual(partial);
   });
+
+  it.each([
+    { skipped: 1, unsupportedProvider: 1, reviewRequired: 1 },
+    { permanentFailures: 1, reviewRequired: 1 },
+    { checked: 1, reviewRequired: 1 },
+    { selected: 0, checked: 0, reviewRequired: 0 },
+  ])(
+    "returns 200 for expected skip/review/no-work outcomes: %j",
+    async (outcome) => {
+      const summary = {
+        ...success,
+        checked: 0,
+        transitioned: 0,
+        fulfilled: 0,
+        ...outcome,
+      };
+      mocks.reconcile.mockResolvedValue(summary);
+      const response = await GET(new Request("http://localhost/api/cron/test"));
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual(summary);
+    },
+  );
 
   it("returns 500 for a batch-level failure", async () => {
     mocks.reconcile.mockRejectedValue(new Error("database unavailable"));

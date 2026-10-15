@@ -18,6 +18,7 @@ export const SUMOPOD_SANDBOX_BASE_URL = "https://api-pay-sandbox.sumopod.com";
 export const SUMOPOD_LIVE_BASE_URL = "https://api-pay.sumopod.com";
 // Returned by the official sandbox create API during acceptance; differs from Quick Start's example.
 export const SUMOPOD_SANDBOX_CHECKOUT_HOST = "sumo.sandbox.pymnt.global";
+export const SUMOPOD_LIVE_CHECKOUT_HOST = "checkout.pymnt.app";
 const SIGNATURE_TOLERANCE_SECONDS = 300;
 
 export interface SumopodConfiguration {
@@ -111,9 +112,16 @@ export function parseSumopodCreatedPayment(
     throw new PaymentProviderError("provider_response_mismatch");
   }
   const url = new URL(parsed.data.payment_link_url);
+  const paymentLinksId = /^\/payment-links\/([^/]+)$/.exec(url.pathname)?.[1];
+  const validPaymentLinksPath = z.uuid().safeParse(paymentLinksId).success;
   const documentedLink =
     url.hostname === "pay.sumopod.com" &&
     url.pathname === `/pay/${parsed.data.payment_id}`;
+  // Validate the LIVE link UUID without assuming it equals payment_id.
+  const observedLiveLink =
+    baseUrl === SUMOPOD_LIVE_BASE_URL &&
+    url.hostname === SUMOPOD_LIVE_CHECKOUT_HOST &&
+    validPaymentLinksPath;
   // The payment-link UUID is distinct from payment_id in the observed sandbox response.
   const observedSandboxLink =
     baseUrl === SUMOPOD_SANDBOX_BASE_URL &&
@@ -121,6 +129,11 @@ export function parseSumopodCreatedPayment(
     /^\/payment-links\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
       url.pathname,
     );
+  // Reject normalization tricks, empty query/fragment markers, and empty userinfo.
+  const literalUrl =
+    parsed.data.payment_link_url === `https://${url.hostname}${url.pathname}` ||
+    parsed.data.payment_link_url ===
+      `https://${url.hostname}:443${url.pathname}`;
   if (
     url.protocol !== "https:" ||
     url.username ||
@@ -128,9 +141,22 @@ export function parseSumopodCreatedPayment(
     url.port ||
     url.search ||
     url.hash ||
-    (!documentedLink && !observedSandboxLink)
+    !literalUrl ||
+    (!documentedLink && !observedLiveLink && !observedSandboxLink)
   ) {
-    throw new PaymentProviderError("untrusted_checkout_url");
+    throw new PaymentProviderError("untrusted_checkout_url", "unknown", {
+      checkoutHostname:
+        url.hostname === "pay.sumopod.com" ||
+        url.hostname === SUMOPOD_LIVE_CHECKOUT_HOST ||
+        url.hostname === SUMOPOD_SANDBOX_CHECKOUT_HOST
+          ? url.hostname
+          : "unrecognized",
+      checkoutPathType: validPaymentLinksPath
+        ? "payment_links_uuid"
+        : z.uuid().safeParse(/^\/pay\/([^/]+)$/.exec(url.pathname)?.[1]).success
+          ? "pay_uuid"
+          : "other",
+    });
   }
   return {
     redirectUrl: url.toString(),
@@ -202,6 +228,7 @@ export class SumopodProvider implements PaymentProvider {
   readonly name = "sumopod";
   readonly label = "Sumopod";
   readonly supportsRefundEvidence = false;
+  readonly supportsStatusReconciliation = false;
   constructor(private readonly suppliedConfiguration?: SumopodConfiguration) {}
 
   private config() {
@@ -255,14 +282,32 @@ export class SumopodProvider implements PaymentProvider {
     );
     // Rejection/idempotency guarantees are not documented: every API failure stays recoverable.
     if (!response.ok)
-      throw new PaymentProviderError("sumopod_create_outcome_unknown");
+      throw new PaymentProviderError(
+        "sumopod_create_outcome_unknown",
+        "unknown",
+        {
+          upstreamStatus: response.status,
+        },
+      );
     let json: unknown;
     try {
       json = JSON.parse(rawBody);
     } catch {
-      throw new PaymentProviderError("invalid_provider_response");
+      throw new PaymentProviderError("invalid_provider_response", "unknown", {
+        upstreamStatus: response.status,
+      });
     }
-    return parseSumopodCreatedPayment(input, json, config.baseUrl);
+    try {
+      return parseSumopodCreatedPayment(input, json, config.baseUrl);
+    } catch (error) {
+      if (error instanceof PaymentProviderError) {
+        throw new PaymentProviderError(error.code, error.outcome, {
+          ...error.diagnostics,
+          upstreamStatus: response.status,
+        });
+      }
+      throw error;
+    }
   }
 
   async getPaymentStatus(

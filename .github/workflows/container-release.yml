@@ -33,7 +33,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - name: Focused runtime tests
-        run: npm test -- src/app/api/ready/route.test.ts src/lib/env.test.ts src/lib/storage/index.test.ts src/lib/site-indexing.test.ts src/proxy.test.ts src/app/sitemap.test.ts src/lib/payments/doku.test.ts src/app/api/cron/reconcile-doku-payments/route.test.ts src/lib/cron-auth.test.ts
+        run: npm test -- src/app/api/health/route.test.ts src/app/api/ready/route.test.ts src/lib/env.test.ts src/lib/storage/index.test.ts src/lib/site-indexing.test.ts src/proxy.test.ts src/app/sitemap.test.ts src/lib/payments src/app/api/payments/create/route.test.ts src/app/api/cron/reconcile-doku-payments/route.test.ts src/lib/cron-auth.test.ts
       - name: Production operations checks
         run: |
           bash scripts/test-production-runtime.sh
@@ -99,6 +99,7 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ steps.release.outputs.sha }}
             org.opencontainers.image.created=${{ steps.release.outputs.created }}
+            com.ngaturi.ops-sha256=${{ steps.release.outputs.ops_sha256 }}
           provenance: false
       - name: Publish immutable candidate/release tags and manifest
         env:
@@ -106,7 +107,7 @@ jobs:
         run: node scripts/container-release.mjs publish
       - name: Package production operation files (no source or secrets)
         if: steps.release.outputs.kind == 'release'
-        run: tar -C ops/production -czf ngaturi-production-ops.tar.gz compose.yml deploy.sh rollback.sh scheduler.crontab scheduler.mjs deploy.env.example README.md GIT_RELEASE.md ngaturi-runtime.service
+        run: python3 ops/production/release.py --package --metadata release-manifest.json --output ngaturi-production-ops.tar.gz
       - uses: actions/upload-artifact@v4
         with:
           name: container-${{ steps.release.outputs.tag }}-${{ steps.release.outputs.sha }}

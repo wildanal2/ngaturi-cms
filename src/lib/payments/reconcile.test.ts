@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Database } from "@/lib/db";
-import type { PaymentObservation, PaymentProvider } from "./provider";
+import {
+  PaymentProviderError,
+  type PaymentObservation,
+  type PaymentProvider,
+} from "./provider";
+import { PaymentResultError } from "./grant";
 import { SumopodProvider, SUMOPOD_LIVE_BASE_URL } from "./sumopod";
 import {
   reconcilePayments,
+  recordReconciliationAttempt,
   RECONCILIATION_BATCH_SIZE,
   type ReconciliationCandidate,
 } from "./reconcile";
@@ -50,7 +56,11 @@ function resolver(
   getPaymentStatus: PaymentProvider["getPaymentStatus"],
   name: "doku" | "sumopod" = "doku",
 ) {
-  return { name, getPaymentStatus } as PaymentProvider;
+  return {
+    name,
+    getPaymentStatus,
+    supportsStatusReconciliation: name === "doku",
+  } as PaymentProvider;
 }
 const recordAttempt = vi.fn().mockResolvedValue(undefined);
 
@@ -60,16 +70,17 @@ describe("mixed-provider reconciliation", () => {
     const fetch = vi.spyOn(globalThis, "fetch");
     const applyResult = vi.fn();
     const record = vi.fn().mockResolvedValue(undefined);
+    const provider = new SumopodProvider({
+      baseUrl: SUMOPOD_LIVE_BASE_URL,
+      liveEnabled: true,
+      apiKey: "test-live",
+      webhookToken: "test-token",
+    });
+    const lookup = vi.spyOn(provider, "getPaymentStatus");
     try {
       const summary = await reconcilePayments({
         loadCandidates: async () => [candidate(1, "sumopod")],
-        resolveProvider: () =>
-          new SumopodProvider({
-            baseUrl: SUMOPOD_LIVE_BASE_URL,
-            liveEnabled: true,
-            apiKey: "test-live",
-            webhookToken: "test-token",
-          }),
+        resolveProvider: () => provider,
         applyResult,
         recordAttempt: record,
       });
@@ -79,17 +90,14 @@ describe("mixed-provider reconciliation", () => {
         transitioned: 0,
         fulfilled: 0,
         reviewRequired: 1,
-        unavailableProvider: 1,
-        errors: 1,
+        skipped: 1,
+        unsupportedProvider: 1,
+        errors: 0,
       });
       expect(applyResult).not.toHaveBeenCalled();
       expect(fetch).not.toHaveBeenCalled();
-      expect(record).toHaveBeenLastCalledWith(
-        expect.objectContaining({ status: "pending", provider: "sumopod" }),
-        expect.any(Date),
-        "sumopod_status_contract_missing",
-        expect.anything(),
-      );
+      expect(lookup).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
     } finally {
       fetch.mockRestore();
       warning.mockRestore();
@@ -133,12 +141,11 @@ describe("mixed-provider reconciliation", () => {
       providerOrderId: "NGUNL-1",
       providerPaymentId: null,
     });
-    expect(sumopod).toHaveBeenCalledWith({
-      providerOrderId: "NGUNL-2",
-      providerPaymentId: null,
-    });
+    expect(sumopod).not.toHaveBeenCalled();
     expect(summary).toMatchObject({
-      checked: 2,
+      checked: 1,
+      skipped: 1,
+      unsupportedProvider: 1,
       fulfilled: 1,
       aged: 2,
       errors: 0,
@@ -172,8 +179,169 @@ describe("mixed-provider reconciliation", () => {
       expect.any(Date),
       "provider_or_processing_error",
       expect.anything(),
+      true,
     );
     warning.mockRestore();
+  });
+  it.each([false, undefined])(
+    "requires explicit status capability (%s)",
+    async (capability) => {
+      const lookup = vi.fn();
+      const record = vi.fn();
+      const provider = resolver(lookup);
+      Object.assign(provider, { supportsStatusReconciliation: capability });
+      const summary = await reconcilePayments({
+        loadCandidates: async () => [candidate(1)],
+        resolveProvider: () => provider,
+        recordAttempt: record,
+      });
+      expect(summary).toMatchObject({
+        skipped: 1,
+        unsupportedProvider: 1,
+        errors: 0,
+      });
+      expect(lookup).not.toHaveBeenCalled();
+      expect(record).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    new PaymentProviderError("sumopod_status_contract_missing", "unavailable"),
+    new PaymentProviderError("unsupported_payment_provider", "unavailable"),
+    new PaymentProviderError("payment_not_configured", "unavailable"),
+    new PaymentProviderError("permanent_provider_rejection", "rejected"),
+    new PaymentResultError("amount_mismatch"),
+  ])("records permanent %s once and never retries it", async (error) => {
+    const pending = candidate(1);
+    const lookup = vi.fn().mockRejectedValue(error);
+    const applyResult = vi.fn();
+    const record = vi.fn<typeof recordReconciliationAttempt>(
+      async (_candidate, attemptedAt, category, _database, retryable) => {
+        pending.rawWebhook = {
+          reconciliation: {
+            attemptedAt: attemptedAt.toISOString(),
+            category,
+            retryable,
+          },
+        };
+      },
+    );
+    const dependencies = {
+      loadCandidates: async () => [pending],
+      resolveProvider: () => resolver(lookup),
+      recordAttempt: record,
+      applyResult,
+    };
+    expect(await reconcilePayments(dependencies)).toMatchObject({
+      errors: 0,
+      permanentFailures: 1,
+      reviewRequired: 1,
+    });
+    const metadata = structuredClone(pending.rawWebhook);
+    expect(await reconcilePayments(dependencies)).toMatchObject({
+      errors: 0,
+      skipped: 1,
+      checked: 0,
+    });
+    expect(lookup).toHaveBeenCalledOnce();
+    expect(record).toHaveBeenCalledOnce();
+    expect(applyResult).not.toHaveBeenCalled();
+    expect(pending.status).toBe("pending");
+    expect(pending.rawWebhook).toEqual(metadata);
+  });
+  it("skips legacy permanent metadata and missing references without mutation", async () => {
+    const legacy = candidate(1);
+    legacy.rawWebhook = {
+      reconciliation: {
+        category: "sumopod_status_contract_missing",
+        attemptedAt: "2020-01-01",
+      },
+    };
+    const missing = { ...candidate(2), providerOrderId: null };
+    const lookup = vi.fn();
+    const record = vi.fn();
+    expect(
+      await reconcilePayments({
+        loadCandidates: async () => [legacy, missing],
+        resolveProvider: () => resolver(lookup),
+        recordAttempt: record,
+      }),
+    ).toMatchObject({ skipped: 2, missingReference: 1, errors: 0 });
+    expect(lookup).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
+  });
+  it("keeps transient provider failures eligible for the next invocation", async () => {
+    const pending = candidate(1);
+    const lookup = vi
+      .fn()
+      .mockRejectedValue(new PaymentProviderError("provider_timeout"));
+    const record = vi.fn<typeof recordReconciliationAttempt>(
+      async (_candidate, attemptedAt, category, _database, retryable) => {
+        pending.rawWebhook = {
+          reconciliation: {
+            attemptedAt: attemptedAt.toISOString(),
+            category,
+            retryable,
+          },
+        };
+      },
+    );
+    const dependencies = {
+      loadCandidates: async () => [pending],
+      resolveProvider: () => resolver(lookup),
+      recordAttempt: record,
+    };
+    expect(await reconcilePayments(dependencies)).toMatchObject({
+      errors: 1,
+      permanentFailures: 0,
+    });
+    expect(await reconcilePayments(dependencies)).toMatchObject({
+      errors: 1,
+      permanentFailures: 0,
+    });
+    expect(lookup).toHaveBeenCalledTimes(2);
+    expect(record).toHaveBeenCalledTimes(2);
+    expect(pending.status).toBe("pending");
+    expect(pending.rawWebhook).toMatchObject({
+      reconciliation: { retryable: true },
+    });
+  });
+  it("stops automatic attempts after an authoritative result requires review", async () => {
+    const pending = candidate(1);
+    const lookup = vi
+      .fn()
+      .mockResolvedValue(observation("NGUNL-1", "doku", "pending"));
+    const record = vi.fn<typeof recordReconciliationAttempt>(
+      async (_candidate, attemptedAt, category, _database, retryable) => {
+        pending.rawWebhook = {
+          reconciliation: {
+            attemptedAt: attemptedAt.toISOString(),
+            category,
+            retryable,
+          },
+        };
+      },
+    );
+    const dependencies = {
+      loadCandidates: async () => [pending],
+      resolveProvider: () => resolver(lookup),
+      recordAttempt: record,
+      applyResult: vi.fn(async (result: PaymentObservation) => ({
+        ...applied(result),
+        reviewRequired: true,
+      })),
+    };
+    expect(await reconcilePayments(dependencies)).toMatchObject({
+      checked: 1,
+      reviewRequired: 1,
+      errors: 0,
+    });
+    expect(await reconcilePayments(dependencies)).toMatchObject({
+      skipped: 1,
+      checked: 0,
+      errors: 0,
+    });
+    expect(lookup).toHaveBeenCalledOnce();
+    expect(record).toHaveBeenCalledOnce();
   });
   it("caps each cycle at fifty rows", async () => {
     const check = vi.fn(async ({ providerOrderId }) =>

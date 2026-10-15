@@ -76,6 +76,7 @@ export class DokuProvider implements PaymentProvider {
   readonly name = "doku";
   readonly label = "DOKU";
   readonly supportsRefundEvidence = true;
+  readonly supportsStatusReconciliation = true;
 
   constructor(private readonly configuration?: Configuration) {}
 

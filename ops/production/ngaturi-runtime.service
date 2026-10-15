@@ -9,7 +9,8 @@ StartLimitBurst=3
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/opt/ngaturi/deploy.sh --recover
+WorkingDirectory=/home/okee/ngaturi
+ExecStart=/home/okee/ngaturi/deploy.sh --recover
 TimeoutStartSec=900
 Restart=on-failure
 RestartSec=10

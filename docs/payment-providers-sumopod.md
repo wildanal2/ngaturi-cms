@@ -86,9 +86,19 @@ Established create contract:
 - The actual sandbox returned
   `https://sumo.sandbox.pymnt.global/payment-links/<uuid>`; its link UUID differs
   from `payment_id`. This exact host/path is permitted only for the sandbox base.
+  The confirmed LIVE checkout format is
+  `https://checkout.pymnt.app/payment-links/<uuid>`, permitted only for the LIVE
+  API base. Its link UUID is validated independently of `payment_id`.
   The Quick Start example `https://pay.sumopod.com/pay/<payment_id>` is also
-  validated. Arbitrary domains, userinfo, non-HTTPS URLs, ports, query overrides,
-  and fragments are rejected.
+  validated. Arbitrary domains, userinfo, non-HTTPS URLs, non-default ports,
+  query overrides, and fragments are rejected.
+
+Create-failure logs retain the provider error code/outcome, elapsed milliseconds,
+and upstream HTTP status when available. Checkout validation failures include
+only an allowlisted hostname (or `unrecognized`) and a path category; link IDs,
+full URLs, credentials, query contents, and raw provider responses are not logged.
+The provider deadline remains 15 seconds, and unknown creation outcomes remain
+pending without retry.
 
 Established webhook contract:
 

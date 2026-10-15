@@ -95,6 +95,7 @@ export async function POST(req: Request) {
   const callbackUrl = new URL("/payment/callback", env.BETTER_AUTH_URL);
   callbackUrl.searchParams.set("invoice", orderId);
   let created;
+  const creationStartedAt = performance.now();
   try {
     // The durable attempt transaction has committed before this external request.
     created = await provider.createPayment({
@@ -109,6 +110,12 @@ export async function POST(req: Request) {
       callbackUrl: callbackUrl.toString(),
     });
   } catch (error) {
+    const elapsedMs = Math.max(
+      0,
+      Math.round(performance.now() - creationStartedAt),
+    );
+    const providerError =
+      error instanceof PaymentProviderError ? error : undefined;
     const rejected =
       error instanceof PaymentProviderError && error.outcome === "rejected";
     if (rejected) {
@@ -130,6 +137,12 @@ export async function POST(req: Request) {
         paymentId: payment.id,
         provider: provider.name,
         category: rejected ? "provider_rejected" : "provider_outcome_unknown",
+        errorCode: providerError?.code ?? "unexpected_provider_error",
+        outcome: providerError?.outcome ?? "unknown",
+        elapsedMs,
+        upstreamStatus: providerError?.diagnostics.upstreamStatus,
+        checkoutHostname: providerError?.diagnostics.checkoutHostname,
+        checkoutPathType: providerError?.diagnostics.checkoutPathType,
       }),
     );
     return NextResponse.json(

@@ -1,19 +1,63 @@
-import { and, asc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, lte, ne, sql } from "drizzle-orm";
 import { db, type Database } from "@/lib/db";
 import { payments } from "@/lib/db/schema";
-import { applyPaymentObservation, type AppliedPaymentResult } from "./grant";
+import {
+  applyPaymentObservation,
+  PaymentResultError,
+  type AppliedPaymentResult,
+} from "./grant";
 import {
   PaymentProviderError,
   type PaymentProvider,
   type PaymentResultStatus,
 } from "./provider";
-import { resolvePaymentProvider } from "./registry";
+import {
+  resolvePaymentProvider,
+  statusReconciliationProviders,
+} from "./registry";
 import { unresolvedPaymentCondition } from "./query-policy";
-import { isLegacyLocalExpiration } from "./processing-metadata";
+import { asRecord, isLegacyLocalExpiration } from "./processing-metadata";
 
 export const RECONCILIATION_MIN_AGE_MINUTES = 2;
 export const RECONCILIATION_BATCH_SIZE = 50;
 export const RECONCILIATION_CONCURRENCY = 5;
+
+// Also recognize records written before the explicit retryable flag existed.
+const PERMANENT_CATEGORIES = [
+  "sumopod_status_contract_missing",
+  "unsupported_payment_provider",
+  "status_reconciliation_unsupported",
+  "missing_merchant_reference",
+  "payment_not_configured",
+  "unsupported_currency",
+  "unknown_payment",
+  "wrong_provider",
+  "amount_mismatch",
+  "currency_mismatch",
+  "merchant_reference_mismatch",
+  "provider_payment_id_mismatch",
+  "unsupported_refund",
+  "review_required",
+];
+
+function retryableReconciliationCondition() {
+  return and(
+    sql`coalesce(${payments.rawWebhook}->'reconciliation'->>'retryable', 'true') <> 'false'`,
+    sql`coalesce(${payments.rawWebhook}->'reconciliation'->>'category', '') not in (${sql.join(
+      PERMANENT_CATEGORIES.map((category) => sql`${category}`),
+      sql`, `,
+    )})`,
+  );
+}
+
+function requiresManualReview(candidate: ReconciliationCandidate): boolean {
+  const record = asRecord(asRecord(candidate.rawWebhook).reconciliation);
+  return (
+    record.retryable === false ||
+    (typeof record.category === "string" &&
+      PERMANENT_CATEGORIES.includes(record.category))
+  );
+}
 
 export type ReconciliationCandidate = Pick<
   typeof payments.$inferSelect,
@@ -46,10 +90,14 @@ export interface PaymentReconciliationSummary {
   transitioned: number;
   fulfilled: number;
   reviewRequired: number;
+  skipped: number;
+  unsupportedProvider: number;
+  permanentFailures: number;
   aged: number;
   missingReference: number;
   unavailableProvider: number;
   statuses: Record<PaymentResultStatus, number>;
+  /** Retryable provider/internal failures only; expected review/skips are not errors. */
   errors: number;
   truncated: boolean;
 }
@@ -58,6 +106,8 @@ export async function loadUnresolvedPayments(
   { newestCreatedAt, limit }: ReconciliationWindow,
   database: Database = db,
 ): Promise<ReconciliationCandidate[]> {
+  const providers = statusReconciliationProviders();
+  if (providers.length === 0) return [];
   return database
     .select({
       id: payments.id,
@@ -73,6 +123,10 @@ export async function loadUnresolvedPayments(
     .where(
       and(
         unresolvedPaymentCondition(),
+        inArray(payments.provider, providers),
+        isNotNull(payments.providerOrderId),
+        ne(payments.providerOrderId, ""),
+        retryableReconciliationCondition(),
         lte(payments.createdAt, newestCreatedAt),
       ),
     )
@@ -93,10 +147,12 @@ export async function recordReconciliationAttempt(
   attemptedAt: Date,
   category: string,
   database: Database = db,
+  retryable = true,
 ): Promise<void> {
   const record = JSON.stringify({
     attemptedAt: attemptedAt.toISOString(),
     category,
+    retryable,
   });
   const base = isLegacyLocalExpiration(candidate)
     ? sql`jsonb_set(coalesce(${payments.rawWebhook}, '{}'::jsonb), '{processing}', coalesce(${payments.rawWebhook}->'processing', '{}'::jsonb) || '{"legacyExpirationRecovery":true}'::jsonb)`
@@ -106,7 +162,13 @@ export async function recordReconciliationAttempt(
     .set({
       rawWebhook: sql`jsonb_set(${base}, '{reconciliation}', ${record}::jsonb)`,
     })
-    .where(and(eq(payments.id, candidate.id), unresolvedPaymentCondition()));
+    .where(
+      and(
+        eq(payments.id, candidate.id),
+        unresolvedPaymentCondition(),
+        retryableReconciliationCondition(),
+      ),
+    );
 }
 
 function errorCategory(error: unknown): string {
@@ -136,7 +198,7 @@ async function runWithConcurrency<T>(
   );
 }
 
-/** One existing scheduler, mixed providers, no maximum-age exclusion or local expiration. */
+/** Manual/bounded recovery by stored provider; never infer expiration from age. */
 export async function reconcilePayments(
   dependencies: ReconciliationDependencies = {},
 ): Promise<PaymentReconciliationSummary> {
@@ -164,6 +226,9 @@ export async function reconcilePayments(
     transitioned: 0,
     fulfilled: 0,
     reviewRequired: 0,
+    skipped: 0,
+    unsupportedProvider: 0,
+    permanentFailures: 0,
     aged: 0,
     missingReference: 0,
     unavailableProvider: 0,
@@ -177,18 +242,49 @@ export async function reconcilePayments(
     async (candidate) => {
       if (candidate.createdAt.getTime() < now.getTime() - 24 * 3_600_000)
         summary.aged++;
-      let category = "checking";
+      const skip = (category: string) => {
+        summary.skipped++;
+        summary.reviewRequired++;
+        console.info(
+          "Payment reconciliation skipped",
+          JSON.stringify({
+            paymentId: candidate.id,
+            provider: candidate.provider,
+            category,
+          }),
+        );
+      };
+      if (requiresManualReview(candidate)) {
+        skip("permanent_review_required");
+        return;
+      }
+      if (!candidate.providerOrderId) {
+        summary.missingReference++;
+        skip("missing_merchant_reference");
+        return;
+      }
+      let provider: PaymentProvider;
       try {
-        // Rotate even timed-out/unconfigured candidates, so they cannot monopolize the next batch.
-        await recordAttempt(candidate, now, category, database);
-        if (!candidate.providerOrderId) {
-          summary.missingReference++;
-          throw new PaymentProviderError(
-            "missing_merchant_reference",
-            "unavailable",
-          );
-        }
-        const provider = resolveProvider(candidate.provider);
+        provider = resolveProvider(candidate.provider);
+      } catch (error) {
+        if (
+          !(error instanceof PaymentProviderError) ||
+          error.outcome === "unknown"
+        )
+          throw error;
+        summary.unavailableProvider++;
+        skip(error.code);
+        return;
+      }
+      // Fail closed: method existence is never proof of a supported contract.
+      if (provider.supportsStatusReconciliation !== true) {
+        summary.unsupportedProvider++;
+        skip("status_reconciliation_unsupported");
+        return;
+      }
+      let category = "checking";
+      let retryable = true;
+      try {
         const result = await provider.getPaymentStatus({
           providerOrderId: candidate.providerOrderId,
           providerPaymentId: candidate.providerPaymentId,
@@ -207,27 +303,40 @@ export async function reconcilePayments(
         if (applied.fulfilled) summary.fulfilled++;
         if (applied.reviewRequired) summary.reviewRequired++;
         category = applied.reviewRequired ? "review_required" : applied.status;
+        retryable = !applied.reviewRequired;
       } catch (error) {
-        summary.errors++;
         category = errorCategory(error);
+        retryable = !(
+          PERMANENT_CATEGORIES.includes(category) ||
+          error instanceof PaymentResultError ||
+          (error instanceof PaymentProviderError && error.outcome !== "unknown")
+        );
+        if (retryable) summary.errors++;
+        else {
+          summary.permanentFailures++;
+          summary.reviewRequired++;
+        }
         if (
           error instanceof PaymentProviderError &&
           error.outcome === "unavailable"
         ) {
           summary.unavailableProvider++;
-          summary.reviewRequired++;
         }
         console.warn(
-          "Payment reconciliation candidate failed",
+          retryable
+            ? "Payment reconciliation transient failure"
+            : "Payment reconciliation review required",
           JSON.stringify({
             paymentId: candidate.id,
             provider: candidate.provider,
             category,
+            retryable,
           }),
         );
       }
       try {
-        await recordAttempt(candidate, now, category, database);
+        // One durable attempt rotates transient failures; permanent reviews are excluded next time.
+        await recordAttempt(candidate, now, category, database, retryable);
       } catch {
         summary.errors++;
         console.warn(
