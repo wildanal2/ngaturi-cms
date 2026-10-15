@@ -10,6 +10,7 @@ export async function providerRequest(
 ): Promise<{ response: Response; rawBody: string }> {
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
+  let upstreamStatus: number | undefined;
   try {
     return await Promise.race([
       (async () => {
@@ -18,18 +19,25 @@ export async function providerRequest(
           signal: controller.signal,
           redirect: "error",
         });
+        upstreamStatus = response.status;
         return { response, rawBody: await response.text() };
       })(),
       new Promise<never>((_, reject) => {
         timeout = setTimeout(() => {
           controller.abort();
-          reject(new PaymentProviderError("provider_timeout"));
+          reject(
+            new PaymentProviderError("provider_timeout", "unknown", {
+              upstreamStatus,
+            }),
+          );
         }, timeoutMs);
       }),
     ]);
   } catch (error) {
     if (error instanceof PaymentProviderError) throw error;
-    throw new PaymentProviderError("provider_transport_error");
+    throw new PaymentProviderError("provider_transport_error", "unknown", {
+      upstreamStatus,
+    });
   } finally {
     if (timeout) clearTimeout(timeout);
   }
