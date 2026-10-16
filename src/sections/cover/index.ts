@@ -53,7 +53,7 @@ export const coverSection: SectionDefinition = {
   variants: {
     "gerbang-puspa": {
       name: "Gerbang Puspa",
-      description: "Sampul botani berbingkai kapsul dalam alur undangan",
+      description: "Sampul taman dengan nama utama dan bingkai lengkung tipis",
       component: CoverGerbangPuspa,
       propsSchema: CoverProps,
       fields: coverFields,

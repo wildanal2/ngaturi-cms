@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useCountdown, UNITS } from "./use-countdown";
 import type { SectionRenderProps } from "../types";
-import { GerbangPuspaOrnaments } from "../gerbang-puspa/primitives";
 import { GerbangPuspaPhaseTwoReveal as Reveal } from "../gerbang-puspa/phase-two-media";
 import { adjacentGerbangSection } from "../gerbang-puspa/phase-three-data";
 import foundation from "../gerbang-puspa/foundation.module.css";
@@ -98,7 +97,7 @@ export function CountdownGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
                   ?.click();
               }}
             >
-              Konfirmasi &amp; Kirim Ucapan
+              Konfirmasi Kehadiran
             </button>
           </Reveal>
         )}
@@ -113,7 +112,6 @@ export function CountdownGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
           </a>
         )}
       </div>
-      <GerbangPuspaOrnaments />
     </section>
   );
 }

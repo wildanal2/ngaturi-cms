@@ -1,128 +1,148 @@
 .events {
-  background-color: var(--gp-cream);
-  background-image:
-    linear-gradient(rgba(255, 251, 243, 0.78), rgba(255, 244, 224, 0.78)),
-    url("/themes/gerbang-puspa/stationery-background.svg");
-  padding-top: 120px;
+  background: #f8eee7;
 }
 .events h2 {
   color: var(--gp-maroon);
   font:
-    400 24px/28.8px var(--gp-font-display),
+    400 34px/1.3 var(--gp-font-display),
     serif;
-  margin-bottom: 74px;
+  margin-bottom: 32px;
 }
 .intro {
-  margin: -42px auto 66px !important;
-  max-width: 320px;
+  margin: -8px auto 32px !important;
+  max-width: 360px;
+  font-size: 16px;
+  line-height: 1.8;
   white-space: pre-line;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .eventCard {
   position: relative;
-  z-index: 1;
-  min-height: 315px;
   width: 100%;
-  max-width: 320px;
+  max-width: 396px;
   margin: 0 auto;
-  border-radius: 16px;
-  padding: 24px;
-  background: var(--gp-cream)
-    url("/themes/gerbang-puspa/stationery-background.svg") center / cover;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  color: #271d1c;
+  border: 1px solid var(--gp-line);
+  border-radius: 160px 160px 8px 8px;
+  padding: 32px 24px 20px;
+  background: var(--gp-cream);
 }
 .eventCard + .eventCard {
-  margin-top: 84px;
+  margin-top: 28px;
 }
 .eventCard h3 {
   font:
-    400 24px/28.8px var(--gp-font-body),
+    400 28px/1.35 var(--gp-font-display),
     serif;
-  margin: 16px 0 8px;
+  margin: 14px 0 24px;
   color: var(--gp-maroon);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .rings {
-  position: absolute;
-  top: -44.1px;
-  left: 50%;
-  margin-left: -28.8px;
-  width: 57.6px;
-  height: 57.6px;
-  border-radius: 50%;
-  color: white;
-  background: var(--gp-maroon);
   display: grid;
   place-items: center;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto;
+  color: #a56a6d;
 }
 .dateRow {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 20px;
+  color: var(--gp-maroon);
 }
 .dateRow strong {
-  font-size: 50px;
-  line-height: 50px;
-  font-weight: 400;
-  border-left: 1px solid #8c716f;
-  border-right: 1px solid #8c716f;
-  padding: 0 12px;
+  font:
+    400 52px/1 var(--gp-font-display),
+    serif;
+  border-inline: 1px solid var(--gp-line);
+  padding: 0 16px;
 }
 .dateRow span {
-  font-size: 13px;
-  line-height: 19.5px;
+  font-size: 14px;
+  line-height: 1.6;
 }
 .eventCard p {
-  font-size: 13px;
-  line-height: 19.5px;
-  overflow-wrap: anywhere;
+  font-size: 16px;
+  line-height: 1.8;
+  overflow-wrap: break-word;
 }
 .dateText {
-  margin-bottom: 8px !important;
+  margin-bottom: 18px !important;
 }
 .timeLine {
-  position: relative;
-}
-.calendar {
-  position: absolute;
-  right: -19px;
-  top: 0;
-  width: 19px;
-  height: 19.5px;
-  display: grid;
-  place-items: center;
-  color: var(--gp-maroon);
+  margin-top: 4px !important;
 }
 .venue {
   display: block;
-  margin-top: 8px;
-  font-size: 13px;
-  line-height: 19.5px;
-  overflow-wrap: anywhere;
+  margin-top: 24px;
+  color: var(--gp-maroon);
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 400;
+  overflow-wrap: break-word;
 }
 .address {
-  font-size: 12px !important;
-  line-height: 18px !important;
+  margin-top: 10px !important;
   white-space: pre-line;
 }
 .mapSlot {
-  height: 46px;
+  margin-top: 24px;
+  padding-inline: 24px;
+}
+.mapSlot:empty {
+  display: none;
 }
 .mapButton {
-  position: absolute;
-  bottom: 24px;
-  left: 24px;
-  right: 24px;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
   border: 1px solid var(--gp-maroon);
-  border-radius: 9.6px;
+  border-radius: 28px;
+  padding: 10px 16px;
   background: var(--gp-maroon);
-  color: white;
-  font-size: 16px;
-  line-height: 24px;
-  padding: 6px 12px;
+  color: var(--gp-cream);
+  font-size: 15px;
+  line-height: 1.5;
   text-decoration: none;
+}
+.mapButton:hover {
+  background: #59101a;
+}
+.mapSlot:has([data-gp-location-action]) > .mapButton {
+  display: none;
+}
+.calendarActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 12px;
+  max-width: calc(100% - 48px);
+  margin: 8px auto 0;
+}
+.calendar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  max-width: 100%;
+  color: var(--gp-maroon);
+  font-size: 13px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.calendar svg {
+  flex-shrink: 0;
+}
+.calendarLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.calendar:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }

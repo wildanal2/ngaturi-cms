@@ -59,7 +59,10 @@ export function Canvas({ invitationId }: { invitationId: string }) {
   // music + navigation float over the device viewport (pinned, non-scrolling)
   // exactly like the live page. In the section flow they get a slim
   // placeholder block so they stay visible & selectable.
-  const overlaySections = ordered.filter((s) => OVERLAY_TYPES.has(s.type));
+  const overlaySections = ordered.filter(
+    (s) =>
+      OVERLAY_TYPES.has(s.type) && !(gerbangPuspa && s.type === "navigation"),
+  );
 
   const selectHandler = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -121,10 +124,10 @@ export function Canvas({ invitationId }: { invitationId: string }) {
                 wide ? "inset-x-0" : musicLeft ? "left-0" : "right-0"
               }`
             : "pointer-events-none absolute inset-0 [&_nav]:pointer-events-auto";
-          // Sekar Jawa 3D's overlay buttons own their clicks (seek/audio).
+          // Template-owned overlay buttons handle their own navigation/audio.
           // Its flow placeholder remains the selection target for the inspector.
           const overlaySelectHandler =
-            sekarJawa3D || cinematicVintage
+            sekarJawa3D || cinematicVintage || gerbangPuspa
               ? undefined
               : selectHandler(section.id);
           return (

@@ -48,7 +48,7 @@ export const heroSection: SectionDefinition = {
   variants: {
     "gerbang-puspa": {
       name: "Gerbang Puspa",
-      description: "Gerbang botani dengan pembuka sinematik bertempo panjang",
+      description: "Gerbang taman dengan nama utama dan pembukaan lembut",
       component: HeroGerbangPuspa,
       propsSchema: HeroProps,
       fields: [

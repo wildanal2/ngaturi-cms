@@ -38,7 +38,7 @@ export const gallerySection: SectionDefinition = {
     "gerbang-puspa": {
       name: "Gerbang Puspa",
       description:
-        "Dua foto lebar dilanjutkan pasangan foto dan penampil aksesibel",
+        "Foto utama dilanjutkan pasangan foto dan penampil aksesibel",
       component: GalleryGerbangPuspa,
       propsSchema: GalleryProps,
       fields: [imagesArray],

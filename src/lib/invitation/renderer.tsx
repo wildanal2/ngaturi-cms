@@ -13,7 +13,10 @@ import { SekarJawa3DComposition } from "./immersive-composition";
 import { sekarJawa3DContent } from "@/sections/sekar-jawa-3d/content";
 import type { TemplateComposition } from "@/lib/templates/catalog";
 import type { GlobalSettings, SectionData } from "@/sections/types";
-import { GerbangPuspaPresentation } from "@/sections/gerbang-puspa/opening";
+import {
+  GerbangPuspaPresentation,
+  GerbangPuspaSection,
+} from "@/sections/gerbang-puspa/opening";
 import { hasGerbangPuspa } from "@/sections/gerbang-puspa/content";
 
 const FONT_STACK: Record<string, string> = {
@@ -100,7 +103,11 @@ export function InvitationRenderer({
   const gerbangPuspa = composition === "standard" && hasGerbangPuspa(ordered);
 
   const content = (
-    <GerbangPuspaPresentation enabled={gerbangPuspa} sections={ordered}>
+    <GerbangPuspaPresentation
+      key={invitationId ?? ordered.find((s) => s.type === "cover")?.id}
+      enabled={gerbangPuspa}
+      sections={gerbangPuspa ? sections : ordered}
+    >
       <div
         className={
           gerbangPuspa
@@ -114,6 +121,9 @@ export function InvitationRenderer({
       >
         {ownedComposition}
         {flow.map((section, i) => {
+          // Gerbang Puspa owns one dock, including invitations with saved generic bars.
+          // Persisted section IDs, order and visibility remain untouched.
+          if (gerbangPuspa && section.type === "navigation") return null;
           const variant = getVariant(
             section.type,
             composition === "cinematic-vintage"
@@ -122,22 +132,22 @@ export function InvitationRenderer({
           );
           if (!variant) return null;
           const Component = variant.component;
-          const node = (
-            <div
-              data-section={section.type}
-              data-gp-content={
-                (gerbangPuspa && !OVERLAY.has(section.type)) || undefined
-              }
-            >
-              <Component
-                props={section.props}
-                global={global}
-                invitationId={invitationId}
-                guestName={guestName}
-                isPreview={isPreview}
-                siblingTypes={siblingTypes}
-              />
-            </div>
+          const rendered = (
+            <Component
+              props={section.props}
+              global={global}
+              invitationId={invitationId}
+              guestName={guestName}
+              isPreview={isPreview}
+              siblingTypes={siblingTypes}
+            />
+          );
+          const node = gerbangPuspa ? (
+            <GerbangPuspaSection type={section.type} id={section.id}>
+              {rendered}
+            </GerbangPuspaSection>
+          ) : (
+            <div data-section={section.type}>{rendered}</div>
           );
           if (
             OVERLAY.has(section.type) ||

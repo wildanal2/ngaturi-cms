@@ -13,7 +13,10 @@ import {
   gerbangFormOwners,
   useGerbangFormSurface,
 } from "../gerbang-puspa/phase-three-surface";
-import { GerbangPuspaFormsDialog } from "../gerbang-puspa/phase-three-dialog";
+import {
+  GerbangPuspaFormsDialog,
+  GerbangPuspaFormAction,
+} from "../gerbang-puspa/phase-three-dialog";
 import foundation from "../gerbang-puspa/foundation.module.css";
 import styles from "../gerbang-puspa/phase-three-forms.module.css";
 
@@ -30,13 +33,20 @@ export function RsvpGerbangPuspa({
   const snapshot = useGerbangFormSurface(surface);
   const root = useRef<HTMLElement>(null),
     success = useRef<HTMLParagraphElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const [open, setOpen] = useState(false),
     [paired, setPaired] = useState(false);
   const [opener, setOpener] = useState<HTMLElement | null>(null);
   const [phone, setPhone] = useState(""),
     [prefix, setPrefix] = useState("+62");
+  const [attendance, setAttendance] = useState("");
+  const absent = attendance === "not_attending";
   const id = useId(),
-    maximum = Math.max(1, Math.floor(Number(props.max_guests_per_person) || 2));
+    maximum = Math.min(
+      20,
+      Math.max(1, Math.floor(Number(props.max_guests_per_person) || 2)),
+    );
+  const formId = `${id}-form`;
   useEffect(() => {
     const element = root.current;
     if (!element) return;
@@ -61,9 +71,12 @@ export function RsvpGerbangPuspa({
     };
   }, [surface, inCanvas]);
   useEffect(() => {
-    if (state === "done" && snapshot.active === "rsvp")
-      success.current?.focus();
-  }, [state, snapshot.active]);
+    const status = success.current;
+    if (state === "done" && status?.getClientRects().length) status.focus();
+  }, [state]);
+  useEffect(() => {
+    if (state === "error") errorRef.current?.focus();
+  }, [state, error]);
 
   const form = (
     <div hidden={!inCanvas && snapshot.active !== "rsvp"} data-gp-rsvp-panel>
@@ -77,12 +90,23 @@ export function RsvpGerbangPuspa({
                 : summary.status === "not_attending"
                   ? "Tidak hadir"
                   : "Masih ragu"}{" "}
-              · {summary.count} tamu
+              {summary.status !== "not_attending" && (
+                <>· {summary.count} tamu</>
+              )}
             </span>
           )}
         </p>
       ) : (
-        <form className={styles.form} data-gp-rsvp-form onSubmit={onSubmit}>
+        <form
+          id={formId}
+          className={styles.form}
+          data-gp-rsvp-form
+          onSubmit={onSubmit}
+          aria-busy={state === "sending"}
+        >
+          <p className={styles.formIntro}>
+            Konfirmasi dan pesan ini dikirim kepada tuan rumah.
+          </p>
           <input
             type="text"
             name="_hp"
@@ -102,6 +126,24 @@ export function RsvpGerbangPuspa({
             />
           </div>
           <div className={styles.formGroup}>
+            <label htmlFor={`${id}-status`}>Kehadiran</label>
+            <select
+              id={`${id}-status`}
+              name="status"
+              value={attendance}
+              onChange={(event) => setAttendance(event.target.value)}
+              required
+            >
+              <option value="">Pilih kehadiran</option>
+              <option value="attending">Hadir</option>
+              <option value="not_attending">Tidak Hadir</option>
+              <option value="maybe">Masih ragu</option>
+            </select>
+          </div>
+          {/* The native endpoint requires a positive count for every status.
+              Absence retains its canonical value without suggesting attending guests. */}
+          {absent && <input type="hidden" name="guest_count" value="1" />}
+          <div className={styles.formGroup} hidden={absent}>
             <label htmlFor={`${id}-count`}>Jumlah tamu</label>
             <input
               id={`${id}-count`}
@@ -111,6 +153,7 @@ export function RsvpGerbangPuspa({
               max={maximum}
               defaultValue={1}
               required
+              disabled={absent}
             />
           </div>
           {!!props.require_phone && (
@@ -152,15 +195,6 @@ export function RsvpGerbangPuspa({
             </div>
           )}
           <div className={styles.formGroup}>
-            <label htmlFor={`${id}-status`}>Kehadiran</label>
-            <select id={`${id}-status`} name="status" defaultValue="" required>
-              <option value="">Kehadiran</option>
-              <option value="attending">Hadir</option>
-              <option value="not_attending">Tidak Hadir</option>
-              <option value="maybe">Masih ragu</option>
-            </select>
-          </div>
-          <div className={styles.formGroup}>
             <label htmlFor={`${id}-message`}>
               Pesan untuk tuan rumah (opsional)
             </label>
@@ -170,22 +204,37 @@ export function RsvpGerbangPuspa({
               rows={3}
               placeholder="Pesan untuk tuan rumah"
             />
+            <small className={styles.fieldHint}>
+              Pesan pribadi, tidak ditampilkan di buku tamu.
+            </small>
           </div>
           {!preview && invitationId && snapshot.active === "rsvp" && (
             <TurnstileField />
           )}
           {error && (
-            <p className={styles.error} role="alert">
+            <p
+              ref={errorRef}
+              tabIndex={-1}
+              className={styles.error}
+              role="alert"
+            >
               {error}
             </p>
           )}
-          <button
-            className={styles.submitButton}
-            type="submit"
-            disabled={state === "sending" || preview || !invitationId}
+          <GerbangPuspaFormAction
+            surface={surface}
+            kind="rsvp"
+            inCanvas={inCanvas}
           >
-            {state === "sending" ? "Mengirim..." : "Kirim konfirmasi"}
-          </button>
+            <button
+              className={styles.submitButton}
+              type="submit"
+              form={formId}
+              disabled={state === "sending" || preview || !invitationId}
+            >
+              {state === "sending" ? "Mengirim..." : "Kirim konfirmasi"}
+            </button>
+          </GerbangPuspaFormAction>
           {preview && (
             <p className={styles.notice}>
               Pengiriman dinonaktifkan dalam pratinjau.
@@ -219,6 +268,7 @@ export function RsvpGerbangPuspa({
           tabIndex={paired ? -1 : 0}
           data-gp-rsvp-launch
           onClick={() => {
+            surface.update({ active: "rsvp" });
             setOpener(
               document.activeElement instanceof HTMLElement
                 ? document.activeElement

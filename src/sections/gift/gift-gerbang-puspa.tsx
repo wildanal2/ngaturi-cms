@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Landmark } from "lucide-react";
 import type { SectionRenderProps } from "../types";
 import type { BankAccount } from "./gift-cards";
-import { GerbangPuspaOrnaments } from "../gerbang-puspa/primitives";
 import {
   GerbangPuspaPhaseTwoReveal as Reveal,
   GerbangPuspaMedia,
@@ -39,7 +39,7 @@ export function GiftGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
                   />
                 ) : (
                   <div className={styles.bankMark}>
-                    <span aria-hidden="true">▥</span>
+                    <Landmark size={24} strokeWidth={1.4} aria-hidden="true" />
                     {account.bank_name || "Rekening"}
                   </div>
                 )}
@@ -47,6 +47,7 @@ export function GiftGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
                   <p className={styles.accountNumber}>
                     {account.account_number || "Nomor belum diisi"}
                   </p>
+                  <p className={styles.accountName}>{account.account_name}</p>
                   <button
                     className={styles.copyButton}
                     type="button"
@@ -71,26 +72,24 @@ export function GiftGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
                         ? "Coba Lagi"
                         : "Salin Rekening"}
                   </button>
-                  <p className={styles.accountName}>
-                    {account.bank_name}
-                    {account.bank_name && account.account_name && ": "}
-                    {account.account_name}
-                  </p>
+                  <span
+                    className={styles.feedback}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {failed === index
+                      ? "Gagal menyalin. Silakan salin nomor secara manual."
+                      : copied === index
+                        ? "Nomor rekening berhasil disalin."
+                        : ""}
+                  </span>
                 </div>
               </div>
             ))}
             {!accounts.length && <p>Rekening belum ditambahkan.</p>}
           </div>
         </Reveal>
-        <span className={styles.feedback} role="status" aria-live="polite">
-          {failed !== null
-            ? "Nomor rekening gagal disalin. Anda dapat menyalinnya manual."
-            : copied !== null
-              ? "Nomor rekening berhasil disalin."
-              : ""}
-        </span>
       </div>
-      <GerbangPuspaOrnaments />
     </section>
   );
 }

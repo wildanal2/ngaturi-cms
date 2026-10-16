@@ -70,7 +70,7 @@ export const storySection: SectionDefinition = {
         { kind: "text", key: "title", label: "Judul" },
         itemsField,
       ],
-      defaultProps: { eyebrow: "", title: "Love Story", items: sample },
+      defaultProps: { eyebrow: "", title: "Cerita Kami", items: [] },
       isPremium: true,
     },
     timeline: {

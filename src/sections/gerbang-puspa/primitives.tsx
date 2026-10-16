@@ -24,9 +24,13 @@ export function GerbangPuspaNames({
   names: string;
   compact?: boolean;
 }) {
+  const namesList = parts(names);
+  const longNames = namesList.some((name) => Array.from(name).length > 22);
   return (
-    <div className={`${styles.names} ${compact ? styles.compact : ""}`}>
-      {parts(names).map((name, index) => (
+    <div
+      className={`${styles.names} ${compact || longNames ? styles.compact : ""}`}
+    >
+      {namesList.map((name, index) => (
         <Fragment key={index}>
           {index > 0 && <span className={styles.ampersand}>&amp;</span>}
           <span className={styles.name}>{name}</span>
@@ -100,9 +104,11 @@ export function GerbangPuspaOrnaments({ hero = false }: { hero?: boolean }) {
   return (
     <div className={styles.ornaments} aria-hidden="true">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={GP_ASSETS.floralLeft} className={styles.topLeft} alt="" />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={GP_ASSETS.floralRight} className={styles.topRight} alt="" />
+      <img
+        src={hero ? GP_ASSETS.floralRight : GP_ASSETS.floralLeft}
+        className={hero ? styles.topRight : styles.topLeft}
+        alt=""
+      />
       <GerbangPuspaFlowers
         className={hero ? styles.heroFlowers : styles.bottomRight}
       />
@@ -113,7 +119,7 @@ export function GerbangPuspaOrnaments({ hero = false }: { hero?: boolean }) {
 export function GerbangPuspaReveal({
   children,
   kind = "up",
-  duration = 3000,
+  duration = 600,
   delay = 0,
   className = "",
 }: {
@@ -127,7 +133,8 @@ export function GerbangPuspaReveal({
   const [seen, setSeen] = useState(false);
   const { opened, reducedMotion } = useGerbangPuspa();
   useEffect(() => {
-    if (!opened || !ref.current) return;
+    if (!opened || !ref.current || typeof IntersectionObserver !== "function")
+      return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -144,10 +151,13 @@ export function GerbangPuspaReveal({
     <div
       ref={ref}
       className={`${styles.reveal} ${seen ? styles[kind] : ""} ${className}`}
+      data-gp-revealed={seen || reducedMotion}
       style={
         {
-          animationDelay: reducedMotion ? "0ms" : `${delay}ms`,
-          animationDuration: reducedMotion ? "0ms" : `${duration}ms`,
+          animationDelay: reducedMotion ? "0ms" : `${Math.min(delay, 180)}ms`,
+          animationDuration: reducedMotion
+            ? "0ms"
+            : `${Math.min(duration, 700)}ms`,
         } as CSSProperties
       }
     >

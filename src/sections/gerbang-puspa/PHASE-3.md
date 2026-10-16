@@ -1,5 +1,10 @@
 # Gerbang Puspa Phase 3
 
+> **Current presentation:** the October 2026 visual refinement intentionally
+> supersedes the historical fixed geometry, long timing, heavy frames and
+> interface colours described below. Native data and lifecycle contracts remain
+> authoritative. See [VISUAL-REFINEMENT.md](./VISUAL-REFINEMENT.md).
+
 Six dedicated variants complete the native section preset: Countdown, RSVP,
 Guestbook, Gift, Closing and Music. Phases 1–2 and the standalone stay unchanged.
 No backend, schema, submission endpoint, payment or unrelated template changes

@@ -8,13 +8,13 @@ import {
   GerbangPuspaMedia,
   GerbangPuspaPhaseTwoReveal as Reveal,
 } from "../gerbang-puspa/phase-two-media";
-import { GerbangPuspaOrnaments } from "../gerbang-puspa/primitives";
 import foundation from "../gerbang-puspa/foundation.module.css";
 import styles from "./story-gerbang-puspa.module.css";
 
 export function StoryGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
   const p = props as z.infer<typeof StoryProps>;
   const items = p.items ?? [];
+  if (!items.length && !inCanvas) return null;
   return (
     <section
       className={`${foundation.scene} ${styles.story}`}
@@ -22,6 +22,7 @@ export function StoryGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
       data-gerbang-puspa-story
     >
       <div className={`${foundation.frame} ${styles.storyFrame}`}>
+        {!items.length && <p>Tambahkan cerita dan foto Anda di editor.</p>}
         <Reveal kind="zoom" inCanvas={inCanvas}>
           <GerbangPuspaMedia
             src={items[0]?.image}
@@ -50,7 +51,6 @@ export function StoryGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
           </Reveal>
         ))}
       </div>
-      <GerbangPuspaOrnaments />
     </section>
   );
 }

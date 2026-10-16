@@ -113,3 +113,33 @@ export function instagramProfile(value: string) {
     return null;
   }
 }
+
+/** Only a matching adjacent Location may occupy an event's action slot. */
+export function canPairLocation({
+  groups,
+  venue,
+  address,
+  eventVenue,
+  eventAddress,
+  maps,
+  eventMaps,
+  embed,
+}: {
+  groups: string | undefined;
+  venue: string;
+  address: string;
+  eventVenue: string;
+  eventAddress: string;
+  maps?: string;
+  eventMaps?: string;
+  embed?: string;
+}) {
+  return (
+    groups === "1" &&
+    !!maps &&
+    !embed &&
+    (!venue || matchingText(venue) === matchingText(eventVenue)) &&
+    (!address || matchingText(address) === matchingText(eventAddress)) &&
+    (!eventMaps || eventMaps === maps)
+  );
+}

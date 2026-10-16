@@ -7,9 +7,11 @@ import {
 } from "../gerbang-puspa/primitives";
 import { useGerbangPuspa } from "../gerbang-puspa/opening";
 import { GP_ASSETS } from "../gerbang-puspa/assets";
+import { GerbangPuspaMedia } from "../gerbang-puspa/phase-two-media";
 import { splitGerbangPuspaNames } from "../gerbang-puspa/content";
 import foundation from "../gerbang-puspa/foundation.module.css";
 import styles from "./hero-gerbang-puspa.module.css";
+import { GerbangPuspaGate } from "../gerbang-puspa/gate";
 
 function splitNames(value: string): string[] {
   return splitGerbangPuspaNames(value);
@@ -29,7 +31,7 @@ function invitationDate(value: string): string {
   return `${day} . ${month} . ${year}`;
 }
 
-/** Phase 1 keeps the baseline's deliberately delayed ceremonial entrance. */
+/** Normal-flow identity over the original garden artwork. */
 export function HeroGerbangPuspa({
   props,
   inCanvas = false,
@@ -54,9 +56,9 @@ export function HeroGerbangPuspa({
     >
       <div className={styles.gardenFilm} aria-hidden="true">
         {/* The local gate is an original substitute, never vendor film. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={media || GP_ASSETS.gate} alt="" />
+        <GerbangPuspaMedia src={media} fallback={GP_ASSETS.gate} alt="" eager />
       </div>
+      <GerbangPuspaGate />
       <div className={styles.heroFrame}>
         <GerbangPuspaMonogram
           names={String(props.couple_names ?? "")}
@@ -65,7 +67,9 @@ export function HeroGerbangPuspa({
         {bismillah && <p className={styles.bismillah}>{bismillah}</p>}
         <div className={styles.heroText}>
           <p className={styles.eyebrow}>{String(props.tagline ?? "")}</p>
-          <h1 className={styles.names}>
+          <h1
+            className={`${styles.names} ${names.some((name) => Array.from(name).length > 22) ? styles.longNames : ""}`}
+          >
             <span>{names[0]}</span>
             {names.length === 2 && (
               <>
@@ -83,7 +87,7 @@ export function HeroGerbangPuspa({
                 d="M5 7 15 17 25 7 M5 17 15 27 25 17"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="3"
+                strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />

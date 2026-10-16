@@ -5,6 +5,7 @@ import type { SectionRenderProps } from "../types";
 import {
   GerbangPuspaMonogram,
   GerbangPuspaNames,
+  GerbangPuspaOrnaments,
 } from "../gerbang-puspa/primitives";
 import {
   useGerbangPuspa,
@@ -14,14 +15,20 @@ import foundation from "../gerbang-puspa/foundation.module.css";
 import { useOpen } from "./shell";
 import styles from "./cover-gerbang-puspa.module.css";
 
-/** A retained cover in the native section flow, rather than a page overlay. */
+/** Public entry is a viewport overlay; Builder keeps the cover in editable flow. */
 export function CoverGerbangPuspa({
   props,
   guestName,
   inCanvas,
 }: SectionRenderProps) {
   const { open, reveal } = useOpen();
-  const { reducedMotion } = useGerbangPuspa();
+  const presentation = useGerbangPuspa();
+  const stage =
+    presentation.managed && !inCanvas
+      ? presentation.stage
+      : open
+        ? "opened"
+        : "closed";
   const coverRef = useRef<HTMLElement>(null);
   const { activate } = useGerbangPuspaCoverOpening({
     open,
@@ -36,12 +43,6 @@ export function CoverGerbangPuspa({
   function openInvitation() {
     if (open) return;
     activate();
-    if (!reducedMotion) {
-      coverRef.current?.animate(
-        [{ opacity: 1 }, { opacity: 0.9 }, { opacity: 1 }],
-        { duration: 500, easing: "linear" },
-      );
-    }
   }
 
   return (
@@ -51,6 +52,11 @@ export function CoverGerbangPuspa({
       data-invitation-cover
       data-gerbang-puspa-cover
       data-open={open ? "1" : "0"}
+      data-stage={stage}
+      data-in-canvas={!!inCanvas}
+      hidden={!inCanvas && stage === "opened"}
+      inert={!inCanvas && stage !== "closed"}
+      aria-hidden={(!inCanvas && stage !== "closed") || undefined}
       aria-label="Undangan pernikahan"
     >
       <div className={styles.frame}>
@@ -62,17 +68,20 @@ export function CoverGerbangPuspa({
             <p>{text("note", "Kepada Bapak/Ibu/Saudara/i")}</p>
             <strong>{guestName || "Tamu Undangan"}</strong>
           </div>
-          {!open && (
+          {(!open || !inCanvas) && (
             <button
               type="button"
               className={styles.button}
               onClick={openInvitation}
+              disabled={inCanvas || stage !== "closed"}
+              aria-busy={stage === "opening"}
             >
               {text("button_label", "Buka Undangan")}
             </button>
           )}
         </div>
       </div>
+      <GerbangPuspaOrnaments />
     </section>
   );
 }

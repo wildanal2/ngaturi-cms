@@ -12,7 +12,6 @@ import { TurnstileField } from "../turnstile-field";
 import type { SectionRenderProps } from "../types";
 import {
   adjacentGerbangSection,
-  wishInitials,
   wishTimestamp,
 } from "../gerbang-puspa/phase-three-data";
 import {
@@ -21,7 +20,10 @@ import {
   useGerbangFormSurface,
   type GerbangFormSurface,
 } from "../gerbang-puspa/phase-three-surface";
-import { GerbangPuspaFormsDialog } from "../gerbang-puspa/phase-three-dialog";
+import {
+  GerbangPuspaFormsDialog,
+  GerbangPuspaFormAction,
+} from "../gerbang-puspa/phase-three-dialog";
 import foundation from "../gerbang-puspa/foundation.module.css";
 import styles from "../gerbang-puspa/phase-three-forms.module.css";
 
@@ -43,6 +45,7 @@ export function GuestbookGerbangPuspa({
     [page, setPage] = useState(1);
   const [opener, setOpener] = useState<HTMLElement | null>(null);
   const id = useId();
+  const formId = `${id}-form`;
   useEffect(() => {
     const element = root.current;
     if (!element || inCanvas) return;
@@ -69,16 +72,22 @@ export function GuestbookGerbangPuspa({
     return () => owner?.update({ paired: false });
   }, [owner]);
   useEffect(() => {
-    if (book.state === "done" && snapshot.active === "wishes")
-      success.current?.focus();
-  }, [book.state, snapshot.active]);
+    const status = success.current;
+    if (book.state === "done" && status?.getClientRects().length)
+      status.focus();
+  }, [book.state]);
   const form = (
     <div data-gp-guestbook-panel>
       <form
+        id={formId}
         className={styles.form}
         data-gp-guestbook-form
         onSubmit={book.onSubmit}
+        aria-busy={book.state === "sending"}
       >
+        <p className={styles.formIntro}>
+          Bagikan doa dan ucapan untuk buku tamu mempelai.
+        </p>
         <input type="text" name="_hp" tabIndex={-1} autoComplete="off" hidden />
         <div className={styles.formGroup}>
           <label htmlFor={`${id}-name`}>Nama</label>
@@ -115,13 +124,20 @@ export function GuestbookGerbangPuspa({
             {book.error}
           </p>
         )}
-        <button
-          className={styles.submitButton}
-          type="submit"
-          disabled={book.state === "sending" || preview || !invitationId}
+        <GerbangPuspaFormAction
+          surface={surface}
+          kind="wishes"
+          inCanvas={inCanvas}
         >
-          {book.state === "sending" ? "Mengirim..." : "Kirim ucapan"}
-        </button>
+          <button
+            className={styles.submitButton}
+            type="submit"
+            form={formId}
+            disabled={book.state === "sending" || preview || !invitationId}
+          >
+            {book.state === "sending" ? "Mengirim..." : "Kirim ucapan"}
+          </button>
+        </GerbangPuspaFormAction>
         {book.state === "done" && (
           <p
             ref={success}
@@ -157,23 +173,8 @@ export function GuestbookGerbangPuspa({
       {!book.loading && !book.loadError && !book.msgs.length && (
         <p>Jadilah yang pertama memberi ucapan.</p>
       )}
-      {shown.map((wish, index) => (
+      {shown.map((wish) => (
         <article className={styles.wish} key={wish.id}>
-          <span
-            className={styles.avatar}
-            aria-hidden="true"
-            style={{
-              backgroundColor: [
-                "#455cff",
-                "#698794",
-                "#04bfa8",
-                "#d3ad57",
-                "#b086c5",
-              ][index % 5],
-            }}
-          >
-            {wishInitials(wish.name)}
-          </span>
           <div className={styles.wishBody}>
             <p className={styles.wishName}>{wish.name}</p>
             <p className={styles.wishComment}>{wish.message}</p>
@@ -241,6 +242,7 @@ export function GuestbookGerbangPuspa({
           form={form}
           list={list}
           title="Ucapan & Doa"
+          formKind="wishes"
           onClose={() => setOpen(false)}
           restoreFocusTo={opener}
         />

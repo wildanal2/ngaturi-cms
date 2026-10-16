@@ -1,73 +1,95 @@
-# Gerbang Puspa — adaptation Phase 1
+# Gerbang Puspa
 
-The standard section registry owns four dedicated `gerbang-puspa` variants:
-Loading, Cover, Hero and Quote. The catalog preset stops at Quote. No later
-section, composition type, persisted contract or backend has been introduced.
+A native Ngaturi wedding template with a romantic garden and printed-stationery
+presentation. It uses the standard registry, persisted section contracts,
+Loading boundary, public renderer and Builder Canvas. No standalone template
+runtime, business simulation or duplicate renderer is imported.
 
-`standalone/gerbang-puspa/` remains the independent visual reference. Production
-components import no standalone runtime, fixtures or business simulation.
+## Integration and lifecycle
 
-## Shared presentation
+The catalog preset contains Loading, Cover, Hero, Quote, Couple, optional Story,
+Countdown, Events, Location, Gallery, RSVP, Guestbook, Gift, Closing, Music and
+an editable native Navigation section.
+Story starts hidden and empty; it never invents a couple's history. This order
+applies to new presets only. Saved section identities, order and visibility stay
+native. Closing ends the default content flow; Music uses the existing player.
 
-`foundation.module.css` scopes the cream, dusty pink and maroon palette, legal
-font roles, stationery, surfaces, portrait framing, dividers and motion.
-`primitives.tsx` provides data-derived names/initials, layered floral ornaments
-and once-only reveals. `assets.ts` lists independent temporary art; its stable
-paths can receive future rights-cleared replacements without changing section
-contracts. CSS background/font URLs use those same stable theme paths.
+`opening.tsx` supplies the centered maximum 500px column, quiet public garden
+backdrop and device-contained Builder presentation. `content.ts` remains
+server-safe template detection. Builder sizing comes from its existing device
+scroller, and editable content appears immediately.
 
-`opening.tsx` supplies a presentation context and centered maximum 500px column
-over a fixed public pastoral backdrop. Builder uses its existing device scroller
-and a contained backdrop. Its viewport height and desktop composition come from
-that device, not the host window. `content.ts` is server-safe section detection.
+Loading uses `InvitationLoadingBoundary` and its first-view asset/font provider.
+It is the only readiness owner; no audio player or artificial readiness wait is
+added. Cover's `useOpen()` synchronously dispatches `ngaturi:open` inside the
+opening gesture. One lifecycle owns `closed → opening → opened`. The public
+Cover is a scrollable viewport overlay, and underlying content is inert in SSR
+as well as hydration. Closed entry owns scroll restoration until the gesture.
+Opening releases content and scrolling immediately, reveals the Hero in 600ms
+and opens two original vector gate leaves. Animation completion or an 1100ms
+fallback enables the dock. Reduced motion completes immediately. The initial
+Hero handoff yields to the guest's next gesture; completion never scrolls or
+focuses. Cleanup releases listeners, timers, frames, history policy and locks.
 
-## Native lifecycle and data
+The presentation owns one cream dock: Beranda, Mempelai, Acara, Galeri and RSVP,
+when their content exists. Countdown and Location belong to Acara. RSVP triggers
+its existing dialog owner directly. Saved generic navigation is not rendered a
+second time. An explicitly hidden navigation section is respected. Builder
+portals the dock into its device viewport and retains selectable native section
+placeholders. Empty audio has no public control; Builder retains feedback.
 
-Loading uses `InvitationLoadingBoundary` and its readiness state, with a
-first-view asset/font provider. The loader adds no readiness timer or audio
-player. The existing boundary's bounded preparation/dissolve policy remains
-authoritative.
+## Content contracts
 
-Cover uses persisted `names`, `tagline`, `note` and `button_label`, plus native
-guest-name injection. `useOpen()` synchronously dispatches `ngaturi:open` in the
-button gesture, preserving the existing music lifecycle. Closed public content
-is inert and scrolling is locked. Opening releases both immediately, retains
-the cover in document flow, runs its 500ms visual transition and hands off
-scroll/focus to Hero after 1000ms. Cleanup restores owned scroll styles.
+- Cover preserves names, tagline, note, button label and native personalized
+  guest-name injection. Hero preserves names, authored calendar day, ceremonial
+  text, background image and welcome-image slots.
+- Quote uses existing `text`/`source` only. Blank-line paragraphs supply the quote,
+  welcome heading and welcome body. No religious wording is hardcoded. Welcome
+  media uses the existing Hero `couple_image` slot.
+- Couple retains profile order, names, parentage, optional biography/residence and
+  Instagram destinations. Long names and family details grow naturally.
+- Events retain authored array order and day/place grouping. Only an immediately
+  adjacent Location with matching data and no embed can share the event action
+  slot. Other locations render independently. Missing dates/maps stay truthful.
+- Gallery preserves image ordering, positional crop roles, lazy loading, broken
+  media recovery and native viewer keyboard/swipe/focus/scroll-lock behavior.
+  Story retains the first item's lead-image mapping and optional item photos.
+- Countdown retains active, expired and missing-date states. Adjacent RSVP and
+  Guestbook may share a dialog surface; their hooks, payloads, verification,
+  submission states and moderation remain independent. RSVP never publishes a
+  public wish. Separated sections keep their own entry points.
+- Gift copies account numbers verbatim and reports success/failure beside the
+  relevant control. Closing retains message paragraph roles and dynamic names.
+  Music preserves the native autoplay authorization and actual player state.
 
-Hero uses persisted `couple_names`, `event_date`, `tagline`, optional `bismillah`
-and `background_image`. Its numeric date preserves the persisted ISO calendar
-day. Public text/initials retain 11s/12s delays and 3s reveals after handoff.
+## Assets and presentation
 
-Quote uses only existing `text` and `source`. Separate paragraphs with a blank
-line: the first is the upper quotation, the second is a welcome heading and
-remaining paragraphs are welcome text. `source` remains the quote attribution.
-No religious text is fixed in the component. Welcome media uses the existing
-Hero `couple_image`, falling back to independent local illustrative art. Longer
-copy can grow the cards/scene instead of being clipped.
+Fraunces, Marcellus and Parisienne use the existing licensed local font files.
+`assets.ts` and `phase-two-assets.ts` preserve the stable illustration slots;
+provenance and font licenses remain in `public/themes/gerbang-puspa/`.
+Portraits, gallery, welcome and Story pictures are original temporary
+**illustration placeholders**, not finished production photography. No vendor
+artwork, monogram, fonts, photographs, film or audio was added.
 
-## Explicit fidelity differences
+See [VISUAL-REFINEMENT.md](./VISUAL-REFINEMENT.md) for the current thin frames,
+responsive typography, short once-only reveals, reduced-motion behavior and
+normal-flow layout. Historical measured geometry/timing in
+[PHASE-2.md](./PHASE-2.md) and [PHASE-3.md](./PHASE-3.md) is superseded by that
+refinement; their native data and interaction contracts remain authoritative.
 
-- Native readiness includes Ngaturi's existing minimum/deadline/dissolve policy.
-- Focus handoff, keyboard activation and inert content use native architecture.
-- Reduced motion removes decorative animation and long waits immediately.
-- Builder shows Hero content immediately for editing, contains all scroll/focus
-  effects in its device viewport, and shows Loading as an editable static sample.
-- Quote's combined paragraph layout and shared Hero image work within existing
-  fields; there is no separate welcome salutation or media contract.
-- Initials are independently derived from invitation data, replacing the fixed
-  standalone monogram illustration.
-- Long names/copy can change wrapping and height; measured baseline fixtures
-  preserve the 817.1875px Hero and 807.3125px Quote minimum geometry.
+## Validation
 
-## Rights boundary
+`lifecycle.test.ts`, `opening-handoff.test.ts` and `journey.test.tsx` cover gesture
+ownership, completion fallback, reduced motion, reload policy, interruption,
+SSR inert boundaries, navigation targets and preservation of authored repeats.
+`pairing.test.ts` covers event grouping and Location compatibility. Existing
+Loading, player, form, registry, hydration and composition tests remain applicable.
 
-Marcellus is from the confirmed Google Fonts OFL source. Fraunces and Parisienne
-are legal temporary substitutes for uncleared Against/English111. Font licenses
-and artwork hashes are in `public/themes/gerbang-puspa/`. Exact photography,
-distinctive vendor art, vendor monogram, audio/video and proprietary font
-binaries are excluded. The gate is an independent 20s CSS animation stand-in;
-these files do not introduce any recording or music variant.
+Rendered before/after screenshots and local browser evidence are in
+`/tmp/gerbang-puspa-interactive-20261016/` (previous visual baseline:
+`/tmp/gerbang-puspa-refinement-20261015/`). The external fixture harness imports the
+actual renderer and Canvas and mocks local transport only. It does not establish
+real backend writes, external CAPTCHA acceptance or physical-device behavior.
 
-No vendor APIs, tracking, account routing or submission endpoints are used.
-Phase 1 does not implement Couple or any later section.
+See [INTERACTIVE-REFINEMENT.md](./INTERACTIVE-REFINEMENT.md) for navigation
+ownership, modal footer/tabs, saved-composition findings and production validation.

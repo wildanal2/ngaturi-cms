@@ -1,0 +1,79 @@
+.gate {
+  position: absolute;
+  inset: 40px 24px;
+  z-index: 3;
+  perspective: 800px;
+  pointer-events: none;
+  animation: dissolve var(--gp-opening-duration, 1100ms) ease both;
+}
+.gate svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: #b78a86;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.arch,
+.left,
+.right {
+  position: absolute;
+  inset: 0;
+}
+.left,
+.right {
+  backface-visibility: hidden;
+  animation-duration: 950ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.left {
+  transform-origin: 7.5% 50%;
+  animation-name: openLeft;
+}
+.right {
+  transform-origin: 92.5% 50%;
+  animation-name: openRight;
+}
+.gate .leaf {
+  fill: #fffbf3;
+}
+:global([data-hero-started="false"]) .gate,
+:global([data-hero-started="false"]) .left,
+:global([data-hero-started="false"]) .right {
+  animation-play-state: paused;
+}
+:global([data-in-canvas="true"]) .gate {
+  display: none;
+}
+:global([data-opening-stage="opened"]) .gate {
+  display: none;
+}
+@keyframes openLeft {
+  to {
+    transform: rotateY(-82deg);
+    opacity: 0;
+  }
+}
+@keyframes openRight {
+  to {
+    transform: rotateY(82deg);
+    opacity: 0;
+  }
+}
+@keyframes dissolve {
+  0% {
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gate {
+    display: none;
+    animation: none;
+  }
+}

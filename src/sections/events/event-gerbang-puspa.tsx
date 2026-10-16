@@ -23,7 +23,7 @@ export function EventGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
       data-gerbang-puspa-events
       data-gp-event-groups={groups.length}
     >
-      <Reveal kind="down" delay={500} inCanvas={inCanvas}>
+      <Reveal kind="down" inCanvas={inCanvas}>
         <h2>Save The Date</h2>
       </Reveal>
       {textValue(props.intro) && (
@@ -62,7 +62,7 @@ export function EventGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
                   <path d="m14 11 5-5 5 5-5 7zM14 11h10M19 6v12" />
                 </svg>
               </span>
-              <Reveal kind="down" delay={1500} inCanvas={inCanvas}>
+              <Reveal kind="down" delay={120} inCanvas={inCanvas}>
                 <h3>{events.map((item) => item.name).join(" & ")}</h3>
               </Reveal>
               {date ? (
@@ -76,40 +76,22 @@ export function EventGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
                   </span>
                 </div>
               ) : (
-                <p className={styles.dateText}>{event.date}</p>
+                <p className={styles.dateText}>
+                  {event.date || "Tanggal belum ditentukan."}
+                </p>
               )}
               {events.map((item, eventIndex) => (
                 <p className={styles.timeLine} key={eventIndex}>
                   {item.name}
                   {ceremonyTime(item.start_time, item.end_time) &&
                     `: ${ceremonyTime(item.start_time, item.end_time)}`}
-                  <a
-                    className={styles.calendar}
-                    href={eventCalendarUrl(item)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Simpan ${item.name} ke kalender`}
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      aria-hidden="true"
-                    >
-                      <rect x="3" y="5" width="18" height="16" rx="2" />
-                      <path d="M7 3v4m10-4v4M3 10h18m-6 6h4m-2-2v4" />
-                    </svg>
-                  </a>
                 </p>
               ))}
               <strong className={styles.venue}>{event.venue_name}</strong>
               {event.address && (
                 <p className={styles.address}>{event.address}</p>
               )}
-              <div className={styles.mapSlot}>
+              <div className={styles.mapSlot} data-gp-event-map-slot>
                 {maps && (
                   <a
                     className={styles.mapButton}
@@ -118,8 +100,39 @@ export function EventGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Open Maps
+                    Buka Lokasi
                   </a>
+                )}
+              </div>
+              <div className={styles.calendarActions}>
+                {events.map(
+                  (item, eventIndex) =>
+                    ceremonyDate(item.date) && (
+                      <a
+                        key={eventIndex}
+                        className={styles.calendar}
+                        href={eventCalendarUrl(item)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Simpan ${item.name} ke kalender`}
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          aria-hidden="true"
+                        >
+                          <rect x="3" y="5" width="18" height="16" rx="2" />
+                          <path d="M7 3v4m10-4v4M3 10h18m-6 6h4m-2-2v4" />
+                        </svg>
+                        <span className={styles.calendarLabel}>
+                          Simpan {item.name}
+                        </span>
+                      </a>
+                    ),
                 )}
               </div>
             </article>

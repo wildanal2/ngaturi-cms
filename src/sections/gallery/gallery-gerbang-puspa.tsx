@@ -8,7 +8,7 @@ import { textValue } from "../gerbang-puspa/phase-two-data";
 import { GerbangPuspaLightbox } from "../gerbang-puspa/phase-two-lightbox";
 import styles from "./gallery-gerbang-puspa.module.css";
 
-export function GalleryGerbangPuspa({ props }: SectionRenderProps) {
+export function GalleryGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
   const images = Array.isArray(props.images)
     ? props.images.map((item) => ({
         url: textValue(item?.url),
@@ -19,6 +19,7 @@ export function GalleryGerbangPuspa({ props }: SectionRenderProps) {
     index: number;
     opener: HTMLButtonElement;
   } | null>(null);
+  if (!images.length && !inCanvas) return null;
   return (
     <section
       className={styles.gallery}

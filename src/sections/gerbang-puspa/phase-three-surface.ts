@@ -8,12 +8,14 @@ type Snapshot = {
   paired: boolean;
   formTarget: HTMLElement | null;
   listTarget: HTMLElement | null;
+  actionTarget: HTMLElement | null;
 };
 const empty: Snapshot = {
   active: "rsvp",
   paired: false,
   formTarget: null,
   listTarget: null,
+  actionTarget: null,
 };
 
 /** Presentation coordinates only. No form values, submission state or API belongs here. */

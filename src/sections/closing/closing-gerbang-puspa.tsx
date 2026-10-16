@@ -21,12 +21,7 @@ export function ClosingGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
     >
       <div className={`${foundation.frame} ${styles.closingFrame}`}>
         {paragraphs.map((paragraph, index) => (
-          <Reveal
-            key={index}
-            kind="down"
-            duration={index >= 2 ? 2000 : 3000}
-            inCanvas={inCanvas}
-          >
+          <Reveal key={index} kind="down" inCanvas={inCanvas}>
             <p className={index === 1 ? styles.thanks : undefined}>
               {paragraph}
             </p>

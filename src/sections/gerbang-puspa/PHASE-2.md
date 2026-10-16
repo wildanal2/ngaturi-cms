@@ -1,5 +1,10 @@
 # Gerbang Puspa Phase 2
 
+> **Current presentation:** the October 2026 visual refinement intentionally
+> supersedes the historical fixed geometry, long timing, heavy frames and
+> interface colours described below. Native data and lifecycle contracts remain
+> authoritative. See [VISUAL-REFINEMENT.md](./VISUAL-REFINEMENT.md).
+
 Five dedicated native variants extend the locked opening: `couple-intro`,
 `event-details`, `map-location`, `gallery`, and `story`. The standard registry,
 persisted contracts, renderer and Builder remain authoritative. Phase 1 and the

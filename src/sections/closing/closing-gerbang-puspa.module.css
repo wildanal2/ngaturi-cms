@@ -1,60 +1,52 @@
 .closing {
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 48px 32px 148px;
 }
 .closingFrame {
   width: 100%;
-  max-width: 350px;
-  min-height: 607px;
-  padding: 30px;
-  border-radius: 16px;
+  max-width: 372px;
+  margin: 0 auto;
+  padding: 24px 0 0;
+  border: 0;
+  border-top: 1px solid var(--gp-line);
+  border-radius: 0;
+  background: none;
 }
 .closingFrame p {
-  font-size: 14.4px;
-  line-height: 21.6px;
-  color: black;
+  font-size: 16px;
+  line-height: 1.85;
   white-space: pre-line;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .closingFrame .thanks {
-  margin-top: 8px;
-  margin-bottom: 24px;
+  margin: 24px 0;
 }
 .names {
   font:
-    500 35px/42px var(--gp-font-display),
+    400 clamp(36px, calc(var(--gp-column-width, 390px) * 0.115), 52px)/1.2
+      var(--gp-font-display),
     serif;
   color: var(--gp-maroon);
   display: flex;
   flex-direction: column;
-  padding-top: 8px;
-  overflow-wrap: anywhere;
-}
-.names > div {
-  margin-bottom: 8px;
+  gap: 4px;
+  padding-top: 24px;
+  overflow-wrap: break-word;
 }
 .names span {
   display: block;
 }
 .names .ampersand {
   font:
-    400 24px/28.8px var(--gp-font-script),
+    400 30px/1.2 var(--gp-font-script),
     cursive;
 }
 .flowers {
   position: absolute;
-  bottom: -20px;
-  left: 0;
-  width: 100%;
-  height: 175px;
-  object-fit: fill;
-  z-index: 2;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 230px;
+  height: 96px;
+  object-fit: contain;
   pointer-events: none;
-}
-@media (min-width: 425px) {
-  .closingFrame {
-    min-height: 585.4px;
-  }
 }

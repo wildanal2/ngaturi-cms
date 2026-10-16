@@ -21,15 +21,24 @@
   --gp-cream: #fffbf3;
   --gp-pink: #f1ded7;
   --gp-maroon: #74131c;
-  --gp-ink: #534b53;
-  --gp-surface: rgba(255, 245, 231, 0.82);
-  --gp-font-body: "GP Marcellus";
+  --gp-ink: #584b49;
+  --gp-line: #d9bdb6;
+  --gp-surface: #fff8ee;
+  --gp-font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --gp-font-ceremony: "GP Marcellus", serif;
   --gp-font-display: "GP Fraunces";
   --gp-font-script: "GP Parisienne";
+  --gp-motion-hero: 600ms;
+  --gp-motion-reveal: 600ms;
+  --gp-motion-dock: 300ms;
+  --gp-motion-overlay: 220ms;
+  --gp-motion-press: 120ms;
   color: var(--gp-ink);
   font:
-    14.4px/1.5 "GP Marcellus",
-    serif;
+    16px/1.75 system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
   text-align: center;
 }
 .scope *,
@@ -62,8 +71,9 @@
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: #e9e5d0 url("/themes/gerbang-puspa/pastoral-desktop.svg") center /
-    cover no-repeat;
+  background:
+    linear-gradient(#f4f0e6c9, #f4f0e6c9),
+    url("/themes/gerbang-puspa/pastoral-desktop.svg") center / cover no-repeat;
   pointer-events: none;
 }
 .presentation[data-in-canvas="true"] {
@@ -82,27 +92,28 @@
   margin: 0 auto;
   background: var(--gp-cream);
 }
+.presentation[data-has-navigation="true"] .column {
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
 .scene {
   position: relative;
   width: 100%;
-  min-height: 680px;
-  padding: 30px;
+  padding: 64px 24px;
   overflow: hidden;
-  background: #fffbf3 url("/themes/gerbang-puspa/stationery-background.svg")
-    center / 100% 100%;
+  background: var(--gp-cream);
 }
 .frame {
   position: relative;
   z-index: 1;
-  border: 3px solid var(--gp-maroon);
-  border-radius: 24px;
+  border: 1px solid var(--gp-line);
+  border-radius: 12px;
   background: var(--gp-surface);
 }
 .portrait {
   display: block;
-  width: 50%;
-  height: 240px;
-  border: 3px solid var(--gp-maroon);
+  width: 65%;
+  aspect-ratio: 4/5;
+  border: 1px solid var(--gp-maroon);
   border-radius: 160px;
   object-fit: cover;
   object-position: center 20%;
@@ -117,48 +128,70 @@
 .divider::after {
   content: "";
   flex: 1;
-  border-top: 1px solid currentColor;
-  opacity: 0.45;
+  border-top: 1px solid var(--gp-line);
 }
 .button {
-  border: 1px solid #b86d72;
-  border-radius: 22px;
-  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  max-width: 100%;
+  border: 1px solid var(--gp-maroon);
+  border-radius: 28px;
+  padding: 11px 24px;
   background: var(--gp-maroon);
-  color: white;
+  color: var(--gp-cream);
   font:
-    14px/20px "GP Marcellus",
-    serif;
+    15px/1.5 system-ui,
+    sans-serif;
+  text-decoration: none;
   cursor: pointer;
+  transition:
+    background 180ms ease,
+    transform var(--gp-motion-press) ease;
+}
+.button:active {
+  transform: scale(0.98);
+}
+.button:hover {
+  background: #59101a;
 }
 .scope :focus-visible {
   outline: 2px solid var(--gp-maroon);
   outline-offset: 4px;
 }
 .names {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 4px;
   color: var(--gp-maroon);
   font:
-    400 45px/54px "GP Fraunces",
+    400 clamp(44px, calc(var(--gp-column-width, 390px) * 0.145), 68px)/1.12
+      "GP Fraunces",
     serif;
 }
 .name {
   display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: balance;
 }
 .ampersand {
   font:
-    400 45px/54px "GP Parisienne",
+    400 38px/1.2 "GP Parisienne",
     cursive;
 }
 .compact {
-  font-size: 35px;
-  line-height: 42px;
+  font-size: clamp(32px, calc(var(--gp-column-width, 390px) * 0.1), 44px);
+  line-height: 1.25;
 }
 .monogram {
-  width: 128px;
-  height: 148px;
+  width: 64px;
+  height: 74px;
   color: var(--gp-maroon);
   overflow: visible;
   font-family: "GP Fraunces", serif;
@@ -170,60 +203,56 @@
   overflow: hidden;
   pointer-events: none;
 }
-.topLeft {
-  position: absolute;
-  top: -25px;
-  left: -24px;
-  width: 140px;
-  height: 370px;
-  object-fit: fill;
-  transform-origin: top left;
-  animation: waveLeft 2.5s ease-in-out infinite alternate;
-}
+.topLeft,
 .topRight {
   position: absolute;
-  top: -18px;
-  right: -32px;
-  width: 140px;
-  height: 370px;
-  object-fit: fill;
-  transform-origin: top right;
-  animation: waveRight 3s ease-in-out infinite alternate;
+  width: 68px;
+  height: 180px;
+  object-fit: contain;
+  transform-origin: top;
+  animation: sway 7s ease-in-out infinite alternate;
+}
+.topLeft {
+  top: 8px;
+  left: -20px;
+  width: 120px;
+  height: 196px;
+}
+.topRight {
+  top: 12px;
+  right: -22px;
+  animation-delay: -3s;
 }
 .bottomRight {
   position: absolute;
-  right: -59px;
-  bottom: -45px;
-  width: 210px;
-  height: 210px;
+  right: -44px;
+  bottom: -10px;
+  width: 148px;
+  height: 125px;
   object-fit: contain;
   transform-origin: bottom right;
-  animation: waveLeft 4.2s ease-in-out infinite alternate;
+  animation: sway 8s ease-in-out infinite alternate;
 }
 .heroFlowers {
   position: absolute;
-  bottom: -20px;
-  left: 0;
-  width: 100%;
-  height: 190px;
-  object-fit: fill;
-  transform-origin: bottom center;
-  animation: waveLeft 2.3s ease-in-out infinite alternate;
+  bottom: 8px;
+  left: 50%;
+  width: 260px;
+  height: 108px;
+  object-fit: contain;
+  transform: translateX(-50%);
 }
 .reveal {
-  opacity: 0;
-  animation-duration: 3s;
-  animation-timing-function: ease;
+  opacity: 1;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
   animation-fill-mode: both;
 }
-.up {
+.up,
+.zoom {
   animation-name: fadeUp;
 }
 .down {
   animation-name: fadeDown;
-}
-.zoom {
-  animation-name: zoom;
 }
 .left {
   animation-name: fadeLeft;
@@ -234,81 +263,73 @@
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(100%);
+    transform: translateY(18px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 @keyframes fadeDown {
   from {
     opacity: 0;
-    transform: translateY(-100%);
+    transform: translateY(-16px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 @keyframes fadeLeft {
   from {
     opacity: 0;
-    transform: translateX(-100%);
+    transform: translateX(-16px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: none;
   }
 }
 @keyframes fadeRight {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(16px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: none;
   }
 }
-@keyframes zoom {
+@keyframes sway {
   from {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  50% {
-    opacity: 1;
+    transform: rotate(-1deg);
   }
   to {
-    opacity: 1;
-    transform: scale(1);
+    transform: rotate(1deg);
   }
 }
-@keyframes waveLeft {
-  from {
-    transform: rotate(-2deg);
-  }
-  to {
-    transform: rotate(2deg);
-  }
+.presentation [data-gp-in-view="false"] .ornaments img {
+  animation-play-state: paused;
 }
-@keyframes waveRight {
-  from {
-    transform: rotate(2deg);
-  }
-  to {
-    transform: rotate(-2deg);
-  }
+.presentation[data-backgrounded="true"] * {
+  animation-play-state: paused !important;
+}
+.presentation[data-in-canvas="true"] .reveal {
+  opacity: 1;
+  animation: none !important;
+}
+.presentation[data-in-canvas="true"] .ornaments img {
+  animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .reveal {
     opacity: 1;
     animation: none !important;
   }
-  .topLeft,
-  .topRight,
-  .bottomRight,
-  .heroFlowers {
+  .ornaments img {
     animation: none;
+  }
+  .button {
+    transition: none;
   }
 }

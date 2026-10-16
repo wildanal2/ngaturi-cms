@@ -48,7 +48,7 @@ export function GerbangPuspaMedia({
   );
 }
 
-/** Phase 1's reveal stays locked. Phase 2 preview removes its decorative wait. */
+/** Builder presents editable content immediately without decorative waits. */
 export function GerbangPuspaPhaseTwoReveal({
   inCanvas,
   className = "",

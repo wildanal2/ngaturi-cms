@@ -28,7 +28,7 @@ export const quoteSection: SectionDefinition = {
   variants: {
     "gerbang-puspa": {
       name: "Gerbang Puspa",
-      description: "Kutipan seremonial dan sambutan berbingkai botani",
+      description: "Kutipan dan sambutan dengan ruang tenang bernuansa cream",
       component: QuoteGerbangPuspa,
       propsSchema: QuoteProps,
       fields: [

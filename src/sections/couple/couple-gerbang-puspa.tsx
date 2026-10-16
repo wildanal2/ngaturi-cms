@@ -3,7 +3,6 @@
 import type { z } from "zod";
 import type { CoupleIntroProps } from "../schema";
 import type { SectionRenderProps } from "../types";
-import { GerbangPuspaOrnaments } from "../gerbang-puspa/primitives";
 import {
   GerbangPuspaMedia,
   GerbangPuspaPhaseTwoReveal as Reveal,
@@ -43,7 +42,7 @@ export function CoupleGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
                   />
                 </div>
               </Reveal>
-              <Reveal delay={800} inCanvas={inCanvas}>
+              <Reveal delay={120} inCanvas={inCanvas}>
                 {name && <h3>{name}</h3>}
                 {(person?.child_order || person?.parents) && (
                   <p>
@@ -72,7 +71,6 @@ export function CoupleGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
           );
         })}
       </div>
-      <GerbangPuspaOrnaments />
     </section>
   );
 }

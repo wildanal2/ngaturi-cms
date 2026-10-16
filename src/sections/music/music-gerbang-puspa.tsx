@@ -4,9 +4,11 @@ import { useState } from "react";
 import type { SectionRenderProps } from "../types";
 import { usePlayer, type MusicProps } from "./shared";
 import styles from "./music-gerbang-puspa.module.css";
+import { useGerbangPuspa } from "../gerbang-puspa/opening";
 
 export function MusicGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
   const p = props as MusicProps;
+  const { stage } = useGerbangPuspa();
   const [failed, setFailed] = useState<string>();
   const available = !!p.audio_url && failed !== p.audio_url;
   const { ref, playing, toggle } = usePlayer(
@@ -29,10 +31,14 @@ export function MusicGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
         : playing
           ? "Jeda musik"
           : "Putar musik";
+  if (!p.audio_url && !inCanvas) return null;
+  const hidden = !inCanvas && stage !== "opened";
   return (
     <div
       className={`${styles.music} ${inCanvas ? styles.inline : ""}`}
       data-gerbang-puspa-music
+      hidden={hidden}
+      inert={hidden}
     >
       {p.audio_url && (
         <audio
@@ -72,6 +78,9 @@ export function MusicGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
           )}
         </svg>
       </button>
+      {inCanvas && !p.audio_url && (
+        <span className={styles.notice}>Belum ada lagu dipilih</span>
+      )}
     </div>
   );
 }

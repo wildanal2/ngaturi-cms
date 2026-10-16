@@ -4,9 +4,9 @@
   "assets": [
     {
       "path": "bank-placeholder.svg",
-      "bytes": 594,
-      "sha256": "d454ffb087459fea4b5a6b9b7ee08d72f6dd1a645f8065b9d6ec30100f5ae110",
-      "provenance": "Independently authored original vector temporary stand-in",
+      "bytes": 600,
+      "sha256": "483c96e51c3e4e9f2ca2e95e1167715373d8eff114d09972f691900824c02fda",
+      "provenance": "Independently authored original vector temporary stand-in; refined cream and maroon palette",
       "classification": "TEMPORARY STAND-IN",
       "exact_reference_match": false
     }
