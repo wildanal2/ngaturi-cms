@@ -1,4 +1,5 @@
 import type { CriticalAssetPlan } from "./readiness";
+import { GP_ASSETS } from "../gerbang-puspa/assets";
 
 export type LoadingAssetProvider = (root: HTMLElement) => CriticalAssetPlan;
 
@@ -16,6 +17,25 @@ const openingArt = [
 
 /** Add another template's first-view provider here; never collect all media. */
 export const loadingAssetProviders: Record<string, LoadingAssetProvider> = {
+  "gerbang-puspa": (root) => ({
+    images: [
+      ...root.querySelectorAll<HTMLImageElement>(
+        "[data-gerbang-puspa-cover] img, [data-gerbang-puspa-hero] img",
+      ),
+    ],
+    imageUrls: [
+      GP_ASSETS.stationery,
+      GP_ASSETS.landscape,
+      GP_ASSETS.floralLeft,
+      GP_ASSETS.floralRight,
+      GP_ASSETS.flowers,
+    ],
+    fonts: [
+      { family: '"GP Marcellus"' },
+      { family: '"GP Fraunces"' },
+      { family: '"GP Parisienne"' },
+    ],
+  }),
   "serambi-delima": (root) => {
     const surface = root.querySelector<HTMLElement>("[data-serambi-delima]");
     const computed = surface ? getComputedStyle(surface) : null;

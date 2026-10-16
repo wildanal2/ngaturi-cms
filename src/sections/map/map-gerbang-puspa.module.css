@@ -1,0 +1,82 @@
+.location {
+  padding-top: 32px;
+  padding-bottom: 48px;
+  background: #f8eee7;
+}
+.locationCard {
+  position: relative;
+  width: 100%;
+  max-width: 396px;
+  margin: 0 auto;
+  border: 1px solid var(--gp-line);
+  border-radius: 8px;
+  padding: 24px;
+  background: var(--gp-cream);
+  overflow-wrap: break-word;
+}
+.addressBlock h2 {
+  font:
+    400 28px/1.3 var(--gp-font-display),
+    serif;
+  color: var(--gp-maroon);
+  margin-bottom: 20px;
+}
+.addressBlock strong {
+  display: block;
+  font-weight: 400;
+  color: var(--gp-maroon);
+  font-size: 17px;
+  line-height: 1.5;
+}
+.addressBlock p {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+.map {
+  display: block;
+  width: 100%;
+  height: 240px;
+  margin-top: 24px;
+  border: 1px solid var(--gp-line);
+  border-radius: 4px;
+}
+.fallback {
+  margin-top: 20px !important;
+  font-size: 14px;
+}
+.mapButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 1px solid var(--gp-maroon);
+  border-radius: 28px;
+  background: var(--gp-maroon);
+  color: var(--gp-cream);
+  font-size: 15px;
+  line-height: 1.5;
+  padding: 10px 16px;
+  text-decoration: none;
+  margin-top: 24px;
+  margin-inline: 24px;
+}
+.mapButton:hover {
+  background: #59101a;
+}
+.joined {
+  height: 0;
+  padding: 0;
+  overflow: visible;
+  background: none;
+}
+.locationCard[data-gp-location-action] {
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.locationCard[data-gp-location-action] .mapButton {
+  margin: 0;
+}

@@ -1,0 +1,335 @@
+@font-face {
+  font-family: "GP Marcellus";
+  src: url("/themes/gerbang-puspa/fonts/Marcellus-Regular.ttf")
+    format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GP Fraunces";
+  src: url("/themes/gerbang-puspa/fonts/Fraunces.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GP Parisienne";
+  src: url("/themes/gerbang-puspa/fonts/Parisienne.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+.scope {
+  --gp-cream: #fffbf3;
+  --gp-pink: #f1ded7;
+  --gp-maroon: #74131c;
+  --gp-ink: #584b49;
+  --gp-line: #d9bdb6;
+  --gp-surface: #fff8ee;
+  --gp-font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --gp-font-ceremony: "GP Marcellus", serif;
+  --gp-font-display: "GP Fraunces";
+  --gp-font-script: "GP Parisienne";
+  --gp-motion-hero: 600ms;
+  --gp-motion-reveal: 600ms;
+  --gp-motion-dock: 300ms;
+  --gp-motion-overlay: 220ms;
+  --gp-motion-press: 120ms;
+  color: var(--gp-ink);
+  font:
+    16px/1.75 system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  text-align: center;
+}
+.scope *,
+.scope *::before,
+.scope *::after {
+  box-sizing: border-box;
+}
+.scope h1,
+.scope h2,
+.scope h3,
+.scope p {
+  margin: 0;
+  font-weight: 400;
+}
+.scope img {
+  display: block;
+  max-width: 100%;
+}
+.scope button,
+.scope a {
+  -webkit-tap-highlight-color: transparent;
+}
+.presentation {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 100dvh;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(#f4f0e6c9, #f4f0e6c9),
+    url("/themes/gerbang-puspa/pastoral-desktop.svg") center / cover no-repeat;
+  pointer-events: none;
+}
+.presentation[data-in-canvas="true"] {
+  min-height: 100%;
+}
+.presentation[data-in-canvas="true"] .backdrop {
+  position: sticky;
+  top: 0;
+  height: var(--gp-viewport-height);
+  margin-bottom: calc(-1 * var(--gp-viewport-height));
+}
+.column {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--gp-cream);
+}
+.presentation[data-has-navigation="true"] .column {
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+.scene {
+  position: relative;
+  width: 100%;
+  padding: 64px 24px;
+  overflow: hidden;
+  background: var(--gp-cream);
+}
+.frame {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--gp-line);
+  border-radius: 12px;
+  background: var(--gp-surface);
+}
+.portrait {
+  display: block;
+  width: 65%;
+  aspect-ratio: 4/5;
+  border: 1px solid var(--gp-maroon);
+  border-radius: 160px;
+  object-fit: cover;
+  object-position: center 20%;
+}
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--gp-maroon);
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--gp-line);
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  max-width: 100%;
+  border: 1px solid var(--gp-maroon);
+  border-radius: 28px;
+  padding: 11px 24px;
+  background: var(--gp-maroon);
+  color: var(--gp-cream);
+  font:
+    15px/1.5 system-ui,
+    sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    transform var(--gp-motion-press) ease;
+}
+.button:active {
+  transform: scale(0.98);
+}
+.button:hover {
+  background: #59101a;
+}
+.scope :focus-visible {
+  outline: 2px solid var(--gp-maroon);
+  outline-offset: 4px;
+}
+.names {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--gp-maroon);
+  font:
+    400 clamp(44px, calc(var(--gp-column-width, 390px) * 0.145), 68px)/1.12
+      "GP Fraunces",
+    serif;
+}
+.name {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-break: normal;
+  text-wrap: balance;
+}
+.ampersand {
+  font:
+    400 38px/1.2 "GP Parisienne",
+    cursive;
+}
+.compact {
+  font-size: clamp(32px, calc(var(--gp-column-width, 390px) * 0.1), 44px);
+  line-height: 1.25;
+}
+.monogram {
+  width: 64px;
+  height: 74px;
+  color: var(--gp-maroon);
+  overflow: visible;
+  font-family: "GP Fraunces", serif;
+}
+.ornaments {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.topLeft,
+.topRight {
+  position: absolute;
+  width: 68px;
+  height: 180px;
+  object-fit: contain;
+  transform-origin: top;
+  animation: sway 7s ease-in-out infinite alternate;
+}
+.topLeft {
+  top: 8px;
+  left: -20px;
+  width: 120px;
+  height: 196px;
+}
+.topRight {
+  top: 12px;
+  right: -22px;
+  animation-delay: -3s;
+}
+.bottomRight {
+  position: absolute;
+  right: -44px;
+  bottom: -10px;
+  width: 148px;
+  height: 125px;
+  object-fit: contain;
+  transform-origin: bottom right;
+  animation: sway 8s ease-in-out infinite alternate;
+}
+.heroFlowers {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  width: 260px;
+  height: 108px;
+  object-fit: contain;
+  transform: translateX(-50%);
+}
+.reveal {
+  opacity: 1;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: both;
+}
+.up,
+.zoom {
+  animation-name: fadeUp;
+}
+.down {
+  animation-name: fadeDown;
+}
+.left {
+  animation-name: fadeLeft;
+}
+.right {
+  animation-name: fadeRight;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fadeLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fadeRight {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sway {
+  from {
+    transform: rotate(-1deg);
+  }
+  to {
+    transform: rotate(1deg);
+  }
+}
+.presentation [data-gp-in-view="false"] .ornaments img {
+  animation-play-state: paused;
+}
+.presentation[data-backgrounded="true"] * {
+  animation-play-state: paused !important;
+}
+.presentation[data-in-canvas="true"] .reveal {
+  opacity: 1;
+  animation: none !important;
+}
+.presentation[data-in-canvas="true"] .ornaments img {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    animation: none !important;
+  }
+  .ornaments img {
+    animation: none;
+  }
+  .button {
+    transition: none;
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "template_id": "gerbang-puspa",
+  "phase": 1,
+  "source": "Existing standalone asset ledger; no vendor originals or blocked resources localized",
+  "assets": [
+    {
+      "path": "couple-welcome.svg",
+      "sha256": "2f99349b93b1021dedf7309b74d3a840342f9ec1a738c0e27c749bdd7197e196",
+      "provenance": "Independently authored original standalone temporary SVG stand-in",
+      "exact_reference_match": false
+    },
+    {
+      "path": "floral-bottom.svg",
+      "sha256": "9da806aa9fc8bcc76882b2641e62979584223f2f7a3d4b245405b48175cad620",
+      "provenance": "Independently authored original standalone temporary SVG stand-in",
+      "exact_reference_match": false
+    },
+    {
+      "path": "floral-top-left.svg",
+      "sha256": "bdd5d4af0e8116fb132e37ce4fbb00ff5d648748945afba4104e4c05bd4e5b71",
+      "provenance": "Independently authored original standalone temporary SVG stand-in",
+      "exact_reference_match": false
+    },
+    {
+      "path": "floral-top-right.svg",
+      "sha256": "1c5918d80bcf49b6ee36ff75a2c36612c6a9d856dbddc48fb396453fae59b413",
+      "provenance": "Independently authored original standalone temporary SVG stand-in",
+      "exact_reference_match": false
+    },
+    {
+      "path": "fonts/Fraunces-OFL.txt",
+      "sha256": "6732d6cc72c5d09292ff754dc1f39d9ea14918f74e87a17afa3f00a5120c3d48",
+      "provenance": "Confirmed OFL font/license",
+      "exact_reference_match": false
+    },
+    {
+      "path": "fonts/Fraunces.woff2",
+      "sha256": "ae1d21f0a3120a56e7b163af66f709b58f140d024c0ac4f0a362662c7692a738",
+      "provenance": "Confirmed OFL font/license",
+      "exact_reference_match": false
+    },
+    {
+      "path": "fonts/Marcellus-OFL.txt",
+      "sha256": "b6c7a12bf278193304c4d576daca8bafccff26e1a6392700a49b3f8816dcf7eb",
+      "provenance": "Confirmed OFL font/license",
+      "exact_reference_match": null
+    },
+    {
+      "path": "fonts/Marcellus-Regular.ttf",
+      "sha256": "1cf0cd10b17d35e852729962cc1ffaffed94514895972458345e2df34abb2f81",
+      "provenance": "Confirmed OFL font/license",
+      "exact_reference_match": null
+    },
+    {
+      "path": "fonts/Parisienne-OFL.txt",
+      "sha256": "3846ff6704a5b9210b1671a7f4d87a7142b4e627f0945c05184924bfff085eb1",
+      "provenance": "Confirmed OFL font/license",
+      "exact_reference_match": false
+    },
+    {
+      "path": "fonts/Parisienne.woff2",
+      "sha256": "ff7c6d91efb6866f41cc131d8e84e47876e73a9f2cc3ba9ac48ab950daaabb74",
+      "provenance": "Confirmed OFL font/license",
+      "exact_reference_match": false
+    },
+    {
+      "path": "garden-gate.svg",
+      "sha256": "a0741dbbeb4f9b16e535d797f0cbecef98ab7583f4861e99a372551aa7c0e99a",
+      "provenance": "Independently authored original standalone temporary SVG stand-in",
+      "exact_reference_match": false
+    },
+    {
+      "path": "pastoral-desktop.svg",
+      "sha256": "3a10dcc87e2ade7aae3378d3f893078d0e72d17e4b02ac5e56fdf0cd7e341348",
+      "provenance": "Independently authored original standalone temporary SVG stand-in",
+      "exact_reference_match": false
+    },
+    {
+      "path": "stationery-background.svg",
+      "sha256": "6a84b21a736e042aec4a503725d130503661676a535c2875f41e7458dae0f280",
+      "provenance": "Independently authored original standalone temporary SVG stand-in",
+      "exact_reference_match": false
+    }
+  ],
+  "excluded": [
+    "vendor photography",
+    "vendor distinctive art",
+    "vendor monogram",
+    "audio/video",
+    "Against/English111 font binaries"
+  ],
+  "replacement_boundary": "src/sections/gerbang-puspa/assets.ts"
+}

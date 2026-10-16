@@ -3,6 +3,7 @@ import { StoryProps } from "../schema";
 import { dummyGallery } from "../dummy";
 import { StoryCinematicVintage } from "./story-cinematic-vintage";
 import { StoryTimeline } from "./story-timeline";
+import { StoryGerbangPuspa } from "./story-gerbang-puspa";
 
 export { StoryTimeline };
 
@@ -22,9 +23,22 @@ const itemsField: Field = {
 };
 
 const sample = [
-  { year: "2019", title: "Pertemuan Pertama", description: "Kami pertama bertemu di kampus, tak menyangka akan sejauh ini." },
-  { year: "2022", title: "Pacaran", description: "Memutuskan menjalani hubungan yang lebih serius." },
-  { year: "2025", title: "Lamaran", description: "Acara lamaran sederhana bersama kedua keluarga." },
+  {
+    year: "2019",
+    title: "Pertemuan Pertama",
+    description:
+      "Kami pertama bertemu di kampus, tak menyangka akan sejauh ini.",
+  },
+  {
+    year: "2022",
+    title: "Pacaran",
+    description: "Memutuskan menjalani hubungan yang lebih serius.",
+  },
+  {
+    year: "2025",
+    title: "Lamaran",
+    description: "Acara lamaran sederhana bersama kedua keluarga.",
+  },
 ];
 
 export const storySection: SectionDefinition = {
@@ -34,7 +48,8 @@ export const storySection: SectionDefinition = {
   icon: "HeartHandshake",
   category: "content",
   dummyProps: (variantKey, base) => {
-    if (variantKey === "cinematic-vintage") return;
+    if (variantKey === "cinematic-vintage" || variantKey === "gerbang-puspa")
+      return;
     const items = base.items as { image?: string }[] | undefined;
     if (Array.isArray(items)) {
       const imgs = dummyGallery("story");
@@ -45,6 +60,19 @@ export const storySection: SectionDefinition = {
     }
   },
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      description: "Kisah berurutan dalam panel foto dan kertas botani",
+      component: StoryGerbangPuspa,
+      propsSchema: StoryProps,
+      fields: [
+        { kind: "text", key: "eyebrow", label: "Teks pembuka (opsional)" },
+        { kind: "text", key: "title", label: "Judul" },
+        itemsField,
+      ],
+      defaultProps: { eyebrow: "", title: "Cerita Kami", items: [] },
+      isPremium: true,
+    },
     timeline: {
       name: "Garis Waktu",
       description: "Garis vertikal bertitik dengan kartu foto per momen",
@@ -55,7 +83,11 @@ export const storySection: SectionDefinition = {
         { kind: "text", key: "title", label: "Judul" },
         itemsField,
       ],
-      defaultProps: { eyebrow: "Our Journey", title: "Kisah Cinta", items: sample },
+      defaultProps: {
+        eyebrow: "Our Journey",
+        title: "Kisah Cinta",
+        items: sample,
+      },
     },
   },
 };
@@ -65,5 +97,9 @@ storySection.variants["cinematic-vintage"] = {
   name: "Cinematic Vintage",
   description: "Bingkai cerita dalam perjalanan sinematik",
   component: StoryCinematicVintage,
-  defaultProps: { eyebrow: "Sepenggal kisah kita", title: "Perjalanan Kami", items: [] },
+  defaultProps: {
+    eyebrow: "Sepenggal kisah kita",
+    title: "Perjalanan Kami",
+    items: [],
+  },
 };

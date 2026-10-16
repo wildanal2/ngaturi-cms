@@ -2,6 +2,7 @@ import type { SectionDefinition } from "../types";
 import { ClosingCinematicVintage } from "./closing-cinematic-vintage";
 export { ClosingCinematicVintage };
 import { ClosingProps } from "../schema";
+import { ClosingGerbangPuspa } from "./closing-gerbang-puspa";
 import { dummyClosing } from "../dummy";
 import { ClosingSimple } from "./closing-simple";
 import { ClosingPhoto } from "./closing-photo";
@@ -24,9 +25,33 @@ export const closingSection: SectionDefinition = {
   icon: "Heart",
   category: "footer",
   dummyProps: (variantKey, base) => {
-    if ((variantKey === "photo" || variantKey === "cinematic-vintage") && !base.photo) base.photo = dummyClosing();
+    if (
+      (variantKey === "photo" || variantKey === "cinematic-vintage") &&
+      !base.photo
+    )
+      base.photo = dummyClosing();
   },
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      component: ClosingGerbangPuspa,
+      propsSchema: ClosingProps,
+      fields: [
+        {
+          kind: "textarea",
+          key: "message",
+          label: "Pesan penutup",
+          help: "Pisahkan paragraf utama, terima kasih, dan salam dengan baris kosong.",
+        },
+        { kind: "text", key: "names", label: "Nama" },
+      ],
+      defaultProps: {
+        names: "Dinda & Raka",
+        message:
+          "Terima kasih atas doa dan restu Anda.\n\nKami menantikan kehadiran Anda.\n\nDengan kasih,",
+      },
+      isPremium: true,
+    },
     "sekar-jawa-3d": {
       name: "Pelaminan Jawa",
       description: "Ucapan penutup di depan pelaminan tiga dimensi",
@@ -47,8 +72,16 @@ export const closingSection: SectionDefinition = {
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
       component: ClosingCinematicVintage,
       propsSchema: ClosingProps,
-      fields: [{ kind: "text", key: "names", label: "Nama" }, { kind: "textarea", key: "message", label: "Pesan penutup" }, { kind: "image", key: "photo", label: "Foto pasangan" }],
-      defaultProps: { names: "Dinda & Raka", message: "Merupakan kebahagiaan bagi kami untuk berbagi hari ini bersama Anda. Terima kasih atas doa dan restunya." },
+      fields: [
+        { kind: "text", key: "names", label: "Nama" },
+        { kind: "textarea", key: "message", label: "Pesan penutup" },
+        { kind: "image", key: "photo", label: "Foto pasangan" },
+      ],
+      defaultProps: {
+        names: "Dinda & Raka",
+        message:
+          "Merupakan kebahagiaan bagi kami untuk berbagi hari ini bersama Anda. Terima kasih atas doa dan restunya.",
+      },
       isPremium: true,
     },
     simple: {

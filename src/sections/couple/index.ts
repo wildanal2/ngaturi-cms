@@ -4,6 +4,7 @@ export { CoupleCinematicVintage };
 import { CoupleIntroProps } from "../schema";
 import { dummyBride, dummyGroom } from "../dummy";
 import { coupleFields, sPhotoShape } from "../fields";
+import { CoupleGerbangPuspa } from "./couple-gerbang-puspa";
 import { CoupleSideBySide } from "./couple-side-by-side";
 import { CoupleStacked } from "./couple-stacked";
 import { CouplePolaroid } from "./couple-polaroid";
@@ -30,13 +31,57 @@ export const coupleSection: SectionDefinition = {
   description: "Perkenalan kedua mempelai",
   icon: "Users",
   category: "content",
-  dummyProps: (_variantKey, base) => {
+  dummyProps: (variantKey, base) => {
+    if (variantKey === "gerbang-puspa") return;
     const bride = (base.bride ?? {}) as Record<string, unknown>;
     const groom = (base.groom ?? {}) as Record<string, unknown>;
     if (!bride.photo) base.bride = { ...bride, photo: dummyBride };
     if (!groom.photo) base.groom = { ...groom, photo: dummyGroom };
   },
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      description: "Potret mempelai berurutan dalam bingkai botani",
+      component: CoupleGerbangPuspa,
+      propsSchema: CoupleIntroProps,
+      fields: [
+        { kind: "text", key: "eyebrow", label: "Teks pembuka (opsional)" },
+        { kind: "text", key: "title", label: "Judul" },
+        ...coupleFields,
+        {
+          kind: "text",
+          key: "bride.name",
+          label: "Nama pendek mempelai wanita",
+        },
+        {
+          kind: "textarea",
+          key: "bride.bio",
+          label: "Profil mempelai wanita (opsional)",
+        },
+        { kind: "text", key: "groom.name", label: "Nama pendek mempelai pria" },
+        {
+          kind: "textarea",
+          key: "groom.bio",
+          label: "Profil mempelai pria (opsional)",
+        },
+      ],
+      defaultProps: {
+        title: "Bride & Groom",
+        bride: {
+          name: "Dinda",
+          full_name: "Dinda Ayu Pratiwi",
+          child_order: "Putri kedua dari",
+          parents: "Bapak Arif & Ibu Ratna",
+        },
+        groom: {
+          name: "Raka",
+          full_name: "Raka Wibowo",
+          child_order: "Putra pertama dari",
+          parents: "Bapak Budi & Ibu Dewi",
+        },
+      },
+      isPremium: true,
+    },
     "sekar-jawa-3d": {
       name: "Potret Keraton",
       description: "Dua potret lengkung dalam panel Pendopo",
@@ -56,12 +101,25 @@ export const coupleSection: SectionDefinition = {
       component: CoupleCinematicVintage,
       propsSchema: CoupleIntroProps,
       fields: [{ kind: "text", key: "title", label: "Judul" }, ...coupleFields],
-      defaultProps: { title: "Mempelai", bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi", parents: "Bapak Arif & Ibu Ratna" }, groom: { name: "Raka", full_name: "Raka Wibowo", parents: "Bapak Budi & Ibu Dewi" } },
+      defaultProps: {
+        title: "Mempelai",
+        bride: {
+          name: "Dinda",
+          full_name: "Dinda Ayu Pratiwi",
+          parents: "Bapak Arif & Ibu Ratna",
+        },
+        groom: {
+          name: "Raka",
+          full_name: "Raka Wibowo",
+          parents: "Bapak Budi & Ibu Dewi",
+        },
+      },
       isPremium: true,
     },
     "duo-portrait": {
       name: "Dua Portrait Arch",
-      description: "Dua foto arch berdampingan dengan watercolor dan bunga sudut khas kana1",
+      description:
+        "Dua foto arch berdampingan dengan watercolor dan bunga sudut khas kana1",
       component: CoupleDuoPortrait,
       propsSchema: CoupleIntroProps,
       fields: [
@@ -69,9 +127,17 @@ export const coupleSection: SectionDefinition = {
         { kind: "text", key: "title", label: "Judul" },
         ...coupleFields,
         { kind: "image", key: "background_image", label: "Latar watercolor" },
-        { kind: "image", key: "divider_image", label: "Ilustrasi pembatas bawah" },
+        {
+          kind: "image",
+          key: "divider_image",
+          label: "Ilustrasi pembatas bawah",
+        },
         { kind: "image", key: "flower_left_image", label: "Bunga bawah kiri" },
-        { kind: "image", key: "flower_right_image", label: "Bunga bawah kanan" },
+        {
+          kind: "image",
+          key: "flower_right_image",
+          label: "Bunga bawah kanan",
+        },
       ],
       styleOptions: [
         sPhotoShape,
@@ -100,8 +166,16 @@ export const coupleSection: SectionDefinition = {
       fields: coupleFields,
       styleOptions: [sPhotoShape],
       defaultProps: {
-        bride: { name: "Dinda", full_name: "Dinda Ayu Pratiwi", child_order: "Putri kedua dari" },
-        groom: { name: "Raka", full_name: "Raka Wibowo", child_order: "Putra pertama dari" },
+        bride: {
+          name: "Dinda",
+          full_name: "Dinda Ayu Pratiwi",
+          child_order: "Putri kedua dari",
+        },
+        groom: {
+          name: "Raka",
+          full_name: "Raka Wibowo",
+          child_order: "Putra pertama dari",
+        },
       },
     },
     stacked: {
@@ -129,7 +203,8 @@ export const coupleSection: SectionDefinition = {
     },
     floating17: {
       name: "Mempelai Floating17",
-      description: "Dua portrait bulat berdampingan dengan tipografi sage dan Instagram",
+      description:
+        "Dua portrait bulat berdampingan dengan tipografi sage dan Instagram",
       component: CoupleFloating17,
       propsSchema: CoupleIntroProps,
       fields: [

@@ -13,12 +13,18 @@ import { SekarJawa3DComposition } from "./immersive-composition";
 import { sekarJawa3DContent } from "@/sections/sekar-jawa-3d/content";
 import type { TemplateComposition } from "@/lib/templates/catalog";
 import type { GlobalSettings, SectionData } from "@/sections/types";
+import {
+  GerbangPuspaPresentation,
+  GerbangPuspaSection,
+} from "@/sections/gerbang-puspa/opening";
+import { hasGerbangPuspa } from "@/sections/gerbang-puspa/content";
 
 const FONT_STACK: Record<string, string> = {
   Fraunces: "var(--font-fraunces), Georgia, serif",
   Inter: "var(--font-inter), system-ui, sans-serif",
   Cormorant: "var(--font-cormorant), 'Cormorant Garamond', Georgia, serif",
-  Parisienne: "var(--font-parisienne), 'Segoe Script', 'Brush Script MT', cursive",
+  Parisienne:
+    "var(--font-parisienne), 'Segoe Script', 'Brush Script MT', cursive",
 };
 
 export function invitationRootStyle(global: GlobalSettings): CSSProperties {
@@ -94,25 +100,39 @@ export function InvitationRenderer({
   // fixed-position chrome must live outside the animated flow: a wrapper
   // running a CSS transform becomes the containing block for position:fixed.
   const OVERLAY = new Set(["cover", "music", "navigation"]);
+  const gerbangPuspa = composition === "standard" && hasGerbangPuspa(ordered);
 
   const content = (
-    <div
-      className={composition === "cinematic-vintage" ? `cinematic-invitation mx-auto max-w-lg ${cinematicStyles.invitationRoot}` : "mx-auto max-w-lg"}
-      data-cinematic-public={composition === "cinematic-vintage" || undefined}
-      style={invitationRootStyle(global)}
+    <GerbangPuspaPresentation
+      key={invitationId ?? ordered.find((s) => s.type === "cover")?.id}
+      enabled={gerbangPuspa}
+      sections={gerbangPuspa ? sections : ordered}
     >
-      {ownedComposition}
-      {flow.map((section, i) => {
-        const variant = getVariant(
-          section.type,
-          composition === "cinematic-vintage"
-            ? cinematicVariant(section)
-            : section.variant,
-        );
-        if (!variant) return null;
-        const Component = variant.component;
-        const node = (
-          <div data-section={section.type}>
+      <div
+        className={
+          gerbangPuspa
+            ? undefined
+            : composition === "cinematic-vintage"
+              ? `cinematic-invitation mx-auto max-w-lg ${cinematicStyles.invitationRoot}`
+              : "mx-auto max-w-lg"
+        }
+        data-cinematic-public={composition === "cinematic-vintage" || undefined}
+        style={invitationRootStyle(global)}
+      >
+        {ownedComposition}
+        {flow.map((section, i) => {
+          // Gerbang Puspa owns one dock, including invitations with saved generic bars.
+          // Persisted section IDs, order and visibility remain untouched.
+          if (gerbangPuspa && section.type === "navigation") return null;
+          const variant = getVariant(
+            section.type,
+            composition === "cinematic-vintage"
+              ? cinematicVariant(section)
+              : section.variant,
+          );
+          if (!variant) return null;
+          const Component = variant.component;
+          const rendered = (
             <Component
               props={section.props}
               global={global}
@@ -121,31 +141,57 @@ export function InvitationRenderer({
               isPreview={isPreview}
               siblingTypes={siblingTypes}
             />
-          </div>
-        );
-        if (OVERLAY.has(section.type)) {
-          return <div key={section.id}>{node}</div>;
-        }
-        return (
-          <Reveal
-            key={section.id}
-            animation={global.animation}
-            immediate={i === 0}
-          >
-            {node}
-          </Reveal>
-        );
-      })}
-    </div>
+          );
+          const node = gerbangPuspa ? (
+            <GerbangPuspaSection type={section.type} id={section.id}>
+              {rendered}
+            </GerbangPuspaSection>
+          ) : (
+            <div data-section={section.type}>{rendered}</div>
+          );
+          if (
+            OVERLAY.has(section.type) ||
+            section.variant === "gerbang-puspa"
+          ) {
+            return <div key={section.id}>{node}</div>;
+          }
+          return (
+            <Reveal
+              key={section.id}
+              animation={global.animation}
+              immediate={i === 0}
+            >
+              {node}
+            </Reveal>
+          );
+        })}
+      </div>
+    </GerbangPuspaPresentation>
   );
   const loading = resolveLoading(sections, composition);
-  if (!loading) return <>{opening}{content}</>;
+  if (!loading)
+    return (
+      <>
+        {opening}
+        {content}
+      </>
+    );
   const variant = getVariant("loading", loading.variant);
-  if (!variant) return <>{opening}{content}</>;
+  if (!variant)
+    return (
+      <>
+        {opening}
+        {content}
+      </>
+    );
   const LoadingVisual = variant.component;
   const names =
-    sections.find((section) => section.type === "cover" && section.visible !== false)?.props.names ??
-    sections.find((section) => section.type === "hero" && section.visible !== false)?.props.couple_names;
+    sections.find(
+      (section) => section.type === "cover" && section.visible !== false,
+    )?.props.names ??
+    sections.find(
+      (section) => section.type === "hero" && section.visible !== false,
+    )?.props.couple_names;
   return (
     <InvitationLoadingBoundary
       profile={loading.variant}

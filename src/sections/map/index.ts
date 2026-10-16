@@ -3,6 +3,7 @@ import { MapCinematicVintage } from "./map-cinematic-vintage";
 export { MapCinematicVintage };
 import { MapProps } from "../schema";
 import { DUMMY_MAP_EMBED, DUMMY_MAP_LINK } from "../fields";
+import { MapGerbangPuspa } from "./map-gerbang-puspa";
 import { MapEmbed } from "./map-embed";
 import { MapButton } from "./map-button";
 import { MapSerambiDelima } from "./map-serambi-delima";
@@ -15,18 +16,51 @@ export const mapSection: SectionDefinition = {
   description: "Peta atau tombol ke Google Maps",
   icon: "MapPin",
   category: "content",
-  dummyProps: (_variantKey, base) => {
+  dummyProps: (variantKey, base) => {
+    if (variantKey === "gerbang-puspa") return;
     if (!base.embed_url) base.embed_url = DUMMY_MAP_EMBED;
     if (!base.maps_url) base.maps_url = DUMMY_MAP_LINK;
   },
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      description: "Arah lokasi yang menyatu dengan kartu acara terkait",
+      component: MapGerbangPuspa,
+      propsSchema: MapProps,
+      fields: [
+        { kind: "text", key: "venue_name", label: "Nama tempat" },
+        { kind: "textarea", key: "address", label: "Alamat" },
+        { kind: "url", key: "maps_url", label: "Link Google Maps" },
+        {
+          kind: "url",
+          key: "embed_url",
+          label: "URL embed (opsional)",
+          help: "Kosongkan untuk tombol arah seperti komposisi dasar.",
+        },
+      ],
+      defaultProps: {
+        venue_name: "Masjid Al-Falah",
+        address: "Jl. Melati No. 10, Bandung",
+        maps_url:
+          "https://www.google.com/maps/search/?api=1&query=-6.914744,107.609810",
+        embed_url: "",
+      },
+      isPremium: true,
+    },
     "cinematic-vintage": {
       name: "Sinematik Vintage",
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
       component: MapCinematicVintage,
       propsSchema: MapProps,
-      fields: [{ kind: "text", key: "venue_name", label: "Nama tempat" }, { kind: "textarea", key: "address", label: "Alamat" }, { kind: "url", key: "maps_url", label: "Link Google Maps" }],
-      defaultProps: { venue_name: "Graha Melati", address: "Jl. Melati No. 12, Bandung" },
+      fields: [
+        { kind: "text", key: "venue_name", label: "Nama tempat" },
+        { kind: "textarea", key: "address", label: "Alamat" },
+        { kind: "url", key: "maps_url", label: "Link Google Maps" },
+      ],
+      defaultProps: {
+        venue_name: "Graha Melati",
+        address: "Jl. Melati No. 12, Bandung",
+      },
       isPremium: true,
     },
     embed: {
@@ -44,7 +78,10 @@ export const mapSection: SectionDefinition = {
           help: "Maps → Bagikan → Sematkan peta → salin src",
         },
       ],
-      defaultProps: { venue_name: "Gedung Serbaguna", address: "Jl. Melati No. 12, Bandung" },
+      defaultProps: {
+        venue_name: "Gedung Serbaguna",
+        address: "Jl. Melati No. 12, Bandung",
+      },
     },
     button: {
       name: "Tombol Maps",
@@ -56,7 +93,10 @@ export const mapSection: SectionDefinition = {
         { kind: "textarea", key: "address", label: "Alamat" },
         { kind: "url", key: "maps_url", label: "Link Google Maps" },
       ],
-      defaultProps: { venue_name: "Gedung Serbaguna", address: "Jl. Melati No. 12, Bandung" },
+      defaultProps: {
+        venue_name: "Gedung Serbaguna",
+        address: "Jl. Melati No. 12, Bandung",
+      },
     },
   },
 };

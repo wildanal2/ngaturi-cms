@@ -1,6 +1,7 @@
 import { GiftCinematicVintage } from "./gift-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { GiftProps } from "../schema";
+import { GiftGerbangPuspa } from "./gift-gerbang-puspa";
 import { bankLogo, giftFields } from "../fields";
 import { GiftCards } from "./gift-cards";
 import { GiftMinimal } from "./gift-minimal";
@@ -14,17 +15,29 @@ export const giftSection: SectionDefinition = {
   description: "Rekening & e-wallet hadiah",
   icon: "Gift",
   category: "content",
-  dummyProps: (_variantKey, base) => {
+  dummyProps: (variantKey, base) => {
+    if (variantKey === "gerbang-puspa") return;
     if (Array.isArray(base.bank_accounts)) {
-      base.bank_accounts = (base.bank_accounts as Record<string, unknown>[]).map(
-        (b) => ({
-          ...b,
-          logo_url: b.logo_url || bankLogo(String(b.bank_name || "bank")),
-        }),
-      );
+      base.bank_accounts = (
+        base.bank_accounts as Record<string, unknown>[]
+      ).map((b) => ({
+        ...b,
+        logo_url: b.logo_url || bankLogo(String(b.bank_name || "bank")),
+      }));
     }
   },
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      component: GiftGerbangPuspa,
+      propsSchema: GiftProps,
+      fields: giftFields,
+      defaultProps: {
+        intro: "Doa restu Anda merupakan karunia yang sangat berarti.",
+        bank_accounts: [],
+      },
+      isPremium: true,
+    },
     cards: {
       name: "Kartu Bank",
       component: GiftCards,
@@ -34,9 +47,21 @@ export const giftSection: SectionDefinition = {
         intro:
           "Doa restu Anda merupakan karunia yang sangat berarti. Namun jika memberi lebih, dapat melalui:",
         bank_accounts: [
-          { bank_name: "Bank BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
-          { bank_name: "Bank Mandiri", account_number: "0987654321", account_name: "Raka Wibowo" },
-          { bank_name: "GoPay", account_number: "0812-3456-7890", account_name: "Dinda Ayu" },
+          {
+            bank_name: "Bank BCA",
+            account_number: "1234567890",
+            account_name: "Dinda Ayu Pratiwi",
+          },
+          {
+            bank_name: "Bank Mandiri",
+            account_number: "0987654321",
+            account_name: "Raka Wibowo",
+          },
+          {
+            bank_name: "GoPay",
+            account_number: "0812-3456-7890",
+            account_name: "Dinda Ayu",
+          },
         ],
       },
     },
@@ -49,8 +74,16 @@ export const giftSection: SectionDefinition = {
       defaultProps: {
         intro: "Kirimkan tanda kasih Anda melalui:",
         bank_accounts: [
-          { bank_name: "Bank BCA", account_number: "1234567890", account_name: "Dinda Ayu Pratiwi" },
-          { bank_name: "Bank Mandiri", account_number: "0987654321", account_name: "Raka Wibowo" },
+          {
+            bank_name: "Bank BCA",
+            account_number: "1234567890",
+            account_name: "Dinda Ayu Pratiwi",
+          },
+          {
+            bank_name: "Bank Mandiri",
+            account_number: "0987654321",
+            account_name: "Raka Wibowo",
+          },
         ],
       },
     },

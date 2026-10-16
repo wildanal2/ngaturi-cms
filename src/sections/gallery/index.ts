@@ -4,6 +4,8 @@ export { GalleryCinematicVintage };
 import { GalleryProps } from "../schema";
 import { dummyGallery } from "../dummy";
 import { columnsField, imagesArray } from "../fields";
+import { GalleryGerbangPuspa } from "./gallery-gerbang-puspa";
+import { GP_PHASE_TWO_ASSETS } from "../gerbang-puspa/phase-two-assets";
 import { GalleryGrid } from "./gallery-grid";
 import { GalleryMasonry } from "./gallery-masonry";
 import { GalleryCarousel } from "./gallery-carousel";
@@ -27,11 +29,28 @@ export const gallerySection: SectionDefinition = {
   icon: "Images",
   category: "content",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "gerbang-puspa") return;
     if (Array.isArray(base.images) && base.images.length === 0) {
       base.images = dummyGallery(variantKey);
     }
   },
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      description:
+        "Foto utama dilanjutkan pasangan foto dan penampil aksesibel",
+      component: GalleryGerbangPuspa,
+      propsSchema: GalleryProps,
+      fields: [imagesArray],
+      defaultProps: {
+        images: GP_PHASE_TWO_ASSETS.gallery.map((url) => ({
+          url,
+          caption: "",
+        })),
+        columns: 2,
+      },
+      isPremium: true,
+    },
     "cinematic-vintage": {
       name: "Sinematik Vintage",
       description: "Bingkai heritage dalam perjalanan kamera berbasis scroll",
@@ -86,7 +105,8 @@ export const gallerySection: SectionDefinition = {
     },
     floating17: {
       name: "Carousel Floating17",
-      description: "Foto aktif di tengah dengan kedalaman 3D, tombol, swipe, dan lightbox",
+      description:
+        "Foto aktif di tengah dengan kedalaman 3D, tombol, swipe, dan lightbox",
       component: GalleryFloating17,
       propsSchema: GalleryProps,
       fields: [

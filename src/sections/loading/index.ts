@@ -3,6 +3,7 @@ import type { SectionDefinition } from "../types";
 import { LoadingCinematicVintage } from "./loading-cinematic-vintage";
 import { LoadingSerambiDelima } from "./loading-serambi-delima";
 import { DEFAULT_LOADING_MESSAGE } from "./resolve";
+import { LoadingGerbangPuspa } from "./loading-gerbang-puspa";
 
 export const loadingSection: SectionDefinition = {
   type: "loading",
@@ -11,6 +12,16 @@ export const loadingSection: SectionDefinition = {
   icon: "Hourglass",
   category: "hero",
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      component: LoadingGerbangPuspa,
+      propsSchema: z.object({
+        message: z.string().default(DEFAULT_LOADING_MESSAGE),
+      }),
+      defaultProps: { message: DEFAULT_LOADING_MESSAGE },
+      fields: [{ kind: "text", key: "message", label: "Pesan persiapan" }],
+      isPremium: true,
+    },
     "serambi-delima": {
       name: "Serambi Delima",
       component: LoadingSerambiDelima,

@@ -1,0 +1,48 @@
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: #fffbf3;
+  outline: none;
+  touch-action: none;
+  overscroll-behavior: none;
+  transition: opacity 350ms ease;
+}
+
+.screen[data-loading-phase="leaving"] {
+  opacity: 0;
+}
+
+.inline {
+  position: relative;
+  min-height: 500px;
+  z-index: auto;
+  touch-action: auto;
+}
+
+.indicator {
+  display: block;
+  box-sizing: border-box;
+  width: 25px;
+  height: 25px;
+  border: 2px solid #a56a6d;
+  animation: rotate 1.3s linear infinite;
+}
+
+@keyframes rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen {
+    transition: none;
+  }
+
+  .indicator {
+    animation: none;
+  }
+}
