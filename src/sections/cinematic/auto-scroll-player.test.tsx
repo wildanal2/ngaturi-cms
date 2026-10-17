@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CinematicAutoScroll } from "./auto-scroll-player";
 import { CinematicComposition } from "./composition";
 import { getTemplate } from "@/lib/templates/catalog";
+import { hydrateTemplateSections } from "@/lib/templates/hydrate";
 
 const hooks = vi.hoisted(() => ({
   anchor: null as unknown,
@@ -30,20 +31,23 @@ function setup(native = true, legacy = false) {
   return { cover, root };
 }
 describe("Cinematic automatic player boundary", () => {
-  it("opts in public Cinematic presentation while excluding Builder and simple mode", () => {
-    const global = getTemplate("cinematic-vintage")!.global_settings;
-    const enabled = (inCanvas = false, simple = false) =>
-      CinematicComposition({
-        sections: [],
-        inCanvas,
-        global: {
-          ...global,
-          presentationMode: simple ? "simple" : "cinematic",
-        },
-      }).props.children.at(-1).props.enabled;
-    expect(enabled()).toBe(true);
-    expect(enabled(true)).toBe(false);
-    expect(enabled(false, true)).toBe(false);
+  it("keeps ordinary invitations guest-controlled in public, Builder and simple presentation", () => {
+    const template = getTemplate("cinematic-vintage")!;
+    for (const inCanvas of [true, false]) {
+      for (const presentationMode of ["cinematic", "simple"] as const) {
+        const composition = CinematicComposition({
+          sections: hydrateTemplateSections(template),
+          inCanvas,
+          global: { ...template.global_settings, presentationMode },
+        });
+        expect(
+          composition.props.children.some(
+            (node: { type: unknown }) => node.type === CinematicAutoScroll,
+          ),
+        ).toBe(false);
+        expect(mount).not.toHaveBeenCalled();
+      }
+    }
   });
   it("never attaches a player to disabled previews or invitations without a Cover", () => {
     setup();

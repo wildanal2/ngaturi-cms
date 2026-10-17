@@ -38,7 +38,7 @@ export function usePlayer(canControl?: boolean, autoplay = true, startAt = 0) {
     };
     const onLoop = () => {
       a.currentTime = startAt;
-      void a.play();
+      void a.play().catch(() => setPlaying(false));
     };
     a.addEventListener("loadedmetadata", seekStart);
     a.addEventListener("ended", onLoop);
@@ -52,12 +52,15 @@ export function usePlayer(canControl?: boolean, autoplay = true, startAt = 0) {
     };
     window.addEventListener("ngaturi:open", onOpen);
     const sync = () => setPlaying(!a.paused);
+    const failed = () => setPlaying(false);
     a.addEventListener("play", sync);
     a.addEventListener("pause", sync);
+    a.addEventListener("error", failed);
     return () => {
       window.removeEventListener("ngaturi:open", onOpen);
       a.removeEventListener("play", sync);
       a.removeEventListener("pause", sync);
+      a.removeEventListener("error", failed);
       a.removeEventListener("loadedmetadata", seekStart);
       a.removeEventListener("ended", onLoop);
     };
@@ -72,7 +75,9 @@ export function usePlayer(canControl?: boolean, autoplay = true, startAt = 0) {
           a.currentTime = startAt;
         } catch {}
       }
-      a.play().then(() => setPlaying(true)).catch(() => {});
+      a.play()
+        .then(() => setPlaying(true))
+        .catch(() => {});
     } else {
       a.pause();
       setPlaying(false);
@@ -128,7 +133,9 @@ export function Sleeve({
       style={{
         width: size,
         height: size,
-        ...(playing && spinSeconds ? { animationDuration: `${spinSeconds}s` } : {}),
+        ...(playing && spinSeconds
+          ? { animationDuration: `${spinSeconds}s` }
+          : {}),
       }}
     >
       {cover ? (

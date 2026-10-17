@@ -90,7 +90,8 @@ export function animateCinematicScroll(
 }
 
 export type CinematicSeekDetail =
-  string | { sectionId: string; behavior: "smooth" | "instant" };
+  | string
+  | { sectionId: string; behavior: "smooth" | "instant"; panelIndex?: number };
 export function focusCinematicChapter(section: HTMLElement) {
   const heading = section.querySelector<HTMLElement>("h1, h2");
   if (!heading) return;

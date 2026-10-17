@@ -8,6 +8,7 @@ import {
   focusCinematicChapter,
 } from "../cinematic/scroll";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CinematicDialog } from "../cinematic/dialog";
 import styles from "../cinematic/cinematic.module.css";
 
 function ChapterLabel({ label, from }: { label: string; from?: string }) {
@@ -46,6 +47,7 @@ export function NavigationCinematicVintage({
     direction: "forward",
   });
   const ref = useRef<HTMLElement>(null);
+  const [menu, setMenu] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     const root = ref.current && cinematicRoot(ref.current);
@@ -61,7 +63,9 @@ export function NavigationCinematicVintage({
         owner instanceof HTMLElement ? owner.getBoundingClientRect().top : 0;
       const height =
         owner instanceof HTMLElement ? owner.clientHeight : window.innerHeight;
-      const sections = [...root.querySelectorAll<HTMLElement>("[data-section]")];
+      const sections = [
+        ...root.querySelectorAll<HTMLElement>("[data-section]"),
+      ];
       const rendered = cinematicDestinations(
         sections.map((section) => section.dataset.section!),
         true,
@@ -80,7 +84,8 @@ export function NavigationCinematicVintage({
           section.closest(
             "[data-cinematic-stage][data-enhanced]:not([data-linear])",
           )
-        ) return false;
+        )
+          return false;
         const panels = [
           ...section.querySelectorAll<HTMLElement>("[data-world-panel]"),
         ];
@@ -97,17 +102,7 @@ export function NavigationCinematicVintage({
         const box = node.getBoundingClientRect();
         return box.top <= y && box.bottom > y;
       });
-      const focused =
-        document.activeElement instanceof HTMLElement &&
-        root.contains(document.activeElement) &&
-        document.activeElement.matches(
-          "input, textarea, select, [contenteditable]",
-        )
-          ? document.activeElement.closest<HTMLElement>("[data-section]")
-          : null;
-      const type = focused?.closest("[data-cinematic-interaction]")
-        ? focused.dataset.section
-        : (current?.dataset.section ?? stage?.dataset.activeSection);
+      const type = current?.dataset.section ?? stage?.dataset.activeSection;
       if (type)
         setActive((previous) =>
           previous.type === type
@@ -136,6 +131,7 @@ export function NavigationCinematicVintage({
     owner.addEventListener("scroll", request, { passive: true });
     window.addEventListener("resize", request);
     document.addEventListener("focusin", request);
+    root.addEventListener("cinematic:layout", request);
     update();
     return () => {
       cancelAnimationFrame(raf);
@@ -143,6 +139,7 @@ export function NavigationCinematicVintage({
       owner.removeEventListener("scroll", request);
       window.removeEventListener("resize", request);
       document.removeEventListener("focusin", request);
+      root.removeEventListener("cinematic:layout", request);
     };
   }, [inCanvas, initial]);
   const go = (type: string) => {
@@ -187,59 +184,102 @@ export function NavigationCinematicVintage({
     (item) => item.type === active.previousType,
   );
   return (
-    <nav
-      ref={ref}
-      className={styles.cinematicDock}
-      data-in-canvas={inCanvas || undefined}
-      data-cinematic-pager
-      aria-label="Perjalanan undangan"
-    >
-      <div className={styles.dockInner} data-direction={active.direction}>
-        <button
-          type="button"
-          disabled={!previous}
-          aria-label={
-            previous ? `Bab sebelumnya: ${previous.label}` : "Awal perjalanan"
-          }
-          onClick={() => previous && go(previous.type)}
-        >
-          {previous ? (
-            <>
-              <ChevronLeft size={16} aria-hidden="true" />
+    <>
+      <nav
+        ref={ref}
+        className={styles.cinematicDock}
+        data-in-canvas={inCanvas || undefined}
+        data-cinematic-pager
+        data-current-chapter={current.type}
+        aria-label="Perjalanan undangan"
+      >
+        <div className={styles.dockInner} data-direction={active.direction}>
+          <button
+            type="button"
+            disabled={!previous}
+            aria-label={
+              previous ? `Bab sebelumnya: ${previous.label}` : "Awal perjalanan"
+            }
+            onClick={() => previous && go(previous.type)}
+          >
+            {previous ? (
+              <>
+                <ChevronLeft size={16} aria-hidden="true" />
+                <ChapterLabel
+                  label={previous.label}
+                  from={chapters[fromIndex - 1]?.label}
+                />
+              </>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            className={styles.pagerCurrent}
+            aria-current="location"
+            aria-label={`Buka daftar bab: ${current.label}, ${index + 1} dari ${chapters.length}`}
+            aria-haspopup="dialog"
+            aria-expanded={!!menu}
+            onClick={(event) => setMenu(event.currentTarget)}
+          >
+            <strong>
               <ChapterLabel
-                label={previous.label}
-                from={chapters[fromIndex - 1]?.label}
+                label={current.label}
+                from={chapters[fromIndex]?.label}
               />
-            </>
-          ) : null}
-        </button>
-        <div className={styles.pagerCurrent} aria-current="location">
-          <strong>
-            <ChapterLabel
-              label={current.label}
-              from={chapters[fromIndex]?.label}
-            />
-          </strong>
+            </strong>
+            <span className={styles.chapterPosition}>
+              {index + 1}/{chapters.length} · Daftar bab
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={!next}
+            aria-label={
+              next ? `Bab berikutnya: ${next.label}` : "Akhir perjalanan"
+            }
+            onClick={() => next && go(next.type)}
+          >
+            {next ? (
+              <>
+                <ChapterLabel
+                  label={next.label}
+                  from={chapters[fromIndex + 1]?.label}
+                />
+                <ChevronRight size={16} aria-hidden="true" />
+              </>
+            ) : null}
+          </button>
         </div>
-        <button
-          type="button"
-          disabled={!next}
-          aria-label={
-            next ? `Bab berikutnya: ${next.label}` : "Akhir perjalanan"
-          }
-          onClick={() => next && go(next.type)}
+      </nav>
+      {menu ? (
+        <CinematicDialog
+          title="Jelajahi undangan"
+          kind="chapters"
+          opener={menu}
+          onClose={() => setMenu(null)}
         >
-          {next ? (
-            <>
-              <ChapterLabel
-                label={next.label}
-                from={chapters[fromIndex + 1]?.label}
-              />
-              <ChevronRight size={16} aria-hidden="true" />
-            </>
-          ) : null}
-        </button>
-      </div>
-    </nav>
+          <ol className={styles.chapterList}>
+            {chapters.map((chapter, i) => (
+              <li key={chapter.type}>
+                <button
+                  type="button"
+                  aria-current={
+                    chapter.type === current.type ? "location" : undefined
+                  }
+                  onClick={() => {
+                    setMenu(null);
+                    requestAnimationFrame(() => go(chapter.type));
+                  }}
+                >
+                  <span>{String(i + 1).padStart(2, "0")}</span>
+                  {chapter.label}
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ol>
+        </CinematicDialog>
+      ) : null}
+    </>
   );
 }

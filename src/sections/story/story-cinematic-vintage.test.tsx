@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { Children, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getTemplate } from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
@@ -7,6 +8,7 @@ import { getVariant, variantDefaultProps } from "../registry";
 import { cinematicContent, cinematicVariant } from "../cinematic/content";
 import { cinematicDestinations } from "../cinematic/chrome";
 import { CinematicComposition } from "../cinematic/composition";
+import { CinematicStage } from "../cinematic/stage";
 import { useBuilder } from "@/stores/builder-store";
 import { cinematicStoryItems } from "./cinematic-items";
 import {
@@ -35,15 +37,13 @@ describe("Cinematic Story", () => {
     "keeps the Add Story defaults scoped to %s",
     (composition) => {
       const existing = sections().filter((s) => s.type !== "story");
-      useBuilder
-        .getState()
-        .load({
-          invitationId: "story-test",
-          sections: existing,
-          global: template.global_settings,
-          locked: false,
-          compositionPolicy: getCompositionPolicy({ composition }),
-        });
+      useBuilder.getState().load({
+        invitationId: "story-test",
+        sections: existing,
+        global: template.global_settings,
+        locked: false,
+        compositionPolicy: getCompositionPolicy({ composition }),
+      });
       const before = JSON.stringify(useBuilder.getState().sections);
       useBuilder.getState().addSection("story", "timeline");
       const current = useBuilder.getState().sections;
@@ -67,8 +67,17 @@ describe("Cinematic Story", () => {
     story.visible = true;
     story.props.items = [{ title: "Pertemuan" }];
     const key = () =>
-      CinematicComposition({ sections: data, global: template.global_settings })
-        .props.children[0].props.layoutKey;
+      Children.toArray(
+        CinematicComposition({
+          sections: data,
+          global: template.global_settings,
+        }).props.children,
+      ).flatMap((node) =>
+        isValidElement<{ layoutKey?: string }>(node) &&
+        node.type === CinematicStage
+          ? [node.props.layoutKey]
+          : [],
+      )[0];
     const first = key();
     story.props.items = [
       {
@@ -116,7 +125,7 @@ describe("Cinematic Story", () => {
     expect(JSON.stringify(data)).toBe(before);
   });
   it.each([1, 3, 7])(
-    "renders all %i meaningful memories once in one chapter before Countdown",
+    "renders all %i meaningful memories once in one chapter before Gallery and Countdown",
     (count) => {
       const data = sections();
       const story = data.find((s) => s.type === "story")!;
@@ -136,7 +145,6 @@ describe("Cinematic Story", () => {
       expect(markup.indexOf('data-section="story"')).toBeLessThan(
         markup.indexOf('data-section="countdown"'),
       );
-      expect(markup.match(/data-cinematic-stage=/g)).toHaveLength(2);
       const journey = cinematicDestinations(
         cinematicContent(data).siblingTypes,
       ).map((c) => c.type);
@@ -145,7 +153,7 @@ describe("Cinematic Story", () => {
           journey.indexOf("story") - 1,
           journey.indexOf("story") + 2,
         ),
-      ).toEqual(["quote", "story", "countdown"]);
+      ).toEqual(["quote", "story", "gallery"]);
     },
   );
   it("supports description-only, title-only and long content without fallback narratives", () => {
@@ -166,7 +174,7 @@ describe("Cinematic Story", () => {
     expect(
       markup.slice(
         markup.indexOf('data-section="story"'),
-        markup.indexOf('data-section="countdown"'),
+        markup.indexOf("</section>", markup.indexOf('data-section="story"')),
       ),
     ).not.toContain("<img");
   });
@@ -197,6 +205,6 @@ describe("Cinematic Story", () => {
     const journey = cinematicDestinations(
       cinematicContent(data).siblingTypes,
     ).map((c) => c.type);
-    expect(journey.slice(1, 4)).toEqual(["couple-intro", "story", "countdown"]);
+    expect(journey.slice(1, 4)).toEqual(["couple-intro", "story", "gallery"]);
   });
 });

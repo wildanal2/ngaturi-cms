@@ -514,8 +514,7 @@ describe("Cinematic outer-scroll regression", () => {
     expect(f.root.hasAttribute("data-linear")).toBe(true);
     expect(
       f.memories.every(
-        (m) =>
-          !m.node.inert && !m.node.hasAttribute("data-cinematic-tall"),
+        (m) => !m.node.inert && !m.node.hasAttribute("data-cinematic-tall"),
       ),
     ).toBe(true);
     f.win.innerHeight = 800;
@@ -526,7 +525,7 @@ describe("Cinematic outer-scroll regression", () => {
     cleanup?.();
   });
   it.each(["entry", "tail"])(
-    "settles the visible stage %s instead of rejecting it by timeline bounds",
+    "keeps a small manual scroll at the stage %s without advancing a chapter",
     (edge) => {
       vi.useFakeTimers();
       const f = setup();
@@ -572,8 +571,7 @@ describe("Cinematic outer-scroll regression", () => {
       vi.advanceTimersByTime(300);
       tick(0);
       tick(450);
-      if (edge === "entry") expect(f.win.scrollY).toBeGreaterThan(before + 35);
-      else expect(f.win.scrollY).toBe(73 + parseFloat(f.root.style.height));
+      expect(f.win.scrollY).toBe(before + 35);
       cleanup?.();
     },
   );
@@ -611,7 +609,7 @@ describe("Cinematic outer-scroll regression", () => {
     cleanup?.();
   });
   it.each([false, true])(
-    "settles manual input to the actual timeline beat (local scroller: %s)",
+    "lets forward input escape a resting beat (local scroller: %s)",
     (local) => {
       vi.useFakeTimers();
       const f = setup({ local });
@@ -643,7 +641,7 @@ describe("Cinematic outer-scroll regression", () => {
       vi.advanceTimersByTime(300);
       tick(0);
       tick(450);
-      expect(f.scroller ? f.scroller.scrollTop : f.win.scrollY).toBe(rest);
+      expect(f.scroller ? f.scroller.scrollTop : f.win.scrollY).toBe(rest + 80);
       if (local) expect(f.win.scrollTo).not.toHaveBeenCalled();
       cleanup?.();
     },
@@ -714,7 +712,7 @@ describe("Cinematic outer-scroll regression", () => {
   });
 
   it.each([false, true])(
-    "settles after the final Closing pan without rewinding its message (local: %s)",
+    "lets the reader leave the final Closing pan without rewinding its message (local: %s)",
     (local) => {
       vi.useFakeTimers();
       const f = setup({ local });
@@ -742,14 +740,16 @@ describe("Cinematic outer-scroll regression", () => {
         frames.delete(key),
       );
       const tick = (now: number) => {
-        const pending = [...frames.values()]; frames.clear();
+        const pending = [...frames.values()];
+        frames.clear();
         pending.forEach((callback) => callback(now));
       };
       const cleanup = f.mount();
       const owner = f.scroller ?? f.win;
       const top = () => (local ? owner.scrollTop : f.win.scrollY);
       const setTop = (value: number) => {
-        if (local) owner.scrollTop = value; else f.win.scrollY = value;
+        if (local) owner.scrollTop = value;
+        else f.win.scrollY = value;
       };
       f.root.dispatchEvent(
         new CustomEvent("cinematic:seek", {
@@ -763,15 +763,21 @@ describe("Cinematic outer-scroll regression", () => {
       const pan = 1600 - (800 - 120);
       owner.dispatchEvent(new Event("wheel"));
       setTop(start + pan / 2);
-      owner.dispatchEvent(new Event("scroll")); tick(0);
-      vi.advanceTimersByTime(300); tick(0); tick(450);
+      owner.dispatchEvent(new Event("scroll"));
+      tick(0);
+      vi.advanceTimersByTime(300);
+      tick(0);
+      tick(450);
       expect(top()).toBe(start + pan / 2);
       expect(body.hasAttribute("data-cinematic-reading")).toBe(false);
       owner.dispatchEvent(new Event("wheel"));
       setTop(start + pan + 50);
-      owner.dispatchEvent(new Event("scroll")); tick(0);
-      vi.advanceTimersByTime(300); tick(0); tick(450);
-      expect(top()).toBe(start + pan);
+      owner.dispatchEvent(new Event("scroll"));
+      tick(0);
+      vi.advanceTimersByTime(300);
+      tick(0);
+      tick(450);
+      expect(top()).toBe(start + pan + 50);
       expect(closing.style.translate).toBe(`0 -${pan}px`);
       expect(f.root.dataset.activeSection).toBe("closing");
       if (local) expect(f.win.scrollTo).not.toHaveBeenCalled();

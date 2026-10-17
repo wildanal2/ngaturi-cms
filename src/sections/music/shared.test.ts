@@ -25,6 +25,24 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("shared music Opening gesture", () => {
+  it("reports stopped playback on media failure and contains a rejected loop restart", async () => {
+    vi.stubGlobal("window", new EventTarget());
+    const audio = new Audio();
+    hooks.audio = audio;
+    audio.play.mockRejectedValue(new Error("source unavailable"));
+    usePlayer(true, true);
+    const cleanup = hooks.effects[0]();
+    audio.dispatchEvent(new Event("error"));
+    expect(hooks.setPlaying).toHaveBeenCalledWith(false);
+    hooks.setPlaying.mockClear();
+    audio.dispatchEvent(new Event("ended"));
+    await Promise.resolve();
+    expect(hooks.setPlaying).toHaveBeenCalledWith(false);
+    cleanup?.();
+    hooks.setPlaying.mockClear();
+    audio.dispatchEvent(new Event("error"));
+    expect(hooks.setPlaying).not.toHaveBeenCalled();
+  });
   it("never plays on mount/readiness and invokes play synchronously on Opening; cleanup detaches it", async () => {
     const owner = new EventTarget();
     vi.stubGlobal("window", owner);

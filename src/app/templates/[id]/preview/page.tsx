@@ -34,7 +34,10 @@ export default async function TemplatePreviewPage({
   return (
     <div className="min-h-screen bg-white">
       <div className="sticky top-0 z-50 flex items-center justify-between border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur">
-        <Link href="/templates" className="text-sm text-ink-soft hover:text-ink">
+        <Link
+          href="/templates"
+          className="text-sm text-ink-soft hover:text-ink"
+        >
           ← Semua template
         </Link>
         <span className="text-sm font-medium">{t.name}</span>
@@ -46,7 +49,13 @@ export default async function TemplatePreviewPage({
         </Link>
       </div>
 
-      <div className="relative mx-auto max-w-lg">
+      <div
+        className={
+          resolveTemplateComposition(t.id) === "cinematic-vintage"
+            ? "relative mx-auto max-w-[1120px]"
+            : "relative mx-auto max-w-lg"
+        }
+      >
         {!t.sections.some((s) => s.type === "cover") &&
         resolveTemplateComposition(t.id) !== "cinematic-vintage" ? (
           <InvitationCover
@@ -63,7 +72,10 @@ export default async function TemplatePreviewPage({
             !t.sections.some((s) => s.type === "cover") &&
             resolveTemplateComposition(t.id) === "cinematic-vintage" ? (
               <InvitationCover
-                names={(t.sections.find((s) => s.type === "hero")?.props.couple_names as string) ?? t.name}
+                names={
+                  (t.sections.find((s) => s.type === "hero")?.props
+                    .couple_names as string) ?? t.name
+                }
                 guestName={null}
                 global={t.global_settings}
               />

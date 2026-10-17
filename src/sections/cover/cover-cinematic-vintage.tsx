@@ -24,7 +24,8 @@ export function CoverCinematicVintage({
   useEffect(() => {
     if (inCanvas || loading || !gate.current) return;
     if (!open || leaving) return containCinematicCover(gate.current);
-    gate.current.closest(".cinematic-invitation")
+    gate.current
+      .closest(".cinematic-invitation")
       ?.querySelector<HTMLElement>("[data-cinematic-opening-focus]")
       ?.focus({ preventScroll: true });
   }, [inCanvas, loading, open, leaving]);
@@ -41,8 +42,8 @@ export function CoverCinematicVintage({
   const enter = () => {
     if (inCanvas || loading || open) return;
     setGateOffset(
-      gate.current?.closest("[data-invitation-cover]")
-        ?.getBoundingClientRect().top ?? 0,
+      gate.current?.closest("[data-invitation-cover]")?.getBoundingClientRect()
+        .top ?? 0,
     );
     const invitation = gate.current?.closest(".cinematic-invitation");
     if (invitation)
@@ -84,7 +85,9 @@ export function CoverCinematicVintage({
           <p className={styles.coverGreeting}>
             {p.note ?? "Kepada Bapak/Ibu/Saudara/i"}
           </p>
-          {guestName ? <p className={styles.coverGuest}>{guestName}</p> : null}
+          <p className={styles.coverGuest}>
+            {guestName?.trim() || "Tamu Undangan"}
+          </p>
           <button
             type="button"
             className={styles.button}

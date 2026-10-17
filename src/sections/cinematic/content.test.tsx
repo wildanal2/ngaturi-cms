@@ -18,6 +18,64 @@ const template = getTemplate("cinematic-vintage")!;
 const sections = () => hydrateTemplateSections(template);
 
 describe("Cinematic Vintage contract", () => {
+  it("retains enabled public chapters when the author disables Hero", () => {
+    const saved = sections().map((section) =>
+      section.type === "hero" ? { ...section, visible: false } : section,
+    );
+    const markup = renderToStaticMarkup(
+      <InvitationRenderer
+        sections={saved}
+        global={template.global_settings}
+        composition="cinematic-vintage"
+        isPreview
+      />,
+    );
+    expect(markup).not.toContain('data-section="hero"');
+    for (const type of [
+      "couple-intro",
+      "quote",
+      "gallery",
+      "event-details",
+      "rsvp",
+      "closing",
+    ])
+      expect(
+        markup.match(new RegExp(`data-section="${type}"`, "g")),
+      ).toHaveLength(1);
+  });
+  it("presents saved flip countdown once in authored order without mutating records", () => {
+    const saved = sections().sort((a, b) => a.order - b.order);
+    const countdown = saved.find((s) => s.type === "countdown")!;
+    const closing = saved.find((s) => s.type === "closing")!;
+    countdown.variant = "flip";
+    countdown.order = closing.order + 1;
+    const snapshot = JSON.stringify(saved);
+    const markup = renderToStaticMarkup(
+      <CinematicComposition
+        sections={saved}
+        global={template.global_settings}
+      />,
+    );
+    expect(markup.match(/data-section="countdown"/g)).toHaveLength(1);
+    expect(markup.indexOf('data-section="closing"')).toBeLessThan(
+      markup.indexOf('data-section="countdown"'),
+    );
+    expect(cinematicContent(saved).remaining).not.toContain(countdown);
+    expect(JSON.stringify(saved)).toBe(snapshot);
+  });
+  it("keeps the default countdown near Events and Closing as the final content chapter", () => {
+    const types = sections()
+      .filter(
+        (s) =>
+          s.visible !== false &&
+          !["music", "navigation", "loading", "cover"].includes(s.type),
+      )
+      .map((s) => s.type);
+    expect(types.at(-1)).toBe("closing");
+    expect(
+      Math.abs(types.indexOf("countdown") - types.indexOf("event-details")),
+    ).toBe(1);
+  });
   it("reads replacement photos from section props and never hardcodes couple artwork", () => {
     const hydrated = sections();
     hydrated.find((s) => s.type === "hero")!.props.background_image =
@@ -130,6 +188,7 @@ describe("Cinematic Vintage contract", () => {
       "entrance",
       "couple",
       "quote",
+      "world",
       "countdown",
       "world",
       "closing",
@@ -284,7 +343,7 @@ describe("Cinematic Vintage contract", () => {
     }
   });
 
-  it("renders the complete chapter order once, with interactions outside both stages", () => {
+  it("renders the complete chapter order once, including the three interaction chapters", () => {
     const markup = renderToStaticMarkup(
       <InvitationRenderer
         sections={sections()}
@@ -303,15 +362,14 @@ describe("Cinematic Vintage contract", () => {
       "hero",
       "couple-intro",
       "quote",
-      "countdown",
       "gallery",
+      "countdown",
       "event-details",
       "rsvp",
       "gift",
       "guestbook",
       "closing",
     ]);
-    expect(markup.match(/data-cinematic-stage=/g)).toHaveLength(2);
     expect(markup).toContain("Tamu Istimewa");
     expect(markup).toContain("Perjalanan undangan");
     expect(markup).not.toContain("Lainnya");

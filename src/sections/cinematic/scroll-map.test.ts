@@ -4,6 +4,20 @@ import { cinematicScrollMap } from "./scroll-map";
 const node = () => ({ style: { translate: "" } }) as HTMLElement;
 
 describe("Cinematic outer-scroll traversal", () => {
+  it("preserves the same reading point when a resized chapter grows", () => {
+    const chapter = node();
+    const before = cinematicScrollMap(20, 2000, [
+      { at: 7, pixels: 1000, node: chapter },
+    ]);
+    const after = cinematicScrollMap(20, 1500, [
+      { at: 7, pixels: 2000, node: chapter },
+    ]);
+    const anchor = before.bookmark(1200);
+    expect(after.restore(anchor)).toBe(1525);
+    expect(after.sample(after.restore(anchor)).time).toBe(7);
+    expect(after.bookmark(after.restore(anchor)).progress).toBe(0.5);
+    expect(after.restore(before.bookmark(1900))).toBe(after.position(9));
+  });
   it("holds the timeline while the same owner traverses tall content", () => {
     const content = node();
     const map = cinematicScrollMap(20, 2000, [
@@ -22,7 +36,8 @@ describe("Cinematic outer-scroll traversal", () => {
   });
 
   it("keeps every Story memory and later chapter in order without skipping", () => {
-    const first = node(), second = node();
+    const first = node(),
+      second = node();
     const map = cinematicScrollMap(24, 2400, [
       { at: 9, pixels: 420, node: second },
       { at: 3, pixels: 700, node: first },

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { ReactNode } from "react";
 import { CriticalPortrait } from "./critical-portrait";
 import styles from "./cinematic.module.css";
@@ -51,16 +50,8 @@ export function Portrait({
 }) {
   return (
     <div className={`relative overflow-hidden ${styles.portrait} ${className}`}>
-      {src && eager ? (
-        <CriticalPortrait key={src} src={src} alt={alt} />
-      ) : src ? (
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          sizes="(max-width: 512px) 80vw, 410px"
-          className="object-cover"
-        />
+      {src ? (
+        <CriticalPortrait key={src} src={src} alt={alt} eager={eager} />
       ) : (
         <span aria-hidden="true" className={styles.monogram}>
           ♡
