@@ -40,6 +40,7 @@ export const coverSection: SectionDefinition = {
   icon: "BookOpen",
   category: "hero",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "lakon-kencana") return;
     if (
       variantKey !== "minimal" &&
       variantKey !== "sekar-jawa-3d" &&

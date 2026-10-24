@@ -17,6 +17,7 @@ export const mapSection: SectionDefinition = {
   icon: "MapPin",
   category: "content",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "lakon-kencana") return;
     if (variantKey === "gerbang-puspa") return;
     if (!base.embed_url) base.embed_url = DUMMY_MAP_EMBED;
     if (!base.maps_url) base.maps_url = DUMMY_MAP_LINK;

@@ -17,6 +17,21 @@ const openingArt = [
 
 /** Add another template's first-view provider here; never collect all media. */
 export const loadingAssetProviders: Record<string, LoadingAssetProvider> = {
+  "lakon-kencana": (root) => ({
+    images: [
+      ...root.querySelectorAll<HTMLImageElement>(
+        "[data-lakon-cover] img, [data-lakon-scene='hero'] img",
+      ),
+    ],
+    imageUrls: [
+      "/themes/lakon-kencana/gunungan.webp",
+      "/themes/lakon-kencana/wayang-pair.webp",
+    ],
+    fonts: ["--font-cormorant", "--font-inter"].flatMap((variable) => {
+      const family = getComputedStyle(root).getPropertyValue(variable).trim();
+      return family ? [{ family }] : [];
+    }),
+  }),
   "gerbang-puspa": (root) => ({
     images: [
       ...root.querySelectorAll<HTMLImageElement>(

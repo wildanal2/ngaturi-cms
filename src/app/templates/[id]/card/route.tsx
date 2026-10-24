@@ -39,6 +39,13 @@ export async function GET(
   const t = getTemplate(id);
   if (!t) return new Response("not found", { status: 404 });
 
+  if (t.id === "lakon-kencana") {
+    return Response.redirect(
+      new URL("/themes/lakon-kencana/thumbnail.webp", _req.url),
+      307,
+    );
+  }
+
   if (t.id === "gerbang-puspa") {
     return Response.redirect(
       new URL("/themes/gerbang-puspa/stationery-background.svg", _req.url),

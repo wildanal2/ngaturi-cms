@@ -29,6 +29,7 @@ export const gallerySection: SectionDefinition = {
   icon: "Images",
   category: "content",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "lakon-kencana") return;
     if (variantKey === "gerbang-puspa") return;
     if (Array.isArray(base.images) && base.images.length === 0) {
       base.images = dummyGallery(variantKey);

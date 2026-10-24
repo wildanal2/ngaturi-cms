@@ -240,7 +240,8 @@ export function mergeInvitationIntoTemplate(
     if (
       section.type === "loading" &&
       !targetTemplate.sections.some((s) => s.type === "loading")
-    ) continue;
+    )
+      continue;
     const typeIndex = existingTypeIndexes.get(section) ?? 0;
     const sourceDefaults = sourceByType.get(section.type)?.[typeIndex]?.props;
     const standardVariant =
@@ -272,5 +273,64 @@ export function mergeInvitationIntoTemplate(
     });
   }
 
+  // This new preset has demo content for catalog/new-invitation previews.
+  // On a template change, absent source sections must not introduce fictional
+  // identities, venues, photos, or a sample love story into an authored invitation.
+  if (targetTemplate.id === "lakon-kencana") {
+    const sourceProps = (type: string) =>
+      orderedExisting.find((s) => s.type === type)?.props;
+    const value = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+    const couple = sourceProps("couple-intro");
+    const personName = (v: unknown) => {
+      const person =
+        v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+      return value(person.name) || value(person.full_name);
+    };
+    const identity =
+      value(sourceProps("hero")?.couple_names) ||
+      value(sourceProps("cover")?.names) ||
+      value(sourceProps("closing")?.names) ||
+      [personName(couple?.groom), personName(couple?.bride)]
+        .filter(Boolean)
+        .join(" & ");
+    const date =
+      value(sourceProps("hero")?.event_date) ||
+      value(sourceProps("countdown")?.target_date);
+    for (const section of merged) {
+      if (existingByType.has(section.type)) continue;
+      if (["cover", "hero", "closing"].includes(section.type)) {
+        section.props[section.type === "hero" ? "couple_names" : "names"] =
+          identity;
+        if (section.type === "hero") {
+          section.props.event_date = date;
+          delete section.props.background_image;
+          delete section.props.couple_image;
+        }
+        if (section.type === "closing") section.props.message = "";
+      } else if (section.type === "couple-intro") {
+        section.props.bride = { name: "" };
+        section.props.groom = { name: "" };
+        section.visible = false;
+      } else if (
+        ["story", "gallery", "event-details", "quote"].includes(section.type)
+      ) {
+        section.props[
+          (
+            {
+              story: "items",
+              gallery: "images",
+              "event-details": "events",
+              quote: "text",
+            } as Record<string, string>
+          )[section.type]
+        ] = section.type === "quote" ? "" : [];
+        section.visible = false;
+      } else if (section.type === "countdown") {
+        section.props.target_date = date;
+        if (!date && !existingByType.has("event-details"))
+          section.visible = false;
+      }
+    }
+  }
   return merged.map((section, order) => ({ ...section, order }));
 }

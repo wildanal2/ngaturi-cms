@@ -41,6 +41,7 @@ export const heroSection: SectionDefinition = {
   icon: "Sparkles",
   category: "hero",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "lakon-kencana") return;
     if (variantKey === "serambi-delima" || variantKey === "gerbang-puspa")
       return;
     if (!base.background_image) base.background_image = dummyHero(variantKey);

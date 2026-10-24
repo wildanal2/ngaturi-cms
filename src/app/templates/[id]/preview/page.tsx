@@ -51,9 +51,11 @@ export default async function TemplatePreviewPage({
 
       <div
         className={
-          resolveTemplateComposition(t.id) === "cinematic-vintage"
-            ? "relative mx-auto max-w-[1120px]"
-            : "relative mx-auto max-w-lg"
+          t.id === "lakon-kencana"
+            ? "relative w-full"
+            : resolveTemplateComposition(t.id) === "cinematic-vintage"
+              ? "relative mx-auto max-w-[1120px]"
+              : "relative mx-auto max-w-lg"
         }
       >
         {!t.sections.some((s) => s.type === "cover") &&

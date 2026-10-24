@@ -16,6 +16,7 @@ export const giftSection: SectionDefinition = {
   icon: "Gift",
   category: "content",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "lakon-kencana") return;
     if (variantKey === "gerbang-puspa") return;
     if (Array.isArray(base.bank_accounts)) {
       base.bank_accounts = (
