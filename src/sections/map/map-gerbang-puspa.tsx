@@ -12,7 +12,7 @@ import { adjacentGerbangSection } from "../gerbang-puspa/phase-three-data";
 import foundation from "../gerbang-puspa/foundation.module.css";
 import styles from "./map-gerbang-puspa.module.css";
 
-export function MapGerbangPuspa({ props }: SectionRenderProps) {
+export function MapGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
   const venue = textValue(props.venue_name),
     address = textValue(props.address);
   const maps = externalLink(textValue(props.maps_url)),
@@ -108,6 +108,7 @@ export function MapGerbangPuspa({ props }: SectionRenderProps) {
       ref={ref}
       className={`${foundation.scene} ${styles.location} ${slot ? styles.joined : ""}`}
       data-scene="location"
+      data-in-canvas={inCanvas || undefined}
       data-gerbang-puspa-location
       data-gp-location-joined={!!slot}
     >

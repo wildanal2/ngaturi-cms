@@ -49,7 +49,10 @@
 .scope h1,
 .scope h2,
 .scope h3,
-.scope p {
+.scope p,
+.scope
+  :is([data-scene="couple"], [data-scene="countdown"], [data-scene="gift"])
+  :is(h1, h2, h3, p) {
   margin: 0;
   font-weight: 400;
 }
@@ -95,14 +98,21 @@
 .presentation[data-has-navigation="true"] .column {
   padding-bottom: calc(100px + env(safe-area-inset-bottom));
 }
-.scene {
+/* These scenes used the foundation geometry/surface in the committed cascade.
+   Keep that priority when lazy CSS arrives, while quote, story, events and
+   closing retain their own overrides. */
+.scene,
+.scene:is([data-scene="hero"], [data-scene="couple"], [data-scene="countdown"]),
+.scene[data-scene="location"][data-in-canvas="true"] {
   position: relative;
   width: 100%;
   padding: 64px 24px;
   overflow: hidden;
   background: var(--gp-cream);
 }
-.frame {
+.frame,
+:is([data-scene="couple"], [data-scene="countdown"], [data-scene="gift"])
+  .frame {
   position: relative;
   z-index: 1;
   border: 1px solid var(--gp-line);
@@ -189,7 +199,8 @@
   font-size: clamp(32px, calc(var(--gp-column-width, 390px) * 0.1), 44px);
   line-height: 1.25;
 }
-.monogram {
+.monogram,
+[data-scene="hero"] .monogram {
   width: 64px;
   height: 74px;
   color: var(--gp-maroon);
