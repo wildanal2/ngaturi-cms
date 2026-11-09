@@ -39,26 +39,27 @@ export async function GET(
   const t = getTemplate(id);
   if (!t) return new Response("not found", { status: 404 });
 
+  // Relative locations preserve the browser origin behind Docker/reverse proxies.
   if (t.id === "lakon-kencana") {
-    return Response.redirect(
-      new URL("/themes/lakon-kencana/thumbnail.webp", _req.url),
-      307,
-    );
+    return new Response(null, {
+      status: 307,
+      headers: { Location: "/themes/lakon-kencana/thumbnail.webp" },
+    });
   }
 
   if (t.id === "gerbang-puspa") {
-    return Response.redirect(
-      new URL("/themes/gerbang-puspa/stationery-background.svg", _req.url),
-      307,
-    );
+    return new Response(null, {
+      status: 307,
+      headers: { Location: "/themes/gerbang-puspa/stationery-background.svg" },
+    });
   }
 
   // Keep the catalog card contract while serving this template's original vector art.
   if (t.id === "serambi-delima") {
-    return Response.redirect(
-      new URL("/themes/serambi-delima/thumbnail.svg", _req.url),
-      307,
-    );
+    return new Response(null, {
+      status: 307,
+      headers: { Location: "/themes/serambi-delima/thumbnail.svg" },
+    });
   }
 
   const g = t.global_settings;

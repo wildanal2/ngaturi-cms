@@ -1,3 +1,4 @@
+import { ThumbnailImage } from "@/components/ui/thumbnail-image";
 import Link from "next/link";
 import { Eye, MessageCircleHeart, PencilLine, Users } from "lucide-react";
 import type { InferSelectModel } from "drizzle-orm";
@@ -48,9 +49,7 @@ export function InvitationCard({
   const url = `${appUrl.replace(/\/$/, "")}/${inv.slug}`;
   const title = inv.eventTitle ?? "Undangan tanpa judul";
 
-  // Lightweight preview: the template card is plain coloured divs (cached
-  // 1 day, no remote image fetch), so a dashboard with many cards stays
-  // fast. The heavy OG image is only for social-share unfurls.
+  // Reuse the template card endpoint for listing previews.
   const thumb = inv.sourceTemplate
     ? `/templates/${inv.sourceTemplate}/card`
     : null;
@@ -62,11 +61,12 @@ export function InvitationCard({
       {/* preview */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-forest/15 to-wine/15">
         {thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <ThumbnailImage
             src={thumb}
             alt=""
-            loading="lazy"
+            fill
+            unoptimized
+            sizes="(max-width: 640px) 100vw, 400px"
             className="h-full w-full object-cover object-top"
           />
         ) : (
@@ -130,7 +130,11 @@ export function InvitationCard({
             className="inline-flex items-center gap-1.5 rounded-full bg-forest px-4 py-2 font-medium text-cream hover:bg-forest-600"
           >
             <PencilLine size={14} />
-            {locked ? "Lihat isi" : inv.status === "published" ? "Edit" : "Lanjut edit"}
+            {locked
+              ? "Lihat isi"
+              : inv.status === "published"
+                ? "Edit"
+                : "Lanjut edit"}
           </Link>
           {inv.status === "published" ? (
             <a

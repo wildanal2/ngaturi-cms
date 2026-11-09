@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ThumbnailImage as Image } from "@/components/ui/thumbnail-image";
 import type { Metadata } from "next";
 import { MarketingPage, PageHeading } from "@/components/marketing/page-shell";
 import { ButtonLink } from "@/components/ui/button";

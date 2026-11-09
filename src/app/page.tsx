@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ThumbnailImage as Image } from "@/components/ui/thumbnail-image";
 import { connection } from "next/server";
 import Link from "next/link";
 import {
