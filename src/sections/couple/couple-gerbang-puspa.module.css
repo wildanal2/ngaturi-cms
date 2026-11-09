@@ -1,0 +1,109 @@
+.couple {
+  padding-top: 48px;
+}
+.coupleFrame {
+  border: 0;
+  background: none;
+  padding: 0 8px;
+}
+.couple h2 {
+  color: var(--gp-maroon);
+  font:
+    400 34px/1.25 var(--gp-font-display),
+    serif;
+  margin-bottom: 40px;
+  overflow-wrap: break-word;
+}
+.eyebrow {
+  margin-bottom: 10px !important;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.person {
+  position: relative;
+  isolation: isolate;
+}
+.person::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 28px;
+  left: -24px;
+  width: 88px;
+  height: 220px;
+  background: url("/themes/gerbang-puspa/floral-top-left.svg") center / contain
+    no-repeat;
+  opacity: 0.85;
+  pointer-events: none;
+}
+.person[data-gp-partner="1"]::before {
+  left: auto;
+  right: -24px;
+  background-image: url("/themes/gerbang-puspa/floral-top-right.svg");
+}
+.portrait {
+  width: 68%;
+  max-width: 240px;
+  aspect-ratio: 4/5;
+  border-radius: 150px 150px 12px 12px;
+  border: 1px solid #a56a6d;
+  padding: 5px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--gp-cream);
+}
+.person[data-gp-partner="1"] .portrait {
+  border-radius: 150px;
+}
+.portrait img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  object-position: center 20%;
+}
+.person h3 {
+  font:
+    400 28px/1.35 var(--gp-font-display),
+    serif;
+  color: var(--gp-maroon);
+  margin: 24px 0 12px;
+  overflow-wrap: break-word;
+}
+.person p {
+  font-size: 16px;
+  line-height: 1.8;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+.person .extra {
+  margin-top: 12px;
+}
+.social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  max-width: calc(100% - 48px);
+  margin-top: 16px;
+  padding: 8px 18px;
+  border: 1px solid var(--gp-line);
+  border-radius: 24px;
+  color: var(--gp-maroon);
+  font-size: 14px;
+  line-height: 1.5;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.social:hover {
+  background: var(--gp-pink);
+}
+.ampersand {
+  display: block;
+  margin: 28px 0 34px;
+  color: #a56a6d;
+  font:
+    44px/1.2 var(--gp-font-script),
+    cursive;
+}

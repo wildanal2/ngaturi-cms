@@ -1,6 +1,7 @@
 import { CountdownCinematicVintage } from "./countdown-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { CountdownProps } from "../schema";
+import { CountdownGerbangPuspa } from "./countdown-gerbang-puspa";
 import { countdownFields, nowPlus } from "../fields";
 import { CountdownMinimal } from "./countdown-minimal";
 import { CountdownFlip } from "./countdown-flip";
@@ -35,6 +36,14 @@ export const countdownSection: SectionDefinition = {
   icon: "Timer",
   category: "interactive",
   variants: {
+    "gerbang-puspa": {
+      name: "Gerbang Puspa",
+      component: CountdownGerbangPuspa,
+      propsSchema: CountdownProps,
+      fields: [...countdownFields, calendarField],
+      defaultProps: { ...d(), message_expired: "" },
+      isPremium: true,
+    },
     minimal: {
       name: "Kotak Minimalis",
       component: CountdownMinimal,

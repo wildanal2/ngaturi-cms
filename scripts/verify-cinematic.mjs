@@ -1,359 +1,1391 @@
-// Read-only browser regression checks. Requires Playwright and its Chromium browser.
-// BASE_URL=http://localhost:3030 node scripts/verify-cinematic.mjs
-// Optional: PLAYWRIGHT_MODULE, CINEMATIC_STORAGE_STATE, CINEMATIC_BUILDER_URL,
-// CINEMATIC_PUBLIC_URL (defaults to the official template preview route).
+// Safe local browser acceptance. Every public API request is intercepted.
+// BASE_URL=http://127.0.0.1:3048 PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node scripts/verify-cinematic.mjs
+// Optional: CINEMATIC_PUBLIC_URL, CINEMATIC_FIXTURE_URL (stress fixture),
+// CINEMATIC_BUILDER_URL, CINEMATIC_STANDARD_URL, CINEMATIC_OUTPUT, CINEMATIC_STORAGE_STATE.
 import assert from "node:assert/strict";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile, rename } from "node:fs/promises";
 const { chromium } = await import(
   process.env.PLAYWRIGHT_MODULE || "playwright"
 );
-const base = process.env.BASE_URL || "http://localhost:3030";
+const base = process.env.BASE_URL || "http://127.0.0.1:3030";
 const preview =
   process.env.CINEMATIC_PUBLIC_URL ||
   `${base}/templates/cinematic-vintage/preview`;
-const picker = process.env.CINEMATIC_PICKER_URL;
-const standardPicker = process.env.STANDARD_PICKER_URL;
-const output = "/tmp/ngaturi-vintage-verification";
+const fixture = process.env.CINEMATIC_FIXTURE_URL;
+const builder = process.env.CINEMATIC_BUILDER_URL;
+const standard = process.env.CINEMATIC_STANDARD_URL;
+for (const url of [preview, fixture, builder, standard].filter(Boolean))
+  assert(
+    ["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname),
+    "Acceptance must use a local server",
+  );
+const output =
+  process.env.CINEMATIC_OUTPUT || "/tmp/ngaturi-cinematic-acceptance";
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
   args: ["--no-sandbox"],
 });
-const context = await browser.newContext({
-  storageState: process.env.CINEMATIC_STORAGE_STATE,
-});
-const errors = [];
-
-async function load(page, url) {
-  await page.goto(url);
-  const cover = page.locator("[data-invitation-cover] button");
-  if (await cover.count()) await cover.click();
-  await page.waitForSelector("[data-cinematic-stage][data-enhanced]");
-}
-
-async function cameraCheck(page, label, canvas = false) {
-  const stage = page.locator("[data-cinematic-stage]");
-  const bounds = await stage.evaluate((el) => {
-    const scroller = el.closest("[data-device-scroller]");
-    const height = scroller?.clientHeight ?? innerHeight;
-    return {
-      top:
-        el.getBoundingClientRect().top +
-        (scroller?.scrollTop ?? scrollY) -
-        (scroller?.getBoundingClientRect().top ?? 0),
-      distance: el.offsetHeight - height,
-    };
-  });
-  const baseline = await page.evaluate(() => ({
-    window: scrollY,
-    outer: document.querySelector("main")?.scrollTop ?? 0,
-  }));
-  const samples = {};
-  for (const p of [
-    0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.16, 0.27, 0.37, 0.45, 0.52, 0.58, 0.6, 0.62,
-    0.64, 0.66, 0.7, 0.75, 0.8, 0.85, 0.9, 0.94, 0.96, 0.98, 0.99,
-  ]) {
-    await stage.evaluate(
-      (el, { bounds, p }) => {
-        const target = bounds.top + bounds.distance * p;
-        const scroller = el.closest("[data-device-scroller]");
-        if (scroller) scroller.scrollTop = target;
-        else document.documentElement.scrollTop = target;
-      },
-      { bounds, p },
-    );
-    await page.waitForTimeout(80);
-    samples[p] = await stage.evaluate((el) => {
-      const matrix = (selector) =>
-        new DOMMatrix(getComputedStyle(el.querySelector(selector)).transform);
-      const scroller = el.closest("[data-device-scroller]");
-      return {
-        entrance: matrix("[data-scene=entrance] > div").a,
-        couple: matrix("[data-scene=couple] > div").a,
-        quote: matrix("[data-scene=quote] > div").a,
-        venue: matrix("[data-scene=venue] > div").a,
-        closing: matrix("[data-scene=closing] > div").a,
-        rail: matrix("[data-world-rail]").e,
-        camera: matrix("[data-world-camera]").a,
-        foreground: matrix('[data-depth="5"]').f,
-        background: matrix('[data-depth="0"]').f,
-        scenes: [...el.querySelectorAll("[data-scene]")]
-          .filter((s) => !s.inert)
-          .map((s) => s.dataset.scene),
-        overflow: scroller
-          ? scroller.scrollWidth > scroller.clientWidth
-          : document.documentElement.scrollWidth > innerWidth,
-        window: scrollY,
-        outer: document.querySelector("main")?.scrollTop ?? 0,
-      };
+const results = [];
+const names = {
+  hero: "Awal",
+  "couple-intro": "Mempelai",
+  quote: "Kutipan",
+  story: "Perjalanan Kami",
+  countdown: "Hari Bahagia",
+  gallery: "Kenangan",
+  "event-details": "Acara",
+  "map-location": "Lokasi",
+  rsvp: "RSVP",
+  gift: "Tanda Kasih",
+  guestbook: "Doa & Ucapan",
+  closing: "Penutup",
+};
+async function test(name, run) {
+  if (
+    process.env.CINEMATIC_CASES &&
+    !new RegExp(process.env.CINEMATIC_CASES).test(name)
+  )
+    return;
+  const began = Date.now();
+  try {
+    const detail = await run();
+    results.push({
+      name,
+      status: detail?.skipped ? "SKIP" : "PASS",
+      seconds: (Date.now() - began) / 1000,
+      ...detail,
     });
-    assert.equal(samples[p].overflow, false, `${label}: overflow at ${p}`);
-    if (canvas) {
-      assert.equal(
-        samples[p].window,
-        baseline.window,
-        "Builder window scroll changed",
-      );
-      assert.equal(
-        samples[p].outer,
-        baseline.outer,
-        "Builder outer scroll changed",
-      );
-    }
-    if ([0, 0.16, 0.37, 0.52, 0.6, 0.7, 0.85, 0.99].includes(p))
-      await page.screenshot({ path: `${output}/${label}-${p}.png` });
+    console.log(`${detail?.skipped ? "SKIP" : "PASS"} ${name}`);
+  } catch (error) {
+    results.push({ name, status: "FAIL", error: error.stack });
+    console.error(`FAIL ${name}: ${error.message}`);
   }
-  assert(
-    Math.max(samples[0.06].entrance, samples[0.08].entrance, samples[0.1].entrance) >
-      Math.min(samples[0.02].entrance, samples[0.04].entrance),
-    "Entrance must zoom",
-  );
-  assert.notEqual(
-    samples[0.06].foreground,
-    samples[0.06].background,
-    "Depth layers must move differently",
-  );
-  assert(samples[0.27].couple < samples[0.16].couple, "Couple camera must pull back");
-  assert(
-    Math.min(samples[0.27].quote, samples[0.37].quote) <
-      Math.max(samples[0.16].quote, samples[0.27].quote),
-    "Quote must pull back",
-  );
-  assert(
-    samples[0.45].rail < samples[0.37].rail,
-    "Vertical scroll must traverse gallery horizontally",
-  );
-  const akadPeak = Math.max(samples[0.52].camera, samples[0.58].camera);
-  const receptionPeak = Math.max(
-    samples[0.7].camera,
-    samples[0.75].camera,
-    samples[0.8].camera,
-  );
-  assert(akadPeak > samples[0.45].camera, "Akad must enter");
-  assert(samples[0.62].camera < akadPeak, "Akad must exit");
-  assert(
-    Math.abs(samples[0.62].camera - samples[0.64].camera) < 0.001 &&
-      Math.abs(samples[0.62].rail - samples[0.64].rail) < 0.001,
-    "Gallery world must hold after Akad exit",
-  );
-  assert(
-    samples[0.7].rail < samples[0.64].rail,
-    "Camera must travel to reception",
-  );
-  assert(receptionPeak > samples[0.66].camera, "Reception must enter");
-  assert(samples[0.85].camera < receptionPeak, "Reception must exit");
-  assert(samples[0.9].scenes.includes("venue"), "Venue must appear");
-  assert(
-    Math.max(samples[0.9].venue, samples[0.94].venue) > samples[0.85].venue,
-    "Venue transition must zoom in",
-  );
-  assert(
-    Math.min(samples[0.98].closing, samples[0.99].closing) <
-      Math.max(samples[0.94].closing, samples[0.96].closing),
-    "Closing must pull back",
-  );
-  console.log(
-    `${label}: entrance, depth, gallery, Akad enter/exit, reception enter/exit, venue, closing passed`,
-  );
+  await writeFile(`${output}/results.json`, JSON.stringify(results, null, 2));
 }
-
-try {
-  for (const width of process.env.SKIP_PUBLIC ? [] : [360, 430, 1440]) {
-    const page = await context.newPage();
-    page.on("pageerror", (e) => errors.push(e.message));
-    await page.setViewportSize({ width, height: 900 });
-    await load(page, preview);
-    await cameraCheck(page, `public-${width}`);
-    // Preference changes clean up transforms/inert immediately, without remounting.
-    await page.emulateMedia({ reducedMotion: "reduce" });
+async function open(width = 390, height = 844, url = preview, options = {}) {
+  const context = await browser.newContext({
+    viewport: { width, height },
+    hasTouch: width < 500,
+    isMobile: width < 500,
+    storageState: process.env.CINEMATIC_STORAGE_STATE,
+    ...options,
+  });
+  const page = await context.newPage();
+  page.setDefaultTimeout(15000);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("**/api/**", (route) =>
+    route.fulfill({
+      json: route.request().url().includes("public-config") ? {} : [],
+    }),
+  );
+  await page.addInitScript(() => {
+    window.__copyFail = false;
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text) => {
+          if (window.__copyFail) throw Error("mock clipboard unavailable");
+          window.__copied = text;
+        },
+      },
+    });
+  });
+  await page.goto(url, { waitUntil: "domcontentloaded", timeout: 90000 });
+  const cover = page.locator("[data-invitation-cover] button");
+  if (await cover.count()) {
+    assert(
+      !(await page.locator("[data-cinematic-pager]").isVisible()),
+      "Pager must stay hidden before opening",
+    );
+    await cover.click();
     await page.waitForFunction(
       () =>
-        !document
-          .querySelector("[data-cinematic-stage]")
-          .hasAttribute("data-enhanced"),
+        document
+          .querySelector("[data-invitation-cover]")
+          ?.getAttribute("data-open") === "1",
     );
-    assert.equal(
-      await page.locator("[data-cinematic-stage] [inert]").count(),
-      0,
-    );
-    assert.equal(
-      await page.locator("[data-cinematic-stage] [data-event-portal]").count(),
-      2,
-    );
-    await page.locator("[data-scene=venue]").scrollIntoViewIfNeeded();
-    assert(await page.locator("[data-scene=venue] a").isVisible());
-    await page.screenshot({ path: `${output}/reduced-${width}.png` });
-    await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page.waitForSelector("[data-enhanced]");
+  }
+  await page.evaluate(() => document.fonts.ready);
+  if (
+    options.reducedMotion !== "reduce" &&
+    new URL(url).searchParams.get("simple") !== "1"
+  )
     await page
-      .getByRole("button", { name: "Tampilan sederhana", exact: true })
-      .click();
-    assert.equal(await page.locator("[data-enhanced]").count(), 0);
-    for (const type of [
-      "rsvp",
-      "guestbook",
-      "gift",
-      "countdown",
-      "map-location",
-      "music",
-      "navigation",
-    ])
-      assert.equal(
-        await page.locator(`[data-section="${type}"]`).count(),
-        1,
-        `${type} must remain rendered`,
+      .locator("[data-cinematic-stage][data-enhanced]")
+      .first()
+      .waitFor();
+  await page.locator("[data-cinematic-pager]").waitFor();
+  return { context, page, errors };
+}
+async function seek(page, type, panelIndex) {
+  await page.evaluate(
+    ({ type, panelIndex }) => {
+      document.activeElement?.blur();
+      const section = document.querySelector(
+        `.cinematic-invitation [data-section="${type}"]`,
       );
-    console.log(
-      `public-${width}: live reduced motion and manual fallback passed`,
-    );
-    await page.close();
-  }
-  if (picker) {
-    const page = await context.newPage();
-    page.on("pageerror", (e) => errors.push(e.message));
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(picker);
-    const pickerHeading = page.getByRole("heading", { name: "Pilih template undangan" });
-    if (await pickerHeading.count()) {
-      assert(await pickerHeading.isVisible());
-      const card = page.locator("article").filter({ hasText: "Cinematic Vintage" });
-      assert.equal(await card.count(), 1);
-      assert((await card.locator("img").getAttribute("src"))?.includes("/templates/cinematic-vintage/card"));
-      await card.getByRole("button", { name: "Pakai template ini" }).click();
-    }
-    await page.waitForSelector("[data-cinematic-stage][data-enhanced]");
-    assert.equal(await page.getByRole("heading", { name: "Pilih template undangan" }).count(), 0);
-
-    const left = page.locator("aside").first();
-    const inspector = page.locator("aside").nth(1);
-    const field = (label, index = 0) =>
-      inspector
-        .locator("label")
-        .filter({ hasText: label })
-        .nth(index)
-        .locator("input, textarea, select")
-        .last();
-    assert(await inspector.getByText("Cinematic Timeline", { exact: true }).isVisible());
-    const heroRow = left.locator("li").filter({ hasText: "Sampul / Pembuka" });
-    assert.equal(await heroRow.getByRole("button", { name: "Geser" }).count(), 0);
-    assert.equal(await heroRow.getByLabel("Urutan dikendalikan oleh template").count(), 1);
-    const rsvpRow = left.locator("li").filter({ hasText: /^RSVP/ });
-    assert.equal(await rsvpRow.getByRole("button", { name: "Geser" }).count(), 1);
-
-    await heroRow.getByRole("button", { name: "Sampul / Pembuka" }).click();
-    assert(await inspector.getByText("Tampilan dikendalikan oleh template.", { exact: true }).isVisible());
-    await field("Nama").fill("Phase 6B Couple");
-    assert(await page.locator("[data-device-scroller]").getByText("Phase 6B Couple", { exact: true }).isVisible());
-
-    await left.getByRole("button", { name: "Kutipan", exact: true }).click();
-    await inspector.getByRole("heading", { name: "Kutipan", exact: true }).waitFor();
-    await field("Teks kutipan").fill("Phase 6B Quote");
-    assert(await page.locator("[data-device-scroller]").getByText("Phase 6B Quote", { exact: true }).isVisible());
-
-    await left.getByRole("button", { name: "Rangkaian Acara", exact: true }).click();
-    await inspector.getByRole("heading", { name: "Rangkaian Acara", exact: true }).waitFor();
-    const eventNames = inspector.locator("label").filter({ hasText: "Nama acara" }).locator("input");
-    await eventNames.nth(0).fill("Akad Phase 6B");
-    await eventNames.nth(1).fill("Resepsi Phase 6B");
-    await field("Jam mulai").fill("09:15");
-
-    await left.getByRole("button", { name: "Peta Lokasi", exact: true }).click();
-    await field("Nama tempat").fill("Venue Phase 6B");
-
-    await left.getByRole("button", { name: "Galeri", exact: true }).click();
-    await field("Keterangan").fill("Gallery Phase 6B");
-
-    await left.getByRole("button", { name: "Penutup / Terima Kasih", exact: true }).click();
-    await field("Pesan penutup").fill("Closing Phase 6B");
-    await page.getByText("Tersimpan", { exact: true }).waitFor({ timeout: 10000 });
-    await page.reload();
-    await page.waitForSelector("[data-cinematic-stage][data-enhanced]");
-    assert.equal(await page.getByRole("heading", { name: "Pilih template undangan" }).count(), 0);
-    await page.locator("aside").first().getByRole("button", { name: "Sampul / Pembuka" }).click();
-    assert.equal(
-      await page
-        .locator("aside")
-        .nth(1)
-        .locator("label")
-        .filter({ hasText: "Nama" })
-        .first()
-        .locator("input")
-        .inputValue(),
-      "Phase 6B Couple",
-    );
-    console.log("Builder picker, locks, live edits, autosave and reload passed");
-    await page.close();
-  }
-  if (standardPicker) {
-    const page = await context.newPage();
-    page.on("pageerror", (e) => errors.push(e.message));
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(standardPicker);
-    if (await page.getByRole("heading", { name: "Pilih template undangan" }).count()) {
-      const card = page.locator("article").filter({ hasText: "Sage Emas Klasik" });
-      await card.getByRole("button", { name: "Pakai template ini" }).click();
-    }
-    await page.waitForSelector('[data-device-scroller] [data-section-id]');
-    assert.equal(await page.locator("[data-cinematic-stage]").count(), 0);
-    const left = page.locator("aside").first();
-    const inspector = page.locator("aside").nth(1);
-    assert(await inspector.getByLabel("Animasi saat scroll").isVisible());
-    const coverRow = left.locator("li").filter({ hasText: "Sampul / Buka Undangan" });
-    assert.equal(await coverRow.getByRole("button", { name: "Geser" }).count(), 1);
-    await coverRow.getByRole("button", { name: "Sampul / Buka Undangan" }).click();
-    assert((await inspector.getByRole("button").count()) > 1);
-    await page.reload();
-    assert.equal(await page.getByRole("heading", { name: "Pilih template undangan" }).count(), 0);
-    assert.equal(await page.locator("[data-cinematic-stage]").count(), 0);
-    console.log("Standard Builder picker, editable controls and reload passed");
-    await page.close();
-  }
-  if (process.env.CINEMATIC_BUILDER_URL) {
-    const page = await context.newPage();
-    page.on("pageerror", (e) => errors.push(e.message));
-    await page.setViewportSize({ width: 1440, height: 1000 });
-    await load(page, process.env.CINEMATIC_BUILDER_URL);
-    await cameraCheck(page, "builder-360", true);
-    await page.goto(`${base}/templates`);
-    assert.equal(
-      await page.locator("[data-cinematic-stage], .pin-spacer").count(),
-      0,
-    );
-    await page.goBack();
-    await page.waitForSelector("[data-enhanced]");
-    assert.equal(await page.locator("[data-cinematic-stage]").count(), 1);
-    console.log("Builder: navigation away/back lifecycle passed");
-    await page.close();
-  }
-  // Development chunk names allow a real dynamic-import failure to be injected.
-  if (!process.env.SKIP_PUBLIC) {
-    const failed = await context.newPage();
-    let blocked = 0;
-    await failed.route("**/*cinematic_timeline*", (route) => {
-      blocked++;
-      return route.abort();
+      if (!section) throw Error(`Missing chapter ${type}`);
+      const stage = section.closest("[data-cinematic-stage]");
+      const event = new CustomEvent("cinematic:seek", {
+        detail: {
+          sectionId: section.dataset.sectionId,
+          panelIndex,
+          behavior: "instant",
+        },
+        cancelable: true,
+      });
+      if (!stage || stage.dispatchEvent(event))
+        (
+          section.querySelectorAll("[data-world-panel]")[panelIndex ?? 0] ??
+          section
+        ).scrollIntoView({ behavior: "instant", block: "start" });
+    },
+    { type, panelIndex },
+  );
+  await page.waitForTimeout(300);
+}
+const current = (page) =>
+  page
+    .locator(
+      "[data-cinematic-pager] [aria-current=location] strong > span > span:not([aria-hidden])",
+    )
+    .innerText();
+const y = (page) => page.evaluate(() => scrollY);
+async function configuredGuestLimit(form) {
+  const input = form.locator('input[name="guest_count"][type="number"]');
+  const raw = await input.getAttribute("max");
+  const maximum = Number(raw);
+  assert(
+    raw !== null &&
+      /^[1-9]\d*$/.test(raw) &&
+      Number.isSafeInteger(maximum) &&
+      maximum <= 20,
+    `Invalid RSVP fixture: guest-count max must be an integer 1–20; received ${JSON.stringify(raw)}`,
+  );
+  assert.equal(
+    await input.getAttribute("min"),
+    "1",
+    "Invalid RSVP fixture: guest-count min must match the server contract (1)",
+  );
+  return { input, maximum, count: Math.min(2, maximum) };
+}
+async function screenshot(page, name) {
+  await page.evaluate(async () => {
+    const visible = [...document.images].filter((image) => {
+      const box = image.getBoundingClientRect();
+      return (
+        getComputedStyle(image).visibility === "visible" &&
+        box.top < innerHeight &&
+        box.bottom > 0 &&
+        box.left < innerWidth &&
+        box.right > 0
+      );
     });
-    await failed.goto(preview);
-    await failed.locator("[data-invitation-cover] button").click();
-    await failed.waitForTimeout(700);
-    if (blocked) {
-      assert.equal(await failed.locator("[data-enhanced]").count(), 0);
-      await failed.locator("[data-scene=venue]").scrollIntoViewIfNeeded();
-      assert(await failed.locator("[data-scene=venue] a").isVisible());
-      console.log("Dynamic import failure: readable DOM and venue CTA passed");
-    } else
-      console.log(
-        "Dynamic import failure injection skipped: production chunks have opaque names",
+    await Promise.race([
+      Promise.all(visible.map((image) => image.decode().catch(() => {}))),
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+    ]);
+  });
+  await page.screenshot({ path: `${output}/${name}.png` });
+}
+async function visibleScenes(page) {
+  return page.evaluate(() =>
+    [...document.querySelectorAll("[data-scene]")]
+      .filter((node) => {
+        const box = node.getBoundingClientRect();
+        return (
+          box.top < innerHeight &&
+          box.bottom > 0 &&
+          getComputedStyle(node).visibility === "visible" &&
+          Number(getComputedStyle(node).opacity) > 0.1
+        );
+      })
+      .map((node) => node.dataset.scene),
+  );
+}
+try {
+  for (const [width, height] of [
+    [360, 800],
+    [390, 844],
+    [430, 932],
+    [768, 1024],
+    [1440, 844],
+  ])
+    await test(`fresh-${width}x${height}`, async () => {
+      const f = await open(width, height);
+      const { page } = f;
+      try {
+        const start = await y(page);
+        await page.waitForTimeout(1100);
+        assert(
+          Math.abs((await y(page)) - start) <= 1,
+          "Idle opening must not start a tour",
+        );
+        const types = await page.evaluate(() =>
+          [
+            ...document.querySelectorAll(
+              ".cinematic-invitation [data-section]",
+            ),
+          ].map((n) => n.dataset.section),
+        );
+        const chapters = [...new Set(types.filter((type) => names[type]))];
+        for (const type of chapters) {
+          await seek(page, type);
+          assert.equal(
+            await current(page),
+            names[type],
+            `Pager must follow ${type}`,
+          );
+          assert.equal(
+            await page.evaluate(() =>
+              Math.max(0, document.documentElement.scrollWidth - innerWidth),
+            ),
+            0,
+            "No horizontal page overflow",
+          );
+          assert(
+            (await visibleScenes(page)).length <= 1,
+            "Only one cinematic scene at a reading stop",
+          );
+          if (
+            [
+              "hero",
+              "couple-intro",
+              "gallery",
+              "event-details",
+              "rsvp",
+              "closing",
+            ].includes(type)
+          )
+            await screenshot(page, `${type}-${width}`);
+        }
+        const events = page.locator("[data-event-portal]");
+        for (let i = 0; i < (await events.count()); i++) {
+          await seek(page, "event-details", i);
+          const link = events.nth(i).getByRole("link");
+          if (await link.count()) {
+            const box = await link.boundingBox();
+            assert(
+              box && box.y >= 0 && box.y + box.height < height - 78,
+              "Every event map action must clear the pager",
+            );
+          }
+        }
+        await page
+          .locator("[data-cinematic-pager] [aria-haspopup=dialog]")
+          .click();
+        const list = page.locator("[data-cinematic-dialog=chapters] ol button");
+        assert.equal(await list.count(), chapters.length);
+        for (let i = 0; i < chapters.length; i++)
+          assert((await list.nth(i).innerText()).includes(names[chapters[i]]));
+        await screenshot(page, `chapters-${width}`);
+        await page.keyboard.press("Escape");
+        assert(
+          await page
+            .locator("[data-cinematic-pager] [aria-haspopup=dialog]")
+            .evaluate((node) => node === document.activeElement),
+        );
+        assert.deepEqual(f.errors, []);
+        return { chapters, events: await events.count(), pageErrors: f.errors };
+      } finally {
+        await f.context.close();
+      }
+    });
+  await test("scroll-cancellation-and-retained-focus", async () => {
+    const f = await open();
+    const p = f.page;
+    try {
+      await seek(p, "event-details");
+      await p.mouse.move(2, 300);
+      await p.mouse.wheel(0, 45);
+      await p.waitForTimeout(150);
+      const manual = await y(p);
+      await p.waitForTimeout(1000);
+      const resting = await y(p);
+      assert(
+        resting >= manual - 1 && resting - manual <= 65,
+        "A small forward input must not rebound or advance chapters",
       );
-    await failed.close();
-    const standard = await context.newPage();
-    await standard.goto(`${base}/templates/navy-elegan/preview`);
-    assert.equal(await standard.locator("[data-cinematic-stage]").count(), 0);
-    assert.equal(await standard.locator("[data-section=hero]").count(), 1);
-    await standard.close();
-  }
-  assert.deepEqual(errors, [], "Unexpected browser errors");
-  console.log(`Standard template isolation passed. Screenshots: ${output}`);
+      await p.mouse.wheel(0, 260);
+      await p.waitForTimeout(100);
+      await p.mouse.wheel(0, -80);
+      await p.waitForTimeout(150);
+      const reverse = await y(p);
+      await p.waitForTimeout(1000);
+      assert(
+        (await y(p)) <= reverse + 1,
+        "Reverse input must cancel forward assistance",
+      );
+      await p.evaluate(() => {
+        const stage = document.querySelector("[data-cinematic-stage]");
+        scrollTo({
+          top:
+            stage.getBoundingClientRect().top +
+            scrollY +
+            stage.offsetHeight -
+            innerHeight -
+            2,
+          behavior: "instant",
+        });
+      });
+      await p.waitForTimeout(300);
+      assert.equal(
+        (await visibleScenes(p)).length,
+        1,
+        "A stage must stay readable when its final transition is interrupted",
+      );
+      await seek(p, "hero");
+      await p
+        .getByRole("button", { name: "Bab berikutnya: Mempelai", exact: true })
+        .click();
+      await p.waitForTimeout(80);
+      await p.mouse.move(2, 300);
+      await p.mouse.wheel(0, 55);
+      await p.waitForTimeout(150);
+      const interrupted = await y(p);
+      await p.waitForTimeout(1400);
+      assert(
+        Math.abs((await y(p)) - interrupted) <= 65,
+        "New input cancels the chapter tween",
+      );
+      await seek(p, "rsvp");
+      await p
+        .locator("[data-section=rsvp] input[name=name]")
+        .fill("Tamu Lokal");
+      await p.evaluate(() =>
+        document
+          .querySelector("[data-section=gift]")
+          .scrollIntoView({ behavior: "instant" }),
+      );
+      await p.waitForTimeout(350);
+      assert.equal(await current(p), names.gift);
+      assert(
+        await p
+          .locator("input[name=name]")
+          .first()
+          .evaluate((n) => n === document.activeElement),
+      );
+      assert(await p.locator("[data-cinematic-pager]").isVisible());
+      assert.deepEqual(f.errors, []);
+      return { smallForward: { manual, resting }, pageErrors: f.errors };
+    } finally {
+      await f.context.close();
+    }
+  });
+  await test("gallery-lightbox-controls-focus-and-touch", async () => {
+    const f = await open();
+    const p = f.page;
+    try {
+      await seek(p, "gallery");
+      const gallery = p.locator("[data-gallery-frames]");
+      const first = gallery.getByRole("button", {
+        name: /^Perbesar foto 1 dari/,
+      });
+      const position = await y(p);
+      await first.click();
+      await p.locator("dialog[open]").waitFor();
+      assert(!(await p.locator("[data-cinematic-pager]").isVisible()));
+      const dialog = p.locator("dialog");
+      await dialog
+        .getByRole("button", { name: "Foto berikutnya", exact: true })
+        .click();
+      assert((await dialog.innerText()).includes("Foto 2 dari"));
+      await p.keyboard.press("ArrowLeft");
+      assert((await dialog.innerText()).includes("Foto 1 dari"));
+      await dialog
+        .getByRole("button", { name: "Tutup foto", exact: true })
+        .focus();
+      await p.keyboard.press("Shift+Tab");
+      assert.equal(
+        await p.evaluate(() =>
+          document.activeElement.getAttribute("aria-label"),
+        ),
+        "Foto berikutnya",
+      );
+      await p.keyboard.press("Tab");
+      assert.equal(
+        await p.evaluate(() =>
+          document.activeElement.getAttribute("aria-label"),
+        ),
+        "Tutup foto",
+      );
+      await screenshot(p, "lightbox-390");
+      await p.keyboard.press("Escape");
+      assert(await first.evaluate((n) => n === document.activeElement));
+      assert(
+        Math.abs((await y(p)) - position) <= 1,
+        "Closing the viewer preserves its page position within native scroll rounding",
+      );
+      await gallery
+        .locator('[data-gallery-index="0"]')
+        .getByRole("button", { name: "Kenangan berikutnya", exact: true })
+        .click();
+      await p.waitForTimeout(650);
+      assert.equal(
+        await gallery.getAttribute("data-active-gallery-index"),
+        "1",
+      );
+      const cdp = await f.context.newCDPSession(p);
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ x: 290, y: 300 }],
+      });
+      for (const x of [260, 220, 180, 130]) {
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x, y: 300 }],
+        });
+        await p.waitForTimeout(35);
+      }
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      });
+      await p.waitForTimeout(650);
+      assert.equal(
+        await gallery.getAttribute("data-active-gallery-index"),
+        "2",
+      );
+      const secondY = await y(p);
+      await gallery
+        .getByRole("button", { name: /^Perbesar foto 3 dari/ })
+        .click();
+      await p.locator("dialog[open]").waitFor();
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ x: 280, y: 300 }],
+      });
+      for (const x of [230, 180, 120]) {
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x, y: 300 }],
+        });
+        await p.waitForTimeout(35);
+      }
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      });
+      assert((await p.locator("dialog").innerText()).includes("Foto 4 dari"));
+      await p.keyboard.press("Escape");
+      assert(
+        Math.abs((await y(p)) - secondY) <= 1,
+        "Closing the viewer preserves its page position within native scroll rounding",
+      );
+      assert.equal(
+        await gallery.getAttribute("data-active-gallery-index"),
+        "2",
+      );
+      await p.evaluate(() => document.activeElement?.blur());
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchStart",
+        touchPoints: [{ x: 190, y: 490 }],
+      });
+      for (const top of [450, 400, 350, 300]) {
+        await cdp.send("Input.dispatchTouchEvent", {
+          type: "touchMove",
+          touchPoints: [{ x: 190, y: top }],
+        });
+        await p.waitForTimeout(60);
+      }
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchEnd",
+        touchPoints: [],
+      });
+      await p.waitForTimeout(700);
+      assert(
+        (await y(p)) > secondY,
+        "Vertical gallery gestures must retain native page travel",
+      );
+      assert.equal(await p.locator("dialog[open]").count(), 0);
+      assert.deepEqual(f.errors, []);
+      return { pageErrors: f.errors };
+    } finally {
+      await f.context.close();
+    }
+  });
+  await test("rsvp-contract-failure-retry-success-and-private-message", async () => {
+    const f = await open();
+    const p = f.page;
+    const payloads = [];
+    let releaseResponse;
+    const pending = new Promise((resolve) => {
+      releaseResponse = resolve;
+    });
+    try {
+      if (
+        await p
+          .getByText("Pratinjau — konfirmasi tidak akan dikirim.", {
+            exact: true,
+          })
+          .count()
+      )
+        return {
+          skipped:
+            "Submission coverage requires a safe public fixture; the catalog preview deliberately disables submission.",
+        };
+      await p.route("**/api/public/*/rsvp", async (route) => {
+        payloads.push(route.request().postDataJSON());
+        if (payloads.length === 1) await pending;
+        else await new Promise((resolve) => setTimeout(resolve, 350));
+        await route.fulfill({
+          status: payloads.length === 1 ? 503 : 200,
+          json:
+            payloads.length === 1
+              ? { error: "Koneksi terputus. Coba lagi." }
+              : { ok: true },
+        });
+      });
+      await seek(p, "rsvp");
+      const section = p.locator("[data-section=rsvp]");
+      const form = section.locator("form");
+      assert.equal(await form.locator("input[name=status]:checked").count(), 0);
+      await form.locator("input[name=name]").fill("Tamu Pengujian Lokal");
+      if (await form.locator("input[name=phone]").count())
+        await form.locator("input[name=phone]").fill("081234567890");
+      assert(
+        !(await form.evaluate((n) => n.checkValidity())),
+        "Attendance must be an explicit choice",
+      );
+      await form.getByRole("radio", { name: "Hadir", exact: true }).check();
+      const { input, maximum, count } = await configuredGuestLimit(form);
+      await input.fill(String(count));
+      assert(
+        await form.evaluate((node) => node.checkValidity()),
+        "A count within the configured maximum must be valid",
+      );
+      await input.fill(String(maximum + 1));
+      assert(
+        !(await form.evaluate((node) => node.checkValidity())),
+        "The configured attendance limit remains enforced",
+      );
+      await form
+        .getByRole("radio", { name: "Tidak hadir", exact: true })
+        .check();
+      assert.equal(
+        await form.getByLabel("Jumlah tamu", { exact: true }).count(),
+        0,
+      );
+      assert(!(await form.innerText()).includes("Termasuk Anda"));
+      assert.equal(
+        await form.locator("input[name=guest_count]").inputValue(),
+        "1",
+      );
+      await form.getByRole("radio", { name: "Hadir", exact: true }).check();
+      assert.equal(
+        await form.locator("input[name=guest_count]").inputValue(),
+        String(maximum),
+      );
+      await form
+        .getByRole("radio", { name: "Tidak hadir", exact: true })
+        .check();
+      await form
+        .locator("textarea")
+        .fill("Pesan pribadi yang diuji dengan mock.");
+      const submit = form.locator('button[type="submit"]');
+      assert(
+        await form.evaluate((node) => node.checkValidity()),
+        "The non-attending form must have a valid request",
+      );
+      await submit.click();
+      await p.waitForTimeout(80);
+      assert(await submit.isDisabled());
+      await form.dispatchEvent("submit");
+      releaseResponse();
+      await form.getByRole("alert").waitFor();
+      assert.equal(payloads.length, 1);
+      assert.equal(
+        await form.locator("textarea").inputValue(),
+        "Pesan pribadi yang diuji dengan mock.",
+      );
+      assert.equal(
+        await form.locator("input[name=name]").inputValue(),
+        "Tamu Pengujian Lokal",
+      );
+      await submit.click();
+      const before = await y(p);
+      await section.getByRole("status").waitFor();
+      await p.waitForTimeout(400);
+      assert(
+        Math.abs((await y(p)) - before) <= 1,
+        "Success must preserve page position",
+      );
+      assert.equal(payloads.length, 2);
+      assert(
+        payloads.every(
+          (payload) =>
+            payload.status === "not_attending" && payload.guest_count === "1",
+        ),
+      );
+      assert(
+        !(await section.getByRole("status").innerText()).includes("1 tamu"),
+      );
+      await screenshot(p, "rsvp-success-390");
+      assert.deepEqual(f.errors, []);
+      const attending = await open();
+      const attendingPayloads = [];
+      try {
+        await attending.page.route("**/api/public/*/rsvp", async (route) => {
+          attendingPayloads.push(route.request().postDataJSON());
+          await route.fulfill({ json: { ok: true } });
+        });
+        await seek(attending.page, "rsvp");
+        const attendingForm = attending.page.locator(
+          "[data-section=rsvp] form",
+        );
+        await attendingForm
+          .locator("input[name=name]")
+          .fill("Tamu Hadir Lokal");
+        if (await attendingForm.locator("input[name=phone]").count())
+          await attendingForm.locator("input[name=phone]").fill("081234567890");
+        await attendingForm
+          .getByRole("radio", { name: "Hadir", exact: true })
+          .check();
+        const configured = await configuredGuestLimit(attendingForm);
+        assert.equal(configured.maximum, maximum);
+        await configured.input.fill(String(configured.count));
+        assert(await attendingForm.evaluate((node) => node.checkValidity()));
+        await attendingForm.locator('button[type="submit"]').click();
+        await attending.page
+          .locator("[data-section=rsvp]")
+          .getByRole("status")
+          .waitFor();
+        assert.equal(attendingPayloads.length, 1);
+        assert.equal(attendingPayloads[0].status, "attending");
+        assert.equal(attendingPayloads[0].guest_count, String(count));
+        assert.deepEqual(attending.errors, []);
+      } finally {
+        await attending.context.close();
+      }
+      return {
+        configuredMaximum: maximum,
+        validAttendingCount: count,
+        mockedRequests: payloads.length + attendingPayloads.length,
+        payloads,
+        attendingPayload: attendingPayloads[0],
+        successScrollDelta: (await y(p)) - before,
+        pageErrors: f.errors,
+      };
+    } finally {
+      await f.context.close();
+    }
+  });
+  await test("gift-copy-and-public-wishes-feedback", async () => {
+    const f = await open();
+    const p = f.page;
+    let posts = 0;
+    try {
+      await seek(p, "gift");
+      const gift = p.locator("[data-section=gift]");
+      await gift.locator("summary").click();
+      const copy = gift.getByRole("button", { name: /Salin nomor/ }).first();
+      await copy.scrollIntoViewIfNeeded();
+      const height = await gift.evaluate((n) => n.offsetHeight);
+      await copy.click();
+      assert((await gift.innerText()).includes("Tersalin"));
+      await p.evaluate(() => (window.__copyFail = true));
+      await copy.click();
+      assert((await gift.innerText()).includes("Belum tersalin"));
+      assert.equal(await gift.evaluate((n) => n.offsetHeight), height);
+      await screenshot(p, "gift-expanded-390");
+      await p.route("**/api/public/*/guestbook", async (route) => {
+        if (route.request().method() === "GET")
+          return route.fulfill({ json: [] });
+        posts++;
+        return route.fulfill({
+          status: posts === 1 ? 503 : 200,
+          json:
+            posts === 1
+              ? { error: "Coba lagi nanti." }
+              : { ok: true, pending: true },
+        });
+      });
+      await seek(p, "guestbook");
+      const form = p.locator("[data-section=guestbook] form");
+      if (
+        await form
+          .getByText("Pratinjau — ucapan tidak akan dikirim.", { exact: true })
+          .count()
+      )
+        return {
+          giftCopy: "PASS",
+          skipped:
+            "Wish submission requires a safe public fixture; the catalog preview disables submission.",
+        };
+      await form.locator("input[name=name]").fill("Tamu Lokal");
+      await form.locator("textarea").fill("Ucapan publik lokal.");
+      await form
+        .getByRole("button", { name: "Kirim Ucapan", exact: true })
+        .click();
+      await form.getByRole("alert").waitFor();
+      assert.equal(
+        await form.locator("textarea").inputValue(),
+        "Ucapan publik lokal.",
+      );
+      await form
+        .getByRole("button", { name: "Kirim Ucapan", exact: true })
+        .click();
+      await form.getByRole("status").waitFor();
+      assert((await form.innerText()).includes("menunggu persetujuan"));
+      assert.equal(posts, 2);
+      assert.deepEqual(f.errors, []);
+      return { mockedWishRequests: posts, pageErrors: f.errors };
+    } finally {
+      await f.context.close();
+    }
+  });
+  await test("resize-orientation-and-tall-reading", async () => {
+    const f = await open(1440, 844);
+    const p = f.page;
+    try {
+      await p.evaluate(() => {
+        const native = window.scrollTo.bind(window);
+        window.__resizeRestores = [];
+        window.scrollTo = (...args) => {
+          window.__resizeRestores.push(args);
+          return native(...args);
+        };
+      });
+      const restorations = [];
+      const resize = async (width, height) => {
+        await p.evaluate(() => (window.__resizeRestores = []));
+        await p.setViewportSize({ width, height });
+        await p.waitForTimeout(500);
+        const writes = await p.evaluate(() => window.__resizeRestores.length);
+        assert.equal(writes, 1, "One restoration per document viewport change");
+        restorations.push({ width, height, writes });
+      };
+      await seek(p, "couple-intro");
+      await resize(360, 800);
+      assert.equal(await current(p), names["couple-intro"]);
+      assert.deepEqual(await visibleScenes(p), ["couple"]);
+      const couple = p.locator("[data-section=couple-intro]");
+      assert((await couple.getAttribute("data-cinematic-tall")) !== null);
+      await p.mouse.move(2, 300);
+      let reached = false;
+      for (let i = 0; i < 20; i++) {
+        const box = await couple
+          .locator("[data-couple-person]")
+          .last()
+          .boundingBox();
+        if (box && box.y + box.height < 700) {
+          reached = true;
+          break;
+        }
+        await p.mouse.wheel(0, 70);
+        await p.waitForTimeout(90);
+      }
+      assert(reached, "Read the final family lines before leaving Couple");
+      assert.equal(await current(p), names["couple-intro"]);
+      await screenshot(p, "couple-reading-end-360");
+      await resize(844, 390);
+      assert.equal(await current(p), names["couple-intro"]);
+      await seek(p, "event-details");
+      await resize(390, 844);
+      assert.equal(await current(p), names["event-details"]);
+      assert.deepEqual(await visibleScenes(p), ["world"]);
+      await screenshot(p, "orientation-return-390");
+      await seek(p, "closing");
+      await resize(430, 932);
+      assert.equal(
+        await current(p),
+        names.closing,
+        "Later stages must retain their chapter when preceding stages resize",
+      );
+      await seek(p, "rsvp");
+      const field = p.locator("[data-section=rsvp] input[name=name]");
+      await field.fill("Tamu keyboard lokal");
+      await resize(390, 500);
+      assert.equal(
+        await current(p),
+        names.rsvp,
+        "A focused natural-height form must survive viewport shrink",
+      );
+      const fieldBox = await field.boundingBox();
+      assert(
+        fieldBox && fieldBox.y >= 0 && fieldBox.y + fieldBox.height <= 500,
+      );
+      await resize(390, 844);
+      assert.equal(await current(p), names.rsvp);
+      await seek(p, "gift");
+      await p.locator("[data-section=gift] summary").click();
+      const accountAction = p.locator("[data-section=gift] button").first();
+      await accountAction.scrollIntoViewIfNeeded();
+      await accountAction.focus();
+      await p.waitForTimeout(150);
+      await resize(430, 932);
+      assert.equal(await current(p), names.gift);
+      const accountBox = await accountAction.boundingBox();
+      assert(
+        accountBox &&
+          accountBox.y >= 0 &&
+          accountBox.y + accountBox.height <= 932,
+      );
+      await seek(p, "guestbook");
+      const wishName = p.locator("[data-section=guestbook] input[name=name]");
+      await wishName.fill("Tamu ucapan lokal");
+      await resize(390, 500);
+      assert.equal(await current(p), names.guestbook);
+      const wishBox = await wishName.boundingBox();
+      assert(wishBox && wishBox.y >= 0 && wishBox.y + wishBox.height <= 500);
+      await resize(390, 844);
+      assert.equal(await current(p), names.guestbook);
+      assert.deepEqual(f.errors, []);
+      return { restorations, pageErrors: f.errors };
+    } finally {
+      await f.context.close();
+    }
+  });
+  await test("reduced-motion-content-navigation-and-gallery", async () => {
+    const f = await open(390, 844, preview, { reducedMotion: "reduce" });
+    const p = f.page;
+    try {
+      assert.equal(await p.locator("[data-enhanced]").count(), 0);
+      assert.equal(
+        await p.locator("[data-cinematic-stage] [inert]").count(),
+        0,
+      );
+      await seek(p, "gallery");
+      const opener = p.getByRole("button", { name: /^Perbesar foto 1 dari/ });
+      await opener.click();
+      await p.locator("dialog[open]").waitFor();
+      await p.keyboard.press("Escape");
+      assert(await opener.evaluate((n) => n === document.activeElement));
+      await seek(p, "rsvp");
+      assert(
+        await p.locator("[data-section=rsvp] input[name=name]").isVisible(),
+      );
+      await seek(p, "closing");
+      assert.equal(await current(p), names.closing);
+      await screenshot(p, "reduced-motion-closing-390");
+      assert.deepEqual(f.errors, []);
+      return { pageErrors: f.errors };
+    } finally {
+      await f.context.close();
+    }
+  });
+  if (fixture)
+    for (const query of [
+      "optional=1",
+      "reorder=1",
+      "long=1",
+      "empty=1",
+      "broken=1",
+      "simple=1",
+      "nohero=1",
+      "nocover=1",
+    ])
+      await test(`fixture-${query}`, async () => {
+        const url = new URL(fixture);
+        const [key, value] = query.split("=");
+        url.searchParams.set(key, value);
+        const f = await open(360, 640, url.href);
+        const p = f.page;
+        try {
+          const ids = await p
+            .locator(
+              "[data-cinematic-stage] [data-section-id],[data-cinematic-interaction][data-section-id]",
+            )
+            .evaluateAll((nodes) => nodes.map((n) => n.dataset.sectionId));
+          assert.equal(
+            new Set(ids).size,
+            ids.length,
+            "Stable section records must render once",
+          );
+          await p
+            .locator("[data-cinematic-pager] [aria-haspopup=dialog]")
+            .click();
+          await screenshot(p, `fixture-${key}-chapters`);
+          await p
+            .locator("dialog")
+            .getByRole("button", { name: /Acara/ })
+            .click();
+          await p.waitForTimeout(1550);
+          assert.equal(await current(p), names["event-details"]);
+          if (key === "broken") {
+            await seek(p, "gallery");
+            await p.waitForTimeout(500);
+            assert(
+              (await p.locator("[data-gallery-frames]").innerText()).includes(
+                "Foto belum dapat dimuat",
+              ),
+            );
+          }
+          if (key === "optional" || key === "empty")
+            assert.equal(
+              await p.locator("[data-section=music] button").count(),
+              0,
+            );
+          if (key === "long") {
+            await seek(p, "event-details");
+            assert(
+              (await p
+                .locator('[data-event-portal="0"]')
+                .getAttribute("data-cinematic-tall")) !== null,
+            );
+            await screenshot(p, "long-event-360");
+          }
+          assert.equal(
+            await p.evaluate(() =>
+              Math.max(0, document.documentElement.scrollWidth - innerWidth),
+            ),
+            0,
+          );
+          assert.deepEqual(f.errors, []);
+          return { pageErrors: f.errors };
+        } finally {
+          await f.context.close();
+        }
+      });
+  if (builder)
+    await test("real-builder-canvas-ownership-and-live-edits", async () => {
+      const context = await browser.newContext({
+        viewport: { width: 1440, height: 1000 },
+        storageState: process.env.CINEMATIC_STORAGE_STATE,
+      });
+      const p = await context.newPage();
+      const errors = [];
+      p.on("pageerror", (e) => errors.push(e.message));
+      await p.route("**/api/**", (r) => r.fulfill({ json: [] }));
+      try {
+        await p.goto(builder, {
+          waitUntil: "domcontentloaded",
+          timeout: 90000,
+        });
+        await p
+          .locator("[data-cinematic-stage][data-enhanced]")
+          .first()
+          .waitFor();
+        const host = await y(p);
+        await p
+          .locator("[data-cinematic-pager] [aria-haspopup=dialog]")
+          .click();
+        await p.locator("dialog").getByRole("button", { name: /RSVP/ }).click();
+        await p.waitForTimeout(1700);
+        assert.equal(await y(p), host);
+        assert(
+          (await p
+            .locator("[data-device-scroller]")
+            .evaluate((n) => n.scrollTop)) > 0,
+        );
+        assert.equal(await current(p), names.rsvp);
+        if (await p.evaluate(() => !!window.__BUILDER__)) {
+          await p.evaluate(() => {
+            const store = window.__BUILDER__.getState();
+            const hero = store.sections.find((s) => s.type === "hero");
+            store.setProp(hero.id, "couple_names", "Nama Builder Lokal");
+            store.select(hero.id);
+          });
+          await p.waitForTimeout(400);
+          assert(
+            (await p.locator("[data-section=hero]").innerText()).includes(
+              "Nama Builder Lokal",
+            ),
+          );
+          assert.equal(await y(p), host);
+        }
+        await screenshot(p, "builder-1440");
+        let ownerRestorations;
+        if (await p.evaluate(() => !!window.__BUILDER__)) {
+          await p.evaluate(() => {
+            const owner = document.querySelector("[data-device-scroller]");
+            const native = owner.scrollTo.bind(owner);
+            window.__oldBuilderOwner = owner;
+            window.__oldBuilderRestores = [];
+            owner.scrollTo = (...args) => {
+              window.__oldBuilderRestores.push(args);
+              return native(...args);
+            };
+          });
+          await p.evaluate(() =>
+            window.__BUILDER__.getState().setDevice("desktop"),
+          );
+          await p.waitForTimeout(500);
+          assert.equal(
+            await p
+              .locator(".cinematic-invitation")
+              .evaluate((node) =>
+                Math.round(node.getBoundingClientRect().width),
+              ),
+            1120,
+            "Builder desktop must use the public reading width",
+          );
+          assert.equal(await y(p), host);
+          assert(
+            await p.evaluate(() => !window.__oldBuilderOwner.isConnected),
+            "Changing DeviceFrame category replaces its scroll owner",
+          );
+          await p
+            .locator("[data-cinematic-pager] [aria-haspopup=dialog]")
+            .click();
+          await p
+            .locator("dialog")
+            .getByRole("button", { name: /RSVP/ })
+            .click();
+          await p.waitForTimeout(1700);
+          assert.equal(await current(p), names.rsvp);
+          await p
+            .locator("[data-section=rsvp] input[name=name]")
+            .fill("Tamu resize Builder");
+          await p.waitForTimeout(150);
+          await p.evaluate(() => {
+            const owner = document.querySelector("[data-device-scroller]");
+            const native = owner.scrollTo.bind(owner);
+            window.__builderOwner = owner;
+            window.__builderRestores = [];
+            owner.scrollTo = (...args) => {
+              window.__builderRestores.push(args);
+              return native(...args);
+            };
+          });
+          const beforeResizeChapter = await current(p);
+          ownerRestorations = [];
+          for (const height of [800, 1000]) {
+            await p.evaluate(() => (window.__builderRestores = []));
+            await p.setViewportSize({ width: 1440, height });
+            await p.waitForTimeout(500);
+            const state = await p.evaluate(() => ({
+              sameOwner:
+                window.__builderOwner ===
+                document.querySelector("[data-device-scroller]"),
+              writes: window.__builderRestores.length,
+              unmountedWrites: window.__oldBuilderRestores.length,
+            }));
+            assert(
+              state.sameOwner,
+              "Resize coverage must use the same actual scroll owner",
+            );
+            assert.equal(
+              state.writes,
+              1,
+              "One restoration inside the Builder scroll owner",
+            );
+            assert.equal(
+              state.unmountedWrites,
+              0,
+              "Unmounted owners must not receive stale restoration callbacks",
+            );
+            assert.equal(await current(p), beforeResizeChapter);
+            assert.equal(await y(p), host);
+            ownerRestorations.push({ height, ...state });
+          }
+          await screenshot(p, "builder-desktop-1440");
+          await p.evaluate(() => {
+            document.activeElement?.blur();
+            document
+              .querySelector("[data-device-scroller]")
+              .scrollTo({ top: 0, behavior: "instant" });
+          });
+          await p.waitForTimeout(200);
+          const ownerBox = await p
+            .locator("[data-device-scroller]")
+            .boundingBox();
+          assert(ownerBox);
+          await p.mouse.move(
+            ownerBox.x + 4,
+            ownerBox.y + Math.min(160, ownerBox.height / 2),
+          );
+          const seen = new Set();
+          let previous = 0;
+          for (let step = 0; step < 400; step++) {
+            const state = await p.evaluate(() => {
+              const owner = document.querySelector("[data-device-scroller]");
+              return {
+                top: owner.scrollTop,
+                end: owner.scrollHeight - owner.clientHeight,
+                chapter: document.querySelector("[data-cinematic-pager]")
+                  ?.dataset.currentChapter,
+              };
+            });
+            assert(
+              state.top >= previous - 1,
+              "Builder native scroll must not rebound",
+            );
+            seen.add(state.chapter);
+            previous = state.top;
+            if (Math.abs(state.end - state.top) <= 1) break;
+            await p.mouse.wheel(0, 180);
+            await p.waitForTimeout(60);
+          }
+          const expected = await p
+            .locator(".cinematic-invitation [data-section]")
+            .evaluateAll((nodes) => nodes.map((node) => node.dataset.section));
+          for (const chapter of expected.filter((type) => names[type]))
+            assert(
+              seen.has(chapter),
+              `Builder native scroll must reach ${chapter}`,
+            );
+          const remaining = await p
+            .locator("[data-device-scroller]")
+            .evaluate(
+              (owner) =>
+                owner.scrollHeight - owner.clientHeight - owner.scrollTop,
+            );
+          assert(
+            Math.abs(remaining) <= 1,
+            "Builder native scroll must reach the actual end",
+          );
+          assert.equal(await y(p), host);
+          await screenshot(p, "builder-native-journey-end-1440");
+          await p.evaluate(() =>
+            window.__BUILDER__
+              .getState()
+              .setGlobal({ presentationMode: "simple" }),
+          );
+          await p.waitForTimeout(350);
+          assert.equal(
+            await p.locator("[data-cinematic-stage][data-enhanced]").count(),
+            0,
+          );
+          assert(
+            await p
+              .locator("[data-cinematic-stage] [data-scene]")
+              .evaluateAll((nodes) =>
+                nodes.every(
+                  (node) => getComputedStyle(node).visibility === "visible",
+                ),
+              ),
+            "Switching presentation must clear hidden scene styles",
+          );
+        }
+        assert.deepEqual(errors, []);
+        return { hostScroll: host, ownerRestorations, pageErrors: errors };
+      } finally {
+        await context.close();
+      }
+    });
+  if (standard)
+    await test("shared-music-standard-template-smoke", async () => {
+      const context = await browser.newContext({
+        viewport: { width: 390, height: 844 },
+      });
+      const p = await context.newPage();
+      const errors = [];
+      p.on("pageerror", (e) => errors.push(e.message));
+      await p.route("**/api/**", (r) => r.fulfill({ json: [] }));
+      try {
+        await p.goto(standard, {
+          waitUntil: "domcontentloaded",
+          timeout: 90000,
+        });
+        const cover = p.locator("[data-invitation-cover] button");
+        if (await cover.count()) await cover.click();
+        assert.equal(await p.locator("[data-cinematic-stage]").count(), 0);
+        assert((await p.locator("form").count()) > 0);
+        await screenshot(p, "standard-template-390");
+        assert.deepEqual(errors, []);
+        return { pageErrors: errors };
+      } finally {
+        await context.close();
+      }
+    });
+  await test("natural-wheel-journey-every-chapter-and-event", async () => {
+    const f = await open();
+    const p = f.page;
+    const seen = new Set(),
+      events = new Set();
+    try {
+      const expected = await p.evaluate(() =>
+        [
+          ...document.querySelectorAll(".cinematic-invitation [data-section]"),
+        ].map((node) => node.dataset.section),
+      );
+      const chapters = [...new Set(expected.filter((type) => names[type]))];
+      await p.mouse.move(2, 280);
+      let last = await y(p),
+        unchanged = 0;
+      for (let step = 0; step < 400; step++) {
+        const state = await p.evaluate(() => ({
+          y: scrollY,
+          chapter: document.querySelector("[data-cinematic-pager]")?.dataset
+            .currentChapter,
+          events: [...document.querySelectorAll("[data-event-portal]")]
+            .filter((node) => {
+              const box = node.getBoundingClientRect();
+              return (
+                getComputedStyle(node).visibility === "visible" &&
+                Math.abs((box.left + box.right) / 2 - innerWidth / 2) < 70
+              );
+            })
+            .map((node) => node.dataset.eventPortal),
+        }));
+        assert(
+          state.y >= last - 1,
+          "Ordinary forward scrolling must never snap backward",
+        );
+        if (!seen.has(state.chapter)) {
+          seen.add(state.chapter);
+          await p.waitForTimeout(450);
+          assert((await y(p)) >= state.y - 1);
+        }
+        state.events.forEach((index) => events.add(index));
+        unchanged = state.y === last ? unchanged + 1 : 0;
+        last = state.y;
+        if (unchanged >= 4) break;
+        await p.mouse.wheel(0, 180);
+        await p.waitForTimeout(55);
+      }
+      for (const chapter of chapters)
+        assert(seen.has(chapter), `Native wheel journey must reach ${chapter}`);
+      assert.equal(
+        events.size,
+        await p.locator("[data-event-portal]").count(),
+        "Native scroll must reach every configured schedule",
+      );
+      assert.equal(
+        await p
+          .locator("[data-cinematic-pager]")
+          .getAttribute("data-current-chapter"),
+        chapters.at(-1),
+      );
+      const pageEnd = await p.evaluate(() => {
+        const owner = document.scrollingElement;
+        return {
+          top: owner.scrollTop,
+          end: owner.scrollHeight - owner.clientHeight,
+        };
+      });
+      assert(
+        Math.abs(pageEnd.end - pageEnd.top) <= 1,
+        "Native wheel must reach the actual page end",
+      );
+      await screenshot(p, "natural-journey-end-390");
+      assert.deepEqual(f.errors, []);
+      return {
+        chapters: [...seen],
+        events: [...events],
+        pageEnd,
+        pageErrors: f.errors,
+      };
+    } finally {
+      await f.context.close();
+    }
+  });
+  if (process.env.CINEMATIC_RECORD === "1")
+    await test("recorded-guest-journey", async () => {
+      const url = new URL(fixture ?? preview);
+      if (fixture) url.searchParams.set("template", "cinematic-vintage");
+      const f = await open(390, 844, url.href, {
+        recordVideo: { dir: output, size: { width: 390, height: 844 } },
+      });
+      const p = f.page;
+      const video = p.video();
+      try {
+        const go = async (label) => {
+          await p
+            .locator("[data-cinematic-pager] [aria-haspopup=dialog]")
+            .click();
+          await p
+            .locator("dialog")
+            .getByRole("button", { name: new RegExp(label) })
+            .click();
+          await p.waitForTimeout(1550);
+        };
+        await p.waitForTimeout(700);
+        await go("Kenangan");
+        await p.getByRole("button", { name: /^Perbesar foto 1 dari/ }).click();
+        await p.waitForTimeout(650);
+        await p.keyboard.press("ArrowRight");
+        await p.waitForTimeout(600);
+        await p.keyboard.press("Escape");
+        await go("Acara");
+        await p.waitForTimeout(700);
+        await go("RSVP");
+        const form = p.locator("[data-section=rsvp] form");
+        await form
+          .getByRole("radio", { name: "Tidak hadir", exact: true })
+          .check();
+        await p.waitForTimeout(650);
+        await go("Tanda Kasih");
+        await p.locator("[data-section=gift] summary").click();
+        await p.waitForTimeout(600);
+        await go("Penutup");
+        assert.equal(await current(p), names.closing);
+        assert(
+          await p
+            .getByRole("button", { name: "Akhir perjalanan", exact: true })
+            .isDisabled(),
+        );
+        await p.waitForTimeout(900);
+        assert.deepEqual(f.errors, []);
+      } finally {
+        await f.context.close();
+      }
+      const target = `${output}/journey-390.webm`;
+      await rename(await video.path(), target);
+      return {
+        video: target,
+        source: "Default Cinematic Vintage preset; no submission",
+      };
+    });
+  await test("performance-observation", async () => {
+    const f = await open();
+    const p = f.page;
+    try {
+      await p.evaluate(() => {
+        window.__signals = { longTasks: [], shifts: [], frames: [] };
+        try {
+          new PerformanceObserver((list) =>
+            window.__signals.longTasks.push(
+              ...list.getEntries().map((e) => e.duration),
+            ),
+          ).observe({ type: "longtask", buffered: false });
+          new PerformanceObserver((list) =>
+            window.__signals.shifts.push(
+              ...list
+                .getEntries()
+                .filter((e) => !e.hadRecentInput)
+                .map((e) => e.value),
+            ),
+          ).observe({ type: "layout-shift", buffered: false });
+        } catch {}
+        let last = performance.now(),
+          end = last + 3000;
+        const frame = (now) => {
+          window.__signals.frames.push(now - last);
+          last = now;
+          if (now < end) requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+      });
+      await p.mouse.move(2, 300);
+      for (let i = 0; i < 24; i++) {
+        await p.mouse.wheel(0, 85);
+        await p.waitForTimeout(110);
+      }
+      await p.waitForTimeout(400);
+      const signals = await p.evaluate(() => {
+        const s = window.__signals;
+        const sorted = s.frames.sort((a, b) => a - b);
+        return {
+          longTasks: s.longTasks,
+          layoutShiftSum: s.shifts.reduce((a, b) => a + b, 0),
+          frameSamples: sorted.length,
+          rafMedianMs: sorted[Math.floor(sorted.length * 0.5)],
+          rafP95Ms: sorted[Math.floor(sorted.length * 0.95)],
+          willChangeLayers: [
+            ...document.querySelectorAll("[data-depth]"),
+          ].filter((n) => getComputedStyle(n).willChange !== "auto").length,
+        };
+      });
+      return {
+        signals,
+        method:
+          "Headless Chromium desktop host; 3-second synthetic scroll sample. RAF gaps do not measure real-device FPS.",
+      };
+    } finally {
+      await f.context.close();
+    }
+  });
 } finally {
   await browser.close();
 }
+const failed = results.filter((result) => result.status === "FAIL");
+const passed = results.filter((result) => result.status === "PASS").length;
+const skipped = results.filter((result) => result.status === "SKIP").length;
+console.log(
+  `${passed}/${results.length} browser scenarios passed; ${skipped} skipped; evidence: ${output}`,
+);
+if (failed.length) process.exitCode = 1;

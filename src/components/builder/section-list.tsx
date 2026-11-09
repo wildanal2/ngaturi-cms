@@ -15,19 +15,12 @@ import {
 } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  GripVertical,
-  Eye,
-  EyeOff,
-  Copy,
-  Trash2,
-  Lock,
-} from "lucide-react";
+import { GripVertical, Eye, EyeOff, Copy, Trash2, Lock } from "lucide-react";
 import { useBuilder } from "@/stores/builder-store";
 import { SectionRegistry } from "@/sections/registry";
 import { canReorderSection } from "@/lib/templates/composition-policy";
 
-export function SectionList() {
+export function SectionList({ onSelect }: { onSelect?: () => void }) {
   const sections = useBuilder((s) => s.sections);
   const reorder = useBuilder((s) => s.reorder);
   const locked = useBuilder((s) => s.locked);
@@ -54,7 +47,7 @@ export function SectionList() {
       >
         <ul className="space-y-1">
           {sections.map((s) => (
-            <Row key={s.id} id={s.id} locked={locked} />
+            <Row key={s.id} id={s.id} locked={locked} onSelect={onSelect} />
           ))}
         </ul>
       </SortableContext>
@@ -62,7 +55,15 @@ export function SectionList() {
   );
 }
 
-function Row({ id, locked }: { id: string; locked: boolean }) {
+function Row({
+  id,
+  locked,
+  onSelect,
+}: {
+  id: string;
+  locked: boolean;
+  onSelect?: () => void;
+}) {
   const section = useBuilder((s) => s.sections.find((x) => x.id === id));
   const selectedId = useBuilder((s) => s.selectedId);
   const select = useBuilder((s) => s.select);
@@ -75,8 +76,14 @@ function Row({ id, locked }: { id: string; locked: boolean }) {
   const orderEditable = canReorderSection(compositionPolicy, sectionType);
   const dragDisabled = locked || !orderEditable;
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id, disabled: dragDisabled });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: dragDisabled });
 
   if (!section) return null;
   const def = SectionRegistry[section.type];
@@ -87,7 +94,9 @@ function Row({ id, locked }: { id: string; locked: boolean }) {
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`group flex items-center gap-1 rounded-lg border px-1.5 py-1.5 text-sm ${
-        active ? "border-forest bg-cream-200" : "border-transparent hover:bg-cream-200"
+        active
+          ? "border-forest bg-cream-200"
+          : "border-transparent hover:bg-cream-200"
       } ${isDragging ? "opacity-60" : ""}`}
     >
       {orderEditable ? (
@@ -110,7 +119,10 @@ function Row({ id, locked }: { id: string; locked: boolean }) {
         </span>
       )}
       <button
-        onClick={() => select(id)}
+        onClick={() => {
+          select(id);
+          onSelect?.();
+        }}
         className={`flex-1 truncate text-left ${section.visible ? "" : "text-muted line-through"}`}
       >
         {def?.name ?? section.type}

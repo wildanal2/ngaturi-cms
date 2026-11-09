@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { ThumbnailImage as Image } from "@/components/ui/thumbnail-image";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Loader2, X } from "lucide-react";
 import { Toaster, toast } from "sonner";

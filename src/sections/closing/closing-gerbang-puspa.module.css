@@ -1,0 +1,52 @@
+.closing {
+  padding: 48px 32px 148px;
+}
+.closingFrame {
+  width: 100%;
+  max-width: 372px;
+  margin: 0 auto;
+  padding: 24px 0 0;
+  border: 0;
+  border-top: 1px solid var(--gp-line);
+  border-radius: 0;
+  background: none;
+}
+.closingFrame p {
+  font-size: 16px;
+  line-height: 1.85;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+.closingFrame .thanks {
+  margin: 24px 0;
+}
+.names {
+  font:
+    400 clamp(36px, calc(var(--gp-column-width, 390px) * 0.115), 52px)/1.2
+      var(--gp-font-display),
+    serif;
+  color: var(--gp-maroon);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 24px;
+  overflow-wrap: break-word;
+}
+.names span {
+  display: block;
+}
+.names .ampersand {
+  font:
+    400 30px/1.2 var(--gp-font-script),
+    cursive;
+}
+.flowers {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 230px;
+  height: 96px;
+  object-fit: contain;
+  pointer-events: none;
+}

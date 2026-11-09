@@ -1,0 +1,385 @@
+.dialog {
+  position: fixed;
+  inset: var(--gp-dialog-top, 0) 0 auto;
+  width: 100%;
+  height: var(--gp-dialog-height, 100dvh);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: #35222699;
+  color: #584b49;
+  text-align: left;
+}
+.dialog::backdrop {
+  background: transparent;
+}
+.viewport {
+  width: 100%;
+  height: 100%;
+  padding: max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.modalDialog {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 468px;
+  height: 100%;
+  max-height: 860px;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid #d9bdb6;
+  border-radius: 16px;
+  background: #fffbf3;
+  animation: dialogIn 220ms ease-out both;
+}
+.modalHeader {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 16px 24px;
+  border-bottom: 1px solid #e7d6ce;
+}
+.modalScroll,
+.inline {
+  box-sizing: border-box;
+  padding: 24px;
+  background: #fffbf3;
+  color: #584b49;
+  font:
+    16px/1.6 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+.modalScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-color: #cfa8a0 #fff8ee;
+  scrollbar-width: thin;
+  scroll-padding-block: 24px;
+}
+.inline {
+  border-block: 1px solid #e7d6ce;
+}
+.modalScroll *,
+.inline * {
+  box-sizing: border-box;
+}
+.modalTitle {
+  color: #74131c;
+  font:
+    400 30px/1.25 "GP Fraunces",
+    serif;
+  margin: 0;
+}
+.inline .modalTitle {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin: 16px 24px 0;
+  padding: 4px;
+  border-radius: 28px;
+  background: #f3e4de;
+}
+.tabs button {
+  flex: 1;
+  min-height: 44px;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  background: transparent;
+  color: #74131c;
+  cursor: pointer;
+}
+.tabs button[aria-selected="true"] {
+  background: #74131c;
+  color: #fffbf3;
+}
+.modalFooter {
+  flex-shrink: 0;
+  padding: 12px 24px 20px;
+  border-top: 1px solid #e7d6ce;
+  background: #fffbf3;
+  font:
+    16px/1.5 system-ui,
+    sans-serif;
+}
+.modalFooter:empty {
+  display: none;
+}
+.formIntro {
+  margin: 0 0 20px;
+  color: #75645f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.fieldHint {
+  display: block;
+  margin-top: 6px;
+  color: #75645f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.form {
+  margin: 0;
+}
+.formGroup {
+  margin-bottom: 20px;
+}
+.formGroup label {
+  display: block;
+  color: #67403e;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #c8a7a0;
+  border-radius: 8px;
+  background: #fffefa;
+  color: #433637;
+  font: inherit;
+  font-size: 16px;
+  line-height: 24px;
+}
+.formGroup input:not([type="hidden"]),
+.formGroup select {
+  height: 48px;
+}
+.formGroup input::placeholder,
+.formGroup textarea::placeholder {
+  color: #80716d;
+  opacity: 1;
+}
+.formGroup textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  border-color: #74131c;
+  outline: 2px solid #74131c;
+  outline-offset: 2px;
+}
+.phoneField {
+  display: flex;
+  gap: 8px;
+}
+.phoneField > input:not([type="hidden"]) {
+  flex: 1;
+  min-width: 0;
+}
+.phoneField .country {
+  width: 80px;
+  flex-shrink: 0;
+  padding-inline: 8px;
+}
+.submitButton {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  padding: 12px 20px;
+  border: 1px solid #74131c;
+  border-radius: 28px;
+  background: #74131c;
+  color: #fffbf3;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.submitButton:hover {
+  background: #59101a;
+}
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.success,
+.error {
+  padding: 14px 16px;
+  border-radius: 8px;
+  margin: 16px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.success {
+  color: #3e5545;
+  background: #ecf0e7;
+  border: 1px solid #b7c4b2;
+}
+.error {
+  color: #74131c;
+  background: #f3e4de;
+  border: 1px solid #d9bdb6;
+}
+.summary {
+  display: block;
+  margin-top: 8px;
+  font-weight: 600;
+}
+.notice,
+.counter {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #75645f;
+}
+.counter {
+  text-align: right;
+}
+.wishes {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #d9bdb6;
+}
+.wishes > p,
+.wishes > div > p {
+  margin: 0 0 16px;
+}
+.wish {
+  padding: 20px 0;
+  border-bottom: 1px solid #e7d6ce;
+  color: #584b49;
+}
+.wish:first-of-type {
+  padding-top: 0;
+}
+.wishBody {
+  min-width: 0;
+}
+.wishName {
+  margin: 0 0 8px;
+  color: #74131c;
+  font:
+    400 21px/1.4 "GP Fraunces",
+    serif;
+  overflow-wrap: anywhere;
+}
+.wishComment {
+  margin: 0;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.wishTime {
+  font-size: 12px;
+  margin: 10px 0 0;
+  color: #806a63;
+  line-height: 1.6;
+}
+.retry {
+  min-height: 44px;
+  border: 1px solid #c8a7a0;
+  border-radius: 24px;
+  padding: 10px 18px;
+  margin-top: 16px;
+  background: #fffbf3;
+  color: #74131c;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.close {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #d9bdb6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  background: #f3e4de;
+  color: #74131c;
+}
+.dialog button:focus-visible,
+.inline button:focus-visible,
+.success:focus {
+  outline: 2px solid #74131c;
+  outline-offset: 3px;
+}
+.entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+}
+.joinedEntry {
+  height: 0;
+  min-height: 0;
+}
+.hiddenLaunch {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+  padding: 0;
+}
+@keyframes dialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-height: 540px) {
+  .viewport {
+    padding-block: max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-bottom));
+  }
+  .modalHeader {
+    padding: 8px 16px 8px 20px;
+  }
+  .modalTitle {
+    font-size: 26px;
+  }
+  .tabs {
+    margin: 8px 20px 0;
+  }
+  .modalScroll {
+    padding: 16px 20px;
+  }
+  .modalFooter {
+    padding: 8px 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modalDialog {
+    animation: none;
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "template_id": "gerbang-puspa",
+  "phase": 2,
+  "source": "Existing original standalone substitutes; no vendor originals localized",
+  "assets": [
+    {
+      "path": "bride.svg",
+      "bytes": 25702,
+      "sha256": "bdd553d8a47950368bbd3f8cecd0e4092869a368d08997b3ae85c9e9a1f862e3",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    },
+    {
+      "path": "groom.svg",
+      "bytes": 17074,
+      "sha256": "284a2adbff23388206c4e682e5ecdb56d1c7f8d1afca68c3d67343b102d28610",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    },
+    {
+      "path": "story-couple.svg",
+      "bytes": 28021,
+      "sha256": "11e78119e4619b92bb3afd07b215f2679f8956e6734f6eda1c298151a0717c36",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    },
+    {
+      "path": "gallery-1.svg",
+      "bytes": 28026,
+      "sha256": "ba834b25d4efa740362e186c5369f854499128f55e1e58fd7bea1a09b9016ea8",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    },
+    {
+      "path": "gallery-2.svg",
+      "bytes": 28484,
+      "sha256": "6a0b0ca8a10760daa119ceab0454c951a9514aba22e39f0eebf6ae7253c98982",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    },
+    {
+      "path": "gallery-3.svg",
+      "bytes": 28261,
+      "sha256": "22b93baf0a9dd869089aaaf492170cf8534c06e000971f90eff073024c65a3c0",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    },
+    {
+      "path": "gallery-4.svg",
+      "bytes": 28024,
+      "sha256": "b1f0a4c9e3207ee39802a5330dc6ba622b6248033a06b86eb125babab3d97593",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    },
+    {
+      "path": "gallery-5.svg",
+      "bytes": 28034,
+      "sha256": "155daebfe1e8885ffb3f4bb6c2bfa5deb2237fad41f26c37d7de0ec62cbf271f",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    },
+    {
+      "path": "gallery-6.svg",
+      "bytes": 28018,
+      "sha256": "ffd124ee05e363c2a1a29546cecf77dd808e9d80967e75763c340db5556b5764",
+      "provenance": "Independently authored original vector temporary stand-in",
+      "classification": "TEMPORARY STAND-IN",
+      "exact_reference_match": false
+    }
+  ],
+  "replacement_boundary": "src/sections/gerbang-puspa/phase-two-assets.ts",
+  "rights_gap": "Reference photography and distinctive art remain uncleared. Against/English111 and audio/video are excluded."
+}

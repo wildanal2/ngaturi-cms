@@ -1,6 +1,7 @@
 import { MusicCinematicVintage } from "./music-cinematic-vintage";
 import type { SectionDefinition } from "../types";
 import { MusicProps2 } from "../schema";
+import { MusicGerbangPuspa } from "./music-gerbang-puspa";
 import { musicPickerField, sMusicPosition } from "../fields";
 import { MusicDisc } from "./music-disc";
 import { MusicVinyl } from "./music-vinyl";
@@ -53,6 +54,15 @@ export const musicSection: SectionDefinition = {
       defaultProps: { autoplay: true },
     },
   },
+};
+
+musicSection.variants["gerbang-puspa"] = {
+  ...musicSection.variants.pill,
+  name: "Gerbang Puspa",
+  description: "Kontrol musik mengambang dengan status pemutar Ngaturi",
+  component: MusicGerbangPuspa,
+  styleOptions: undefined,
+  isPremium: true,
 };
 
 musicSection.variants["cinematic-vintage"] = {

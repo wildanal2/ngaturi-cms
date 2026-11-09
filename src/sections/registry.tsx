@@ -19,6 +19,10 @@ import { navigationSection } from "./navigation";
 import { closingSection } from "./closing";
 import { giftSection } from "./gift";
 
+// Keep template additions after all legacy imports: Next derives CSS chunk
+// order from this graph, including variants loaded by Inspector thumbnails.
+import { lakonVariants } from "./lakon-kencana/variants";
+
 /**
  * type → SectionDefinition. Each section lives in its own folder
  * (`src/sections/<type>/`) with one file per variant component and an
@@ -44,6 +48,10 @@ export const SectionRegistry: Record<string, SectionDefinition> = {
   closing: closingSection,
   gift: giftSection,
 };
+
+for (const [type, variant] of Object.entries(lakonVariants)) {
+  SectionRegistry[type].variants["lakon-kencana"] = variant;
+}
 
 export function getSectionDefinition(type: string) {
   return SectionRegistry[type];

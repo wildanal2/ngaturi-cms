@@ -1,0 +1,68 @@
+.quote {
+  padding-top: 56px;
+  padding-bottom: 40px;
+}
+.quote p {
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+.quoteCard {
+  font-family: var(--gp-font-ceremony);
+  position: relative;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 12px 8px 36px;
+}
+.quoteCard::before {
+  content: "“";
+  display: block;
+  height: 54px;
+  color: #b68283;
+  font:
+    72px/1 "GP Fraunces",
+    serif;
+}
+.quoteCard p {
+  font-size: 17px;
+  line-height: 1.85;
+}
+.quoteCard strong {
+  display: block;
+  margin-top: 20px;
+  color: #85615d;
+  font:
+    400 12px/1.7 "GP Marcellus",
+    serif;
+  letter-spacing: 0.06em;
+}
+.welcomeCard {
+  width: 100%;
+  margin: 20px auto 0;
+}
+.welcomeCard > img {
+  width: 220px;
+  max-width: 80%;
+  height: 260px;
+  margin: 0 auto;
+  border-radius: 120px 120px 8px 8px;
+  object-fit: cover;
+  object-position: center 30%;
+}
+.welcomeText {
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 28px 8px 0;
+}
+.welcomeText strong {
+  color: var(--gp-maroon);
+  font:
+    400 23px/1.4 "GP Fraunces",
+    serif;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+.welcomeText p {
+  margin-top: 18px;
+  font-size: 16px;
+  line-height: 1.8;
+}

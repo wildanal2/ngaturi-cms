@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ThumbnailImage as Image } from "@/components/ui/thumbnail-image";
 import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations, userProfiles } from "@/lib/db/schema";

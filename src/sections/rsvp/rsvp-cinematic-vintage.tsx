@@ -5,7 +5,6 @@ import type { SectionRenderProps } from "../types";
 import { TurnstileField } from "../turnstile-field";
 import { useRsvp } from "./use-rsvp";
 import { resizeCinematicTextarea } from "../cinematic/textarea";
-import { animateCinematicScroll } from "../cinematic/scroll";
 import styles from "../cinematic/cinematic.module.css";
 
 const ATTENDANCE = [
@@ -19,7 +18,7 @@ export function RsvpCinematicVintage({
   invitationId,
   guestName,
   isPreview,
-  inCanvas,
+  siblingTypes = [],
 }: SectionRenderProps) {
   const p = props as {
     max_guests_per_person?: number;
@@ -29,22 +28,14 @@ export function RsvpCinematicVintage({
   const { state, error, summary, onSubmit } = useRsvp(invitationId, isPreview);
   const confirmation = useRef<HTMLDivElement>(null);
   const [confirmationHeight, setConfirmationHeight] = useState(0);
+  const [attendance, setAttendance] = useState("");
+  const [count, setCount] = useState(1);
+  const maxGuests = Math.max(1, Math.min(20, p.max_guests_per_person ?? 2));
   useEffect(() => {
     if (state !== "done" || !confirmation.current) return;
     const node = confirmation.current;
     node.focus({ preventScroll: true });
-    const heading = node.querySelector("h3");
-    const scroller = node.closest<HTMLElement>("[data-device-scroller]");
-    if (!heading || (inCanvas && !scroller)) return;
-    const top = scroller?.getBoundingClientRect().top ?? 0;
-    const height = scroller?.clientHeight ?? window.innerHeight;
-    const box = heading.getBoundingClientRect();
-    if (box.top < top + 24 || box.bottom > top + height - 24)
-      animateCinematicScroll(
-        scroller ?? window,
-        (scroller?.scrollTop ?? window.scrollY) + box.top - top - height / 2,
-      );
-  }, [state, inCanvas]);
+  }, [state]);
   return (
     <div className={`${styles.interactionChapter} ${styles.rsvpChapter}`}>
       <header className={styles.chapterHeading}>
@@ -81,6 +72,7 @@ export function RsvpCinematicVintage({
             }}
             className={styles.cinematicForm}
             aria-busy={state === "sending"}
+            aria-describedby={error ? `${id}-error` : undefined}
           >
             <input
               type="text"
@@ -95,6 +87,7 @@ export function RsvpCinematicVintage({
                 id={`${id}-name`}
                 name="name"
                 required
+                maxLength={120}
                 autoComplete="name"
                 defaultValue={guestName ?? ""}
               />
@@ -108,6 +101,7 @@ export function RsvpCinematicVintage({
                   name="phone"
                   autoComplete="tel"
                   required
+                  maxLength={40}
                 />
               </label>
             ) : null}
@@ -121,41 +115,66 @@ export function RsvpCinematicVintage({
                       name="status"
                       value={value}
                       required
-                      defaultChecked={value === "attending"}
+                      checked={attendance === value}
+                      onChange={() => {
+                        setAttendance(value);
+                        if (value !== "not_attending")
+                          setCount((previous) =>
+                            Math.max(1, Math.min(maxGuests, previous)),
+                          );
+                      }}
                     />
                     <span>{label}</span>
                   </label>
                 ))}
               </div>
             </fieldset>
-            <label htmlFor={`${id}-count`}>
-              Jumlah tamu
-              <input
-                id={`${id}-count`}
-                name="guest_count"
-                type="number"
-                min={1}
-                max={p.max_guests_per_person ?? 2}
-                defaultValue={1}
-                required
-                inputMode="numeric"
-              />
-              <span className={styles.fieldHelp}>
-                Termasuk Anda · maksimal {p.max_guests_per_person ?? 2} tamu
-              </span>
-            </label>
+            {attendance && attendance !== "not_attending" ? (
+              <label htmlFor={`${id}-count`}>
+                Jumlah tamu
+                <input
+                  id={`${id}-count`}
+                  name="guest_count"
+                  type="number"
+                  min={1}
+                  max={maxGuests}
+                  value={count}
+                  onChange={(event) =>
+                    setCount(event.currentTarget.valueAsNumber || 1)
+                  }
+                  required
+                  inputMode="numeric"
+                />
+                <span className={styles.fieldHelp}>
+                  Termasuk Anda · maksimal {maxGuests} tamu
+                </span>
+              </label>
+            ) : (
+              <input type="hidden" name="guest_count" value="1" />
+            )}
             <label htmlFor={`${id}-message`}>
-              Ucapan <span className={styles.optional}>(opsional)</span>
+              Pesan pribadi untuk mempelai{" "}
+              <span className={styles.optional}>(opsional)</span>
               <textarea
                 id={`${id}-message`}
                 name="message"
                 rows={3}
-                onInput={(event) => resizeCinematicTextarea(event.currentTarget)}
+                maxLength={1000}
+                aria-describedby={`${id}-privacy`}
+                onInput={(event) =>
+                  resizeCinematicTextarea(event.currentTarget)
+                }
               />
+              <span id={`${id}-privacy`} className={styles.fieldHelp}>
+                Hanya dibaca pemilik undangan.
+                {siblingTypes.includes("guestbook")
+                  ? " Untuk ucapan publik, gunakan bab Doa & Ucapan."
+                  : ""}
+              </span>
             </label>
             <TurnstileField />
             {error ? (
-              <p className={styles.formError} role="alert">
+              <p id={`${id}-error`} className={styles.formError} role="alert">
                 {error}
               </p>
             ) : null}

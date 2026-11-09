@@ -8,7 +8,19 @@ const FORM_CONTROL =
   'input, textarea, select, form button, [contenteditable]:not([contenteditable="false"])';
 const PROTECTED = `${FORM_CONTROL}, button, a[href], summary, [data-cinematic-interaction], [data-cinematic-pager], [data-invitation-cover]`;
 
-/** Idle assistance only after manual input. The timeline supplies the resting beat. */
+export function nearbyCinematicRest(
+  current: number,
+  destination: number,
+  direction: number,
+  height: number,
+) {
+  const delta = destination - current;
+  return (
+    Math.abs(delta) <= Math.min(64, height * 0.08) && delta * direction > 0
+  );
+}
+
+/** Idle assistance stays close to the reader and never reverses manual intent. */
 export function mountCinematicSettling(
   root: HTMLElement,
   scroller: HTMLElement | null,
@@ -32,8 +44,10 @@ export function mountCinematicSettling(
   const protectedNode = (node: EventTarget | null) =>
     node instanceof HTMLElement && !!node.closest(PROTECTED);
   const editing = () =>
-    document.activeElement instanceof HTMLElement &&
-    !!document.activeElement.closest(FORM_CONTROL);
+    (document.activeElement instanceof HTMLElement &&
+      !!document.activeElement.closest(FORM_CONTROL)) ||
+    !!invitation.dataset?.cinematicOverlay ||
+    document.getSelection?.()?.isCollapsed === false;
   const cancel = () => {
     clearTimeout(timer);
     timer = undefined;
@@ -55,10 +69,24 @@ export function mountCinematicSettling(
     timer = setTimeout(() => {
       timer = undefined;
       manual = false;
-      if (automatic() || blocked || held || reduced.matches || editing()) return;
+      if (automatic() || blocked || held || reduced.matches || editing())
+        return;
       const destination = target();
       if (destination === null || Math.abs(destination - top()) < 2) return;
-      animateCinematicScroll(owner, destination, { duration: 450, kind: "settle" });
+      const height = scroller?.clientHeight ?? window.innerHeight;
+      if (
+        !nearbyCinematicRest(
+          top(),
+          destination,
+          Math.sign(observed - origin),
+          height,
+        )
+      )
+        return;
+      animateCinematicScroll(owner, destination, {
+        duration: 450,
+        kind: "settle",
+      });
     }, 300);
   };
   const input = (event: Event) => {
@@ -116,6 +144,8 @@ export function mountCinematicSettling(
   // Programmatic navigation must cancel assistance before either stage seeks.
   invitation.addEventListener("cinematic:seek", cancel, true);
   invitation.addEventListener("cinematic:auto-start", cancel);
+  invitation.addEventListener("cinematic:overlay", cancel);
+  document.addEventListener("selectionchange", focus);
   return {
     onScroll,
     cancel,
@@ -129,6 +159,8 @@ export function mountCinematicSettling(
       document.removeEventListener("focusin", focus);
       invitation.removeEventListener("cinematic:seek", cancel, true);
       invitation.removeEventListener("cinematic:auto-start", cancel);
+      invitation.removeEventListener("cinematic:overlay", cancel);
+      document.removeEventListener("selectionchange", focus);
     },
   };
 }

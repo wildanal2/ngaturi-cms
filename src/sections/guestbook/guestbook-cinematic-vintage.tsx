@@ -43,7 +43,10 @@ export function GuestbookCinematicVintage({
       <header className={styles.chapterHeading}>
         <p className={styles.eyebrow}>Kata-kata yang kami simpan</p>
         <h2>Doa &amp; Ucapan</h2>
-        <p>Tinggalkan doa dan kenangan untuk perjalanan baru kami.</p>
+        <p>
+          Ucapan di buku tamu bersifat publik dan dapat dimoderasi pemilik
+          undangan. Mengisi bagian ini opsional, terpisah dari RSVP.
+        </p>
       </header>
       <div className={`${styles.parchment} ${styles.guestbookPage}`}>
         <form

@@ -101,7 +101,7 @@ describe("Cinematic RSVP confirmation", () => {
     expect(animateCinematicScroll).not.toHaveBeenCalled();
   });
 
-  it("reveals an off-screen confirmation through the Builder owner without scrolling the host page", () => {
+  it("preserves the reading position when an off-screen request resolves in Builder", () => {
     submission.state = "done";
     render(true);
     const owner = {
@@ -117,6 +117,6 @@ describe("Cinematic RSVP confirmation", () => {
       }),
     };
     hooks.effects.forEach((effect) => effect());
-    expect(animateCinematicScroll).toHaveBeenCalledWith(owner, 640);
+    expect(animateCinematicScroll).not.toHaveBeenCalled();
   });
 });

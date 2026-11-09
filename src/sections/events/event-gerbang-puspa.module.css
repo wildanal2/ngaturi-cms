@@ -1,0 +1,148 @@
+.events {
+  background: #f8eee7;
+}
+.events h2 {
+  color: var(--gp-maroon);
+  font:
+    400 34px/1.3 var(--gp-font-display),
+    serif;
+  margin-bottom: 32px;
+}
+.intro {
+  margin: -8px auto 32px !important;
+  max-width: 360px;
+  font-size: 16px;
+  line-height: 1.8;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+.eventCard {
+  position: relative;
+  width: 100%;
+  max-width: 396px;
+  margin: 0 auto;
+  border: 1px solid var(--gp-line);
+  border-radius: 160px 160px 8px 8px;
+  padding: 32px 24px 20px;
+  background: var(--gp-cream);
+}
+.eventCard + .eventCard {
+  margin-top: 28px;
+}
+.eventCard h3 {
+  font:
+    400 28px/1.35 var(--gp-font-display),
+    serif;
+  margin: 14px 0 24px;
+  color: var(--gp-maroon);
+  overflow-wrap: break-word;
+}
+.rings {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto;
+  color: #a56a6d;
+}
+.dateRow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  color: var(--gp-maroon);
+}
+.dateRow strong {
+  font:
+    400 52px/1 var(--gp-font-display),
+    serif;
+  border-inline: 1px solid var(--gp-line);
+  padding: 0 16px;
+}
+.dateRow span {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.eventCard p {
+  font-size: 16px;
+  line-height: 1.8;
+  overflow-wrap: break-word;
+}
+.dateText {
+  margin-bottom: 18px !important;
+}
+.timeLine {
+  margin-top: 4px !important;
+}
+.venue {
+  display: block;
+  margin-top: 24px;
+  color: var(--gp-maroon);
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 400;
+  overflow-wrap: break-word;
+}
+.address {
+  margin-top: 10px !important;
+  white-space: pre-line;
+}
+.mapSlot {
+  margin-top: 24px;
+  padding-inline: 24px;
+}
+.mapSlot:empty {
+  display: none;
+}
+.mapButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 1px solid var(--gp-maroon);
+  border-radius: 28px;
+  padding: 10px 16px;
+  background: var(--gp-maroon);
+  color: var(--gp-cream);
+  font-size: 15px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.mapButton:hover {
+  background: #59101a;
+}
+.mapSlot:has([data-gp-location-action]) > .mapButton {
+  display: none;
+}
+.calendarActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 12px;
+  max-width: calc(100% - 48px);
+  margin: 8px auto 0;
+}
+.calendar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  max-width: 100%;
+  color: var(--gp-maroon);
+  font-size: 13px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.calendar svg {
+  flex-shrink: 0;
+}
+.calendarLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.calendar:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

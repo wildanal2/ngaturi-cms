@@ -1,0 +1,151 @@
+.cover {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  width: min(100%, 500px);
+  margin: 0 auto;
+  height: 100dvh;
+  padding: max(24px, env(safe-area-inset-top)) 24px
+    max(24px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #f1ded7;
+}
+.cover[hidden] {
+  display: none;
+}
+.cover[data-in-canvas="true"] {
+  position: relative;
+  height: var(--gp-viewport-height, 100svh);
+  z-index: auto;
+}
+.cover[data-stage="opening"][data-in-canvas="false"] {
+  pointer-events: none;
+  animation: unveil 700ms ease-out both;
+}
+.cover[data-stage="opening"] .composition {
+  animation: lift 450ms ease-out both;
+}
+@keyframes unveil {
+  0%,
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes lift {
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+.frame {
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
+  border: 1px solid #a56a6d;
+  border-radius: 220px 220px 16px 16px;
+  background: #fffbf3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.frame::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid #e1c9c0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.composition {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  padding: 56px 28px 40px;
+}
+.monogram {
+  width: 58px;
+  height: 67px;
+  margin-bottom: 28px;
+  opacity: 0.8;
+}
+.eyebrow {
+  font-family: var(--gp-font-ceremony);
+  color: #74131c;
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  margin-bottom: 24px !important;
+}
+.recipient {
+  margin-top: 36px;
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+.recipient strong {
+  display: block;
+  margin-top: 8px;
+  color: #74131c;
+  font:
+    400 20px/1.4 "GP Fraunces",
+    serif;
+}
+.button {
+  min-height: 48px;
+  max-width: 100%;
+  border: 1px solid #74131c;
+  border-radius: 28px;
+  margin-top: 28px;
+  padding: 11px 28px;
+  background: #74131c;
+  color: #fffbf3;
+  font:
+    15px/1.5 system-ui,
+    sans-serif;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 160ms ease;
+}
+.button:active {
+  transform: scale(0.98);
+}
+.button:hover {
+  background: #59101a;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cover[data-stage="opening"],
+  .cover[data-stage="opening"] .composition {
+    animation: none;
+    opacity: 0;
+  }
+  .button {
+    transition: none;
+  }
+}
+.button:focus-visible {
+  outline: 2px solid #74131c;
+  outline-offset: 4px;
+}
+@media (max-height: 650px) {
+  .composition {
+    padding-top: 36px;
+    padding-bottom: 32px;
+  }
+  .monogram {
+    width: 44px;
+    height: 51px;
+    margin-bottom: 16px;
+  }
+  .recipient {
+    margin-top: 24px;
+  }
+}

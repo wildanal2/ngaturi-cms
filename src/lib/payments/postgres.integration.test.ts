@@ -292,12 +292,24 @@ suite(
       await migrate(database, { migrationsFolder: "src/lib/db/migrations" });
       expect((await row(historical.id)).provider).toBe("doku");
       expect((await storedPayment()).provider).toBe("sumopod");
+      const [issuer] = await client!<{ is_nullable: string }[]>`
+        select is_nullable
+        from information_schema.columns
+        where table_schema = 'public'
+          and table_name = 'accounts'
+          and column_name = 'issuer'
+      `;
+      expect(issuer?.is_nullable).toBe("YES");
+      await client!`
+        insert into accounts (id, account_id, provider_id, user_id)
+        values (${`issuer-compatible-${randomUUID()}`}, ${randomUUID()}, 'google', ${fixtureUser})
+      `;
       await client!.unsafe(migration); // IF NOT EXISTS is repeatable.
       expect(
         (
           await client!`select count(*)::integer as count from drizzle.__drizzle_migrations`
         )[0].count,
-      ).toBe(9);
+      ).toBe(10);
     });
     it("serializes concurrent DOKU/Sumopod reservation into one unresolved same-kind attempt", async () => {
       const attempts = await Promise.allSettled(

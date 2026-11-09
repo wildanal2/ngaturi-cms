@@ -64,6 +64,13 @@
       "when": 1791518283833,
       "tag": "0008_payment_provider_sumopod",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794214934715,
+      "tag": "0009_better_auth_issuer_compatibility",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { getVariant, variantDefaultProps } from "@/sections/registry";
 import { invitationRootStyle } from "@/lib/invitation/renderer";
 import { useBuilder } from "@/stores/builder-store";
+import { LakonPresentation } from "@/sections/lakon-kencana/scope";
 
 const BASE_WIDTH = 390; // mobile canvas width the components are designed for
 const MAX_H = 260; // tallest a thumbnail may get
@@ -80,17 +81,30 @@ export function VariantThumb({
           transform: `scale(${scale})`,
         }}
       >
-        <Component
-          props={thumbProps(type, variantKey)}
-          global={global}
-          isPreview
+        <LakonPresentation
+          enabled={variantKey === "lakon-kencana"}
+          sections={[]}
           inCanvas
-          siblingTypes={
-            type === "navigation"
-              ? ["hero", "couple-intro", "event-details", "gallery", "rsvp", "gift"]
-              : []
-          }
-        />
+        >
+          <Component
+            props={thumbProps(type, variantKey)}
+            global={global}
+            isPreview
+            inCanvas
+            siblingTypes={
+              type === "navigation"
+                ? [
+                    "hero",
+                    "couple-intro",
+                    "event-details",
+                    "gallery",
+                    "rsvp",
+                    "gift",
+                  ]
+                : []
+            }
+          />
+        </LakonPresentation>
       </div>
     </div>
   );
