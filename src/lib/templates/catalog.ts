@@ -63,6 +63,41 @@ const themeDecor = (theme: ThemeAssets) => ({
 
 export const TEMPLATES: TemplatePreset[] = [
   {
+    id: "lakon-kencana",
+    name: "Lakon Kencana",
+    description:
+      "Pahargyan bernuansa wayang: gunungan emas, kertas kawung, potret lengkung, dan kisah dalam setiap babak.",
+    category: "wedding",
+    tier: "premium",
+    composition: "standard",
+    thumbnail: "/templates/lakon-kencana/card",
+    global_settings: {
+      font_family: "Cormorant",
+      color_primary: "#35271e",
+      color_secondary: "#9b753f",
+      color_background: "#f5efe2",
+      animation: "none",
+    },
+    sections: [
+      s("loading", "lakon-kencana", 0),
+      s("cover", "lakon-kencana", 1),
+      s("hero", "lakon-kencana", 2),
+      s("couple-intro", "lakon-kencana", 3),
+      { ...s("quote", "lakon-kencana", 4), visible: false },
+      s("story", "lakon-kencana", 5),
+      s("event-details", "lakon-kencana", 6),
+      { ...s("map-location", "lakon-kencana", 7), visible: false },
+      s("countdown", "lakon-kencana", 8),
+      s("gallery", "lakon-kencana", 9),
+      s("rsvp", "lakon-kencana", 10),
+      { ...s("gift", "lakon-kencana", 11), visible: false },
+      s("guestbook", "lakon-kencana", 12),
+      s("closing", "lakon-kencana", 13),
+      s("music", "lakon-kencana", 14),
+      s("navigation", "lakon-kencana", 15),
+    ],
+  },
+  {
     id: "gerbang-puspa",
     name: "Gerbang Puspa",
     description:

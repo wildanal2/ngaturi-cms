@@ -48,6 +48,7 @@ export const storySection: SectionDefinition = {
   icon: "HeartHandshake",
   category: "content",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "lakon-kencana") return;
     if (variantKey === "cinematic-vintage" || variantKey === "gerbang-puspa")
       return;
     const items = base.items as { image?: string }[] | undefined;

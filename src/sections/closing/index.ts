@@ -25,6 +25,7 @@ export const closingSection: SectionDefinition = {
   icon: "Heart",
   category: "footer",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "lakon-kencana") return;
     if (
       (variantKey === "photo" || variantKey === "cinematic-vintage") &&
       !base.photo

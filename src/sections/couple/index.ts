@@ -32,6 +32,7 @@ export const coupleSection: SectionDefinition = {
   icon: "Users",
   category: "content",
   dummyProps: (variantKey, base) => {
+    if (variantKey === "lakon-kencana") return;
     if (variantKey === "gerbang-puspa") return;
     const bride = (base.bride ?? {}) as Record<string, unknown>;
     const groom = (base.groom ?? {}) as Record<string, unknown>;
