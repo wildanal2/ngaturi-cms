@@ -159,7 +159,7 @@ export function Canvas({ invitationId }: { invitationId: string }) {
     ) : null;
 
   return (
-    <div className="min-h-full px-6 py-8">
+    <div className="min-h-full min-w-0 px-2 py-3 sm:px-4 lg:px-6 lg:py-8">
       <DeviceFrame preset={preset} overlay={floatingOverlay}>
         <LakonPresentation
           enabled={lakon}
