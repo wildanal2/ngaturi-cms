@@ -73,6 +73,7 @@ export function InvitationRenderer({
       flow = cinematicContent(ordered, true).remaining;
       ownedComposition = (
         <CinematicComposition
+          compositionActive
           sections={ordered}
           global={global}
           invitationId={invitationId}

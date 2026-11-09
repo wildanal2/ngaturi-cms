@@ -46,7 +46,24 @@ export function cinematicScrollMap(
     }
     return sample(offset);
   };
-  const clear = () => segments.forEach((pan) => (pan.node.style.translate = ""));
+  const clear = () =>
+    segments.forEach((pan) => (pan.node.style.translate = ""));
+  const bookmark = (offset: number) => {
+    const pan = segments.find(
+      (pan) => offset >= pan.start && offset <= pan.end,
+    );
+    return {
+      time: sample(offset).time,
+      node: pan?.node,
+      progress: pan ? (offset - pan.start) / pan.pixels : 0,
+    };
+  };
+  const restore = (anchor: ReturnType<typeof bookmark>) => {
+    const pan = segments.find((pan) => pan.node === anchor.node);
+    return pan
+      ? pan.start + pan.pixels * anchor.progress
+      : position(anchor.time);
+  };
   // Finishing a reading pan is a resting point too. Without it, idle assistance
   // can rewind a chapter to its beginning after its last line has been read.
   const restingPositions = (beats: number[]) => [
@@ -60,6 +77,8 @@ export function cinematicScrollMap(
     sample,
     apply,
     clear,
+    bookmark,
+    restore,
     restingPositions,
   };
 }

@@ -30,7 +30,8 @@ const LEGACY: Record<string, string> = {
 export function cinematicVariant(
   section: Pick<SectionData, "type" | "variant">,
 ) {
-  return LEGACY[section.type] === section.variant
+  return LEGACY[section.type] === section.variant ||
+    (section.type === "countdown" && section.variant === "flip")
     ? CINEMATIC_VARIANT
     : section.variant;
 }
@@ -69,7 +70,9 @@ export function hasCinematicContent(section: SectionData) {
 
 /** Sections whose presentation is owned by the cinematic composition. */
 export function isCinematicCoreSectionType(type: string) {
-  return type === "cover" || type === "loading" || CORE.includes(type as CoreType);
+  return (
+    type === "cover" || type === "loading" || CORE.includes(type as CoreType)
+  );
 }
 
 /** The persisted hero variant opts into orchestration; no template ID/schema is needed. */

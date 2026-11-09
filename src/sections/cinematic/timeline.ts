@@ -2,6 +2,11 @@ import { gsap } from "gsap";
 import { cinematicScrollMap, type CinematicPan } from "./scroll-map";
 import { mountCinematicSettling } from "./settling";
 import {
+  registerCinematicViewportStage,
+  prepareCinematicLayout,
+  refreshCinematicViewport,
+} from "./viewport";
+import {
   cinematicStageAutoStops,
   registerCinematicAutoStage,
 } from "./auto-scroll-plan";
@@ -22,6 +27,13 @@ export function mountCinematicTimeline(
     "[data-cinematic-viewport]",
   )!;
   const scenes = [...root.querySelectorAll<HTMLElement>("[data-scene]")];
+  const originalVisibility = new Map(
+    scenes.map((node) => [node, node.style.visibility]),
+  );
+  const restoreVisibility = () =>
+    scenes.forEach((node) => {
+      node.style.visibility = originalVisibility.get(node) ?? "";
+    });
   const panels = [...root.querySelectorAll<HTMLElement>("[data-world-panel]")];
   const memories = [
     ...root.querySelectorAll<HTMLElement>("[data-story-memory]"),
@@ -29,12 +41,15 @@ export function mountCinematicTimeline(
   const memoryRanges: { node: HTMLElement; start: number; end: number }[] = [];
   const rail = root.querySelector<HTMLElement>("[data-world-rail]");
   const camera = root.querySelector<HTMLElement>("[data-world-camera]");
+  const panelPosition = (panel: HTMLElement) =>
+    -panel.offsetLeft + (viewport.clientWidth - panel.offsetWidth) / 2;
   const owner = scroller ?? window;
   const chapters = new Map<HTMLElement, number>();
   const beats: number[] = [];
   const rests = new Map<HTMLElement, number>();
   let settling: ReturnType<typeof mountCinematicSettling> | undefined;
   let unregisterAuto: (() => void) | undefined;
+  let unregisterViewport: (() => void) | undefined;
   const ranges: { node: HTMLElement; start: number; end: number }[] = [];
   let distance = 1;
   let scrollMap = cinematicScrollMap(1, 1, []);
@@ -43,6 +58,10 @@ export function mountCinematicTimeline(
   let lastSize = "";
   let disposed = false;
   let linear = false;
+  let activeChapter: HTMLElement | undefined;
+  let lastFrameOffset: number | undefined;
+  let measuredWidth = 0;
+  let measuredHeight = 0;
   const panAt = new Map<HTMLElement, number>();
   const clearPan = () => {
     scrollMap.clear();
@@ -63,7 +82,9 @@ export function mountCinematicTimeline(
       { autoAlpha: 1, duration: 1 },
       time,
     );
-    if (exit)
+    // The last scene leaves with native flow. Fading it out early would leave
+    // an empty sticky viewport while a guest pauses before the next stage.
+    if (exit && node !== scenes.at(-1))
       timeline.to(node, { autoAlpha: 0, duration: 1 }, time + duration - 1);
   };
   try {
@@ -122,8 +143,8 @@ export function mountCinematicTimeline(
           show(scene, duration);
           timeline.fromTo(
             camera,
-            { scale: 0.64 },
-            { scale: 0.78, duration: 3 },
+            { scale: 0.94 },
+            { scale: 1, duration: 3 },
             time,
           );
           let cursor = time + 3;
@@ -136,9 +157,9 @@ export function mountCinematicTimeline(
             });
             timeline.fromTo(
               rail,
-              { x: 0 },
+              { x: () => panelPosition(panels[0]) },
               {
-                x: () => -(photoCount - 1) * viewport.clientWidth,
+                x: () => panelPosition(panels[photoCount - 1]),
                 duration: Math.max(1, photoCount * 3 - 3),
               },
               cursor,
@@ -150,7 +171,7 @@ export function mountCinematicTimeline(
             timeline.to(
               rail,
               {
-                x: () => -index * viewport.clientWidth,
+                x: () => panelPosition(panels[index]),
                 duration: portalTraverseDuration,
               },
               cursor,
@@ -180,7 +201,7 @@ export function mountCinematicTimeline(
               portalHoldDuration;
             timeline.to(
               camera,
-              { scale: 0.78, duration: portalExitDuration },
+              { scale: 0.94, duration: portalExitDuration },
               exitAt,
             );
             cursor += portalDuration;
@@ -190,12 +211,12 @@ export function mountCinematicTimeline(
               // world scale before the rail starts travelling to Reception.
               timeline.to(
                 camera,
-                { scale: 0.64, yPercent: 0, duration: worldSettleDuration },
+                { scale: 0.94, yPercent: 0, duration: worldSettleDuration },
                 cursor,
               );
               timeline.to(
                 camera,
-                { scale: 0.64, yPercent: 0, duration: worldHoldDuration },
+                { scale: 0.94, yPercent: 0, duration: worldHoldDuration },
                 cursor + worldSettleDuration,
               );
               beats.push(cursor + worldSettleDuration + worldHoldDuration / 2);
@@ -204,7 +225,7 @@ export function mountCinematicTimeline(
           }
           timeline.to(
             camera,
-            { scale: 0.7, yPercent: -10, duration: 3 },
+            { scale: 0.94, yPercent: -2, duration: 3 },
             time + duration - 3,
           );
           time += duration - 1;
@@ -235,45 +256,11 @@ export function mountCinematicTimeline(
           timeline.fromTo(
             scene.querySelector("[data-hero-photo]"),
             { scale: 1 },
-            { scale: 1.06, duration: 8 },
+            { scale: 1.025, duration: 8 },
             time + 3,
           );
-        } else if (kind === "couple") {
-          timeline.fromTo(
-            body,
-            { scale: 0.94, xPercent: 0 },
-            { scale: 1, xPercent: 0, duration: 6 },
-            time,
-          );
-          timeline.to(body, { scale: 0.9, xPercent: 0, duration: 5 }, time + 9);
-        } else if (kind === "quote") {
-          timeline.fromTo(
-            body,
-            { scale: 0.96 },
-            { scale: 1, duration: 3 },
-            time,
-          );
-        } else if (kind === "venue") {
-          timeline.fromTo(
-            body,
-            { scale: 0.65, yPercent: 20 },
-            { scale: 1, yPercent: 0, duration: 7 },
-            time,
-          );
-        } else if (kind === "countdown") {
-          timeline.fromTo(
-            body,
-            { scale: 0.97 },
-            { scale: 1, duration: 3 },
-            time,
-          );
-        } else if (kind === "closing") {
-          timeline.fromTo(
-            body,
-            { scale: 1 },
-            { scale: 0.96, duration: 4 },
-            time,
-          );
+        } else {
+          timeline.fromTo(body, { y: 12 }, { y: 0, duration: 2 }, time);
         }
         time += duration - 1;
       }
@@ -281,11 +268,10 @@ export function mountCinematicTimeline(
         const depth = Number(layer.dataset.depth);
         timeline.fromTo(
           layer,
-          { yPercent: depth * 3, xPercent: depth * -1.5, scale: 1.05 },
+          { y: depth * 4, x: depth * -2 },
           {
-            yPercent: depth * -5,
-            xPercent: depth * 2,
-            scale: 1.05 + depth * 0.045,
+            y: depth * -4,
+            x: depth * 2,
             duration:
               scenes.length === 1 && scenes[0].dataset.scene === "closing"
                 ? 4
@@ -303,7 +289,18 @@ export function mountCinematicTimeline(
     });
     const render = () => {
       raf = 0;
-      const sample = scrollMap.apply(scrollTop() - start);
+      // A resize can deliver scroll before ResizeObserver. Keep the last reading
+      // anchor until the new geometry is measured in the same frame.
+      if (
+        measuredWidth &&
+        (root.clientWidth !== measuredWidth ||
+          (scroller?.clientHeight ?? window.innerHeight) !== measuredHeight)
+      )
+        return;
+      const offset = Math.max(0, Math.min(distance, scrollTop() - start));
+      if (!linear && offset === lastFrameOffset) return;
+      lastFrameOffset = offset;
+      const sample = scrollMap.apply(offset);
       timeline.progress(
         Math.max(0, Math.min(1, sample.time / timeline.duration())),
       );
@@ -312,6 +309,17 @@ export function mountCinematicTimeline(
           if (node.inert) node.inert = false;
         });
         delete root.dataset.activeSection;
+        const probe =
+          (scroller?.getBoundingClientRect().top ?? 0) +
+          (scroller?.clientHeight ?? window.innerHeight) * 0.3;
+        activeChapter =
+          [
+            ...scenes.filter((scene) => scene.dataset.scene !== "world"),
+            ...panels,
+          ].find((node) => {
+            const box = node.getBoundingClientRect();
+            return box.top <= probe && box.bottom > probe;
+          }) ?? activeChapter;
         return;
       }
       const now = timeline.time();
@@ -320,8 +328,13 @@ export function mountCinematicTimeline(
         const active =
           now >= range.start && (now < range.end || range === ranges.at(-1));
         if (range.node.inert !== !active) range.node.inert = !active;
-        if (active && range.node.dataset.section)
+        const visibility = active ? "visible" : "hidden";
+        if (range.node.style.visibility !== visibility)
+          range.node.style.visibility = visibility;
+        if (active && range.node.dataset.section) {
           activeSection = range.node.dataset.section;
+          activeChapter = range.node;
+        }
       }
       for (const range of memoryRanges) {
         const inactive = now < range.start || now >= range.end;
@@ -350,10 +363,22 @@ export function mountCinematicTimeline(
             }
           }
         });
-        if (nearestPanel)
+        if (nearestPanel) {
+          activeChapter = nearestPanel;
           activeSection =
             nearestPanel.closest<HTMLElement>("[data-section]")?.dataset
               .section ?? "gallery";
+          const gallery = nearestPanel.closest<HTMLElement>(
+            "[data-gallery-frames]",
+          );
+          if (
+            gallery &&
+            gallery.dataset.activeGalleryIndex !==
+              nearestPanel.dataset.galleryIndex
+          )
+            gallery.dataset.activeGalleryIndex =
+              nearestPanel.dataset.galleryIndex;
+        }
       } else {
         // A hidden world cannot contribute a chapter or a focusable link.
         for (const panel of panels) if (!panel.inert) panel.inert = true;
@@ -366,7 +391,40 @@ export function mountCinematicTimeline(
       if (!raf) raf = requestAnimationFrame(render);
     };
     const measure = () => {
-      if (disposed) return;
+      if (disposed || !root.clientWidth) return;
+      const coordinated = prepareCinematicLayout(root);
+      const current = scrollTop();
+      const anchor = scrollMap.bookmark(current - start);
+      const wasLinear = linear;
+      const within =
+        !coordinated &&
+        !!lastSize &&
+        current >= start &&
+        (wasLinear
+          ? root.getBoundingClientRect().bottom >
+            (scroller?.getBoundingClientRect().top ?? 0)
+          : current <= start + distance);
+      const previousChapter = activeChapter;
+      const oldChapterBox = wasLinear
+        ? previousChapter?.getBoundingClientRect()
+        : undefined;
+      const linearProgress = oldChapterBox
+        ? Math.max(
+            0,
+            Math.min(
+              1,
+              ((scroller?.getBoundingClientRect().top ?? 0) -
+                oldChapterBox.top) /
+                Math.max(
+                  1,
+                  oldChapterBox.bottom -
+                    oldChapterBox.top -
+                    (scroller?.clientHeight ?? window.innerHeight) +
+                    120,
+                ),
+            ),
+          )
+        : 0;
       const height = scroller?.clientHeight ?? window.innerHeight;
       root.style.setProperty("--cinema-height", `${height}px`);
       const pixels = (value: string) => parseFloat(value) || 0;
@@ -389,9 +447,17 @@ export function mountCinematicTimeline(
       // A short portrait Builder viewport must retain its cinematic controller.
       linear = height < 560 && root.clientWidth > height;
       root.toggleAttribute("data-linear", linear);
-      const available = Math.max(120, height - 120);
+      const bottomClearance = Math.max(
+        120,
+        ...scenes.map((scene) => pixels(getComputedStyle(scene).paddingBottom)),
+      );
+      const available = Math.max(120, height - bottomClearance);
       const pans: CinematicPan[] = [];
-      const addPan = (node: HTMLElement, at: number | undefined, needed: number) => {
+      const addPan = (
+        node: HTMLElement,
+        at: number | undefined,
+        needed: number,
+      ) => {
         const pixels = linear ? 0 : Math.ceil(Math.max(0, needed));
         node.toggleAttribute("data-cinematic-tall", pixels > 0);
         if (pixels > 0 && at !== undefined) pans.push({ node, at, pixels });
@@ -422,11 +488,8 @@ export function mountCinematicTimeline(
                 available - padding(body) - headingHeight - padding(frame),
               );
               tall =
-                addPan(
-                  memory,
-                  panAt.get(memory),
-                  required(reader) - space,
-                ) || tall;
+                addPan(memory, panAt.get(memory), required(reader) - space) ||
+                tall;
             });
           scene.toggleAttribute("data-cinematic-tall", tall);
         } else if (body && scene.dataset.scene !== "world")
@@ -444,7 +507,9 @@ export function mountCinematicTimeline(
       }
       const size = `${linear}:${height}:${root.clientWidth}:${panels.map((panel) => panel.offsetHeight).join(",")}:${pans.map((pan) => `${pan.at}:${pan.pixels}`).join(",")}`;
       if (size !== lastSize) {
+        const preserveLocally = !prepareCinematicLayout(root, true) && within;
         settling?.cancel();
+        cancelCinematicScroll(owner);
         scrollMap.clear();
         lastSize = size;
         scrollMap = cinematicScrollMap(
@@ -455,37 +520,94 @@ export function mountCinematicTimeline(
         distance = scrollMap.distance;
         root.style.height = linear ? "auto" : `${distance + height}px`;
         timeline.invalidate();
+        // Initialize every future fromTo, then rewind atomically before paint.
+        // Otherwise a scene left visible by linear mode can survive at a new size.
+        timeline.progress(1, true);
+        timeline.progress(0, true);
+        lastFrameOffset = undefined;
+        start =
+          root.getBoundingClientRect().top +
+          scrollTop() -
+          (scroller?.getBoundingClientRect().top ?? 0);
+        if (preserveLocally) {
+          let destination = start + scrollMap.restore(anchor);
+          if (linear && previousChapter)
+            destination =
+              previousChapter.getBoundingClientRect().top +
+              scrollTop() -
+              (scroller?.getBoundingClientRect().top ?? 0);
+          else if (wasLinear && previousChapter) {
+            const pan = scrollMap.traversals.find(
+              (pan) => pan.node === previousChapter,
+            );
+            destination =
+              start +
+              (pan
+                ? pan.start + pan.pixels * linearProgress
+                : scrollMap.position(
+                    rests.get(previousChapter) ??
+                      chapters.get(previousChapter) ??
+                      0,
+                  ));
+          }
+          owner.scrollTo({
+            top: Math.max(0, destination),
+            behavior: "instant",
+          });
+        }
       }
-      start =
+      const nextStart =
         root.getBoundingClientRect().top +
         scrollTop() -
         (scroller?.getBoundingClientRect().top ?? 0);
+      if (Math.abs(nextStart - start) > 1) prepareCinematicLayout(root, true);
+      start = nextStart;
+      measuredWidth = root.clientWidth;
+      measuredHeight = height;
       render();
+      refreshCinematicViewport(root);
     };
     const seek = (event: Event) => {
       const detail = (event as CustomEvent<CinematicSeekDetail>).detail;
+      if (!detail) return;
       const id = typeof detail === "string" ? detail : detail.sectionId;
       if (linear) return;
-      const node = [...chapters.keys()].find(
+      const matches = [...chapters.keys()].filter(
         (el) =>
           el.dataset.sectionId === id ||
           el.closest("[data-section-id]")?.getAttribute("data-section-id") ===
             id,
       );
+      const node =
+        matches[typeof detail === "string" ? 0 : (detail.panelIndex ?? 0)];
       if (!node) return;
       settling?.cancel();
       event.preventDefault();
       const smooth = typeof detail !== "string" && detail.behavior === "smooth";
-      const destination = start + scrollMap.position(
-        smooth ? (rests.get(node) ?? chapters.get(node)!) : chapters.get(node)!,
-      );
+      const destination =
+        start +
+        scrollMap.position(
+          smooth
+            ? (rests.get(node) ?? chapters.get(node)!)
+            : chapters.get(node)!,
+        );
       if (typeof detail !== "string" && detail.behavior === "smooth")
         animateCinematicScroll(owner, destination, {
+          duration:
+            typeof detail !== "string" && detail.panelIndex !== undefined
+              ? 450
+              : undefined,
           onFrame: render,
-          onComplete: () =>
-            focusCinematicChapter(
-              node.closest<HTMLElement>("[data-section]") ?? node,
-            ),
+          onComplete: () => {
+            if (typeof detail !== "string" && detail.panelIndex !== undefined)
+              node
+                .querySelector<HTMLElement>("button")
+                ?.focus({ preventScroll: true });
+            else
+              focusCinematicChapter(
+                node.closest<HTMLElement>("[data-section]") ?? node,
+              );
+          },
         });
       else {
         owner.scrollTo({ top: destination, behavior: "instant" });
@@ -531,18 +653,14 @@ export function mountCinematicTimeline(
       // While a tall chapter is being read, every owner position is a valid hold.
       // Snapping to either edge would skip unread content.
       if (scrollMap.sample(current - start).panning) return null;
-      const positions = scrollMap.restingPositions(beats).map(
-        (position) => start + position,
-      );
-      const next = root.nextElementSibling as HTMLElement | null;
-      // The visible outgoing viewport lasts beyond the timeline's scroll range.
-      // Its next resting beat is the first natural-height interaction heading.
-      if (next?.querySelector("[data-cinematic-interaction]"))
-        positions.push(
-          next.getBoundingClientRect().top +
-            current -
-            (scroller?.getBoundingClientRect().top ?? 0),
-        );
+      if (!activeChapter) return null;
+      const beat = rests.get(activeChapter);
+      const positions = [
+        ...(beat === undefined ? [] : [start + scrollMap.position(beat)]),
+        ...scrollMap.traversals
+          .filter((pan) => pan.node === activeChapter)
+          .map((pan) => start + pan.end),
+      ];
       const nearest = positions.reduce<number | null>(
         (best, position) =>
           best === null ||
@@ -555,7 +673,65 @@ export function mountCinematicTimeline(
     });
     owner.addEventListener("scroll", requestRender, { passive: true });
     root.addEventListener("cinematic:seek", seek);
+    window.addEventListener("orientationchange", measure);
+    void document.fonts?.ready.then(measure);
     measure();
+    const restoreNode = (node: HTMLElement, progress: number) => {
+      if (linear) return false;
+      const id =
+        node.closest<HTMLElement>("[data-section-id]")?.dataset.sectionId;
+      const target = panAt.has(node)
+        ? node
+        : [...chapters.keys()].find(
+            (el) =>
+              el.dataset.sectionId === id ||
+              el.closest<HTMLElement>("[data-section-id]")?.dataset
+                .sectionId === id,
+          );
+      if (!target) return false;
+      const pan = scrollMap.traversals.find((pan) => pan.node === target);
+      const offset = pan
+        ? pan.start + pan.pixels * progress
+        : scrollMap.position(
+            panAt.get(target) ?? rests.get(target) ?? chapters.get(target) ?? 0,
+          );
+      owner.scrollTo({ top: start + offset, behavior: "instant" });
+      cancelAnimationFrame(raf);
+      render();
+      return true;
+    };
+    unregisterViewport = registerCinematicViewportStage(root, {
+      measure,
+      capture() {
+        cancelAnimationFrame(raf);
+        render();
+        const raw = scrollTop() - start;
+        const clamped = Math.max(0, Math.min(distance, raw));
+        const anchor = scrollMap.bookmark(clamped);
+        return {
+          anchor,
+          node: anchor.node ?? activeChapter ?? scenes[0],
+          progress: anchor.progress,
+          edge:
+            (raw - clamped) / (scroller?.clientHeight ?? window.innerHeight),
+        };
+      },
+      restore(snapshot) {
+        if (linear) return false;
+        owner.scrollTo({
+          top:
+            start +
+            scrollMap.restore(snapshot.anchor) +
+            (snapshot.edge ?? 0) *
+              (scroller?.clientHeight ?? window.innerHeight),
+          behavior: "instant",
+        });
+        cancelAnimationFrame(raf);
+        render();
+        return true;
+      },
+      restoreNode,
+    });
     unregisterAuto = registerCinematicAutoStage(root, () =>
       cinematicStageAutoStops({
         root,
@@ -566,20 +742,23 @@ export function mountCinematicTimeline(
         duration: timeline.duration(),
         linear,
         scroller,
-        closing: scenes.some(scene => scene.dataset.scene === "closing"),
+        closing: scenes.some((scene) => scene.dataset.scene === "closing"),
       }),
     );
     return () => {
       disposed = true;
       unregisterAuto?.();
+      unregisterViewport?.();
       settling?.dispose();
       cancelCinematicScroll(owner, "seek");
       resize.disconnect();
       cancelAnimationFrame(raf);
       owner.removeEventListener("scroll", requestRender);
       root.removeEventListener("cinematic:seek", seek);
+      window.removeEventListener("orientationchange", measure);
       timeline.kill();
       context.revert();
+      restoreVisibility();
       clearPan();
       delete root.dataset.enhanced;
       delete root.dataset.linear;
@@ -595,9 +774,11 @@ export function mountCinematicTimeline(
     };
   } catch (error) {
     unregisterAuto?.();
+    unregisterViewport?.();
     settling?.dispose();
     timeline.kill();
     context.revert();
+    restoreVisibility();
     clearPan();
     delete root.dataset.enhanced;
     delete root.dataset.linear;

@@ -1,8 +1,8 @@
 "use client";
 
-import { Pause, Play } from "lucide-react";
+import { Music2, VolumeX } from "lucide-react";
 import type { SectionRenderProps } from "../types";
-import { usePlayer, Sleeve, type MusicProps } from "./shared";
+import { usePlayer, type MusicProps } from "./shared";
 import styles from "../cinematic/cinematic.module.css";
 
 export function MusicCinematicVintage({
@@ -16,7 +16,7 @@ export function MusicCinematicVintage({
     !isPreview && (p.autoplay ?? true),
     p.start_at ?? 0,
   );
-  if (!p.audio_url && !inCanvas) return null;
+  if (!p.audio_url) return null;
   return (
     <div
       className={styles.musicControl}
@@ -30,21 +30,21 @@ export function MusicCinematicVintage({
         type="button"
         onClick={toggle}
         disabled={!p.audio_url}
-        aria-label={playing ? "Jeda musik" : "Putar musik"}
+        aria-label={
+          playing ? "Matikan musik · Musik aktif" : "Putar musik · Musik mati"
+        }
         aria-pressed={playing}
         className={styles.musicButton}
       >
-        <span className={styles.record}>
-          <Sleeve
-            playing={playing}
-            size={38}
-            spinSeconds={p.spin_seconds ?? 16}
-          />
-        </span>
-        <span className={styles.musicGlyph}>
-          {playing ? <Pause size={15} /> : <Play size={15} />}
-        </span>
+        {playing ? (
+          <Music2 size={20} aria-hidden="true" />
+        ) : (
+          <VolumeX size={20} aria-hidden="true" />
+        )}
       </button>
+      <span className={styles.musicStatus} role="status">
+        {playing ? "Musik aktif" : "Musik mati"}
+      </span>
     </div>
   );
 }
