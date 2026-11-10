@@ -2,6 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { toast, Toaster } from "sonner";
+import { WhatsappMessageEditor } from "./whatsapp-message-editor";
+import {
+  renderWhatsappMessage,
+  whatsappUrl,
+  type WhatsappTemplate,
+} from "@/lib/invitation/whatsapp-message";
 import {
   createGuestInvite,
   deleteGuestInvite,
@@ -24,31 +30,45 @@ export function GuestManager({
   baseUrl,
   guests,
   canCreate,
+  initialWhatsappTemplate,
+  coupleNames,
 }: {
   invitationId: string;
   baseUrl: string;
   guests: Guest[];
   canCreate: boolean;
+  initialWhatsappTemplate: WhatsappTemplate;
+  coupleNames: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
+  const [activeTemplate, setActiveTemplate] = useState(initialWhatsappTemplate);
 
   function link(g: Guest) {
     return `${baseUrl}?to=${g.slugToken}`;
   }
   function waLink(g: Guest) {
-    const text = encodeURIComponent(
-      `Kepada Yth. ${g.guestName},\n\nDengan hormat kami mengundang Anda. Info & konfirmasi kehadiran:\n${link(g)}`,
+    return whatsappUrl(
+      renderWhatsappMessage(
+        activeTemplate.message,
+        g.guestName,
+        link(g),
+        coupleNames,
+      ),
+      g.whatsappPhone,
     );
-    const phone = g.whatsappPhone?.replace(/[^0-9]/g, "").replace(/^0/, "62");
-    return phone
-      ? `https://wa.me/${phone}?text=${text}`
-      : `https://wa.me/?text=${text}`;
   }
 
   return (
     <div className="space-y-6">
       <Toaster position="bottom-center" richColors />
+      <WhatsappMessageEditor
+        invitationId={invitationId}
+        active={activeTemplate}
+        canEdit={canCreate}
+        coupleNames={coupleNames}
+        onSaved={setActiveTemplate}
+      />
 
       {canCreate ? (
         <form
