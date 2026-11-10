@@ -49,6 +49,34 @@ function decodeHtmlAttribute(value: string) {
 }
 
 describe("guest WhatsApp rendering integration", () => {
+  it("keeps the manual form available and does not call browser APIs during server rendering", () => {
+    const select = vi.fn();
+    vi.stubGlobal("navigator", { contacts: { select } });
+    try {
+      const html = render({
+        message: DEFAULT_WHATSAPP_MESSAGE,
+        source: "default",
+        isCustom: false,
+      });
+      expect(html).toContain('name="guest_name"');
+      expect(html).toContain('name="whatsapp_phone"');
+      expect(html).toContain('name="guest_group"');
+      expect(html).toContain('name="max_guests"');
+      expect(html).toContain("Tambah tamu");
+      expect(html).not.toContain("Ambil dari Kontak HP");
+      expect(select).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+  it("does not expose contact import or the creation form without existing entitlement", () => {
+    const html = render(
+      { message: DEFAULT_WHATSAPP_MESSAGE, source: "default", isCustom: false },
+      false,
+    );
+    expect(html).not.toContain('name="guest_name"');
+    expect(html).not.toContain("Ambil dari Kontak HP");
+  });
   it("renders the server's saved custom template into each personal WA link", () => {
     const html = render({
       message: "Halo {nama_tamu} 👋\n{link_undangan}",
