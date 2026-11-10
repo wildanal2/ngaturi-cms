@@ -304,6 +304,7 @@ test("workflow publishes only Staging/tag pushes after validation; single build;
     "needs.validate.outputs.kind == 'validation'",
   );
   assert.equal(workflow.jobs.publish.permissions.packages, "write");
+  assert.equal(workflow.jobs.publish.permissions.contents, "write");
   assert.equal(workflow.permissions.packages, undefined);
   assert.equal(
     workflow.jobs.publish.concurrency.group,
@@ -332,7 +333,14 @@ test("workflow publishes only Staging/tag pushes after validation; single build;
   const stable = steps.findIndex(
     (step) => step.run === "node scripts/container-release.mjs stable",
   );
-  assert(stable > upload);
+  const releaseAsset = steps.findIndex((step) =>
+    step.name === "Publish and verify exact ops asset on GitHub Release",
+  );
+  assert(releaseAsset > upload);
+  assert(stable > releaseAsset);
+  assert(steps[releaseAsset].run.includes('gh release create'));
+  assert(steps[releaseAsset].run.includes('cmp "$asset"'));
+  assert.equal(steps[releaseAsset].if, "steps.release.outputs.kind == 'release'");
   assert.equal(steps[stable].if, "steps.release.outputs.kind == 'release'");
   assert.equal(workflow.jobs["image-validation"].steps.at(-1).with.push, false);
   for (const job of [workflow.jobs.validate, workflow.jobs.publish])

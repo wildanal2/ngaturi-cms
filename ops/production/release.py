@@ -15,6 +15,8 @@ import sys
 import tarfile
 import tempfile
 import time
+import urllib.error
+import urllib.request
 import uuid
 
 RUNTIME = Path('/home/okee/ngaturi')
@@ -34,6 +36,11 @@ BASELINE_HASHES = {
 }
 FILES = tuple(sorted((*BASELINE_HASHES, 'release.py', 'deploy.env.example', 'README.md', 'GIT_RELEASE.md')))
 DAILY = ['0 1 * * * lock-expired-edits', '30 1 * * * archive-expired']
+GITHUB_REPOSITORY = 'wildanal2/ngaturi-cms'
+RELEASE_ASSET = 'ngaturi-production-ops.tar.gz'
+MAX_RELEASE_ASSET_BYTES = 8 * 1024 * 1024
+MAX_RELEASE_METADATA_BYTES = 1024 * 1024
+RELEASE_TAG_PATTERN = r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
 CONFIG_KEYS = {'NGATURI_PACKAGE', 'NGATURI_PROJECT_NAME', 'NGATURI_BIND_IP', 'NGATURI_PORT',
                'RUNTIME_ENV_FILE', 'DEPLOY_STATE_DIR', 'SCHEDULER_ENABLED', 'PROBE_ATTEMPTS'}
 
@@ -101,6 +108,66 @@ def atomic_link(path, target):
     sync_directory(path.parent)
 
 
+def fetch_release_artifact(tag, destination):
+    """Fetch a published, exact-tag GitHub Release asset; never an image-only deploy."""
+    require(isinstance(tag, str) and re.fullmatch(RELEASE_TAG_PATTERN, tag),
+            'automatic artifact download requires a strict vX.Y.Z tag; use --artifact for a digest')
+    api = f'https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/tags/{tag}'
+    headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'ngaturi-release-controller'}
+    try:
+        with urllib.request.urlopen(urllib.request.Request(api, headers=headers), timeout=25) as response:
+            metadata = response.read(MAX_RELEASE_METADATA_BYTES + 1)
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            raise RuntimeError(f'GitHub Release {tag} not published or unavailable; '
+                               'publish its official ops asset or use --artifact for a historical Actions artifact') from None
+        raise RuntimeError(f'GitHub Release metadata request failed (HTTP {error.code})') from None
+    except (urllib.error.URLError, TimeoutError, OSError) as error:
+        raise RuntimeError('GitHub Release metadata unavailable') from error
+    require(len(metadata) <= MAX_RELEASE_METADATA_BYTES, 'GitHub Release metadata exceeds size limit')
+    try:
+        release = json.loads(metadata)
+    except (ValueError, UnicodeError) as error:
+        raise RuntimeError('invalid GitHub Release metadata') from error
+    require(isinstance(release, dict) and release.get('tag_name') == tag and
+            release.get('draft') is False and release.get('prerelease') is False,
+            'GitHub Release tag/status mismatch')
+    assets = [asset for asset in release.get('assets', [])
+              if isinstance(asset, dict) and asset.get('name') == RELEASE_ASSET]
+    require(len(assets) == 1 and assets[0].get('state') == 'uploaded',
+            'GitHub Release must contain exactly one uploaded ops asset')
+    asset = assets[0]
+    size = asset.get('size')
+    require(type(size) is int and 0 < size <= MAX_RELEASE_ASSET_BYTES, 'GitHub Release asset size invalid')
+    expected_url = f'https://github.com/{GITHUB_REPOSITORY}/releases/download/{tag}/{RELEASE_ASSET}'
+    require(asset.get('browser_download_url') == expected_url, 'unexpected GitHub Release asset URL')
+    digest = asset.get('digest')
+    require(digest is None or (isinstance(digest, str) and re.fullmatch(r'sha256:[0-9a-f]{64}', digest)),
+            'invalid GitHub Release asset digest')
+    try:
+        with urllib.request.urlopen(urllib.request.Request(expected_url,
+                                            headers={'User-Agent': 'ngaturi-release-controller'}),
+                                            timeout=45) as response, destination.open('wb') as output:
+            hasher = hashlib.sha256()
+            length = 0
+            while True:
+                chunk = response.read(65536)
+                if not chunk:
+                    break
+                length += len(chunk)
+                require(length <= MAX_RELEASE_ASSET_BYTES, 'GitHub Release asset exceeds download limit')
+                output.write(chunk)
+                hasher.update(chunk)
+    except urllib.error.HTTPError as error:
+        raise RuntimeError(f'GitHub Release asset download failed (HTTP {error.code})') from None
+    except (urllib.error.URLError, TimeoutError, OSError) as error:
+        raise RuntimeError('GitHub Release asset download unavailable') from error
+    require(length == size, 'GitHub Release asset length mismatch')
+    if digest is not None:
+        require(digest == 'sha256:' + hasher.hexdigest(), 'GitHub Release asset digest mismatch')
+    return destination
+
+
 def read_artifact(path):
     require(path.is_file(), 'required release ops artifact is missing')
     with tarfile.open(path, 'r:gz') as archive:
@@ -119,7 +186,7 @@ def validate_payload(manifest, payload):
     require(manifest.get('deployment_protocol') == 1, 'incompatible deployment protocol')
     require(manifest.get('release_type') == 'release', 'production requires an official release artifact')
     tag = manifest.get('git_tag', '')
-    require(re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', tag), 'invalid release tag')
+    require(re.fullmatch(RELEASE_TAG_PATTERN, tag), 'invalid release tag')
     require(tuple(map(int, tag[1:].split('.'))) > (1, 1, 0), 'release predates the safe deployment baseline')
     require(re.fullmatch(r'[0-9a-f]{40}', manifest.get('git_sha', '')), 'invalid release revision')
     require(manifest.get('ghcr_image') == PACKAGE, 'unexpected image package')
@@ -459,8 +526,12 @@ class Manager:
         config = self.config()
         require((self.state / 'releases.env').is_file(), 'current production release cannot be identified')
         if mode == 'deploy':
-            require(artifact is not None, 'release ops artifact required; image-only deployment is forbidden')
-            manifest, payload = read_artifact(Path(artifact))
+            # Temporary download is safe during --dry-run and never modifies the live runtime.
+            # Existing --artifact remains available for audited/offline historical releases.
+            with tempfile.TemporaryDirectory(prefix='ngaturi-ops-fetch-') as download_directory:
+                path = Path(artifact) if artifact is not None else fetch_release_artifact(
+                    target, Path(download_directory) / RELEASE_ASSET)
+                manifest, payload = read_artifact(path)
             require(target in (manifest['git_tag'], manifest['digest']), 'target and ops release identity differ')
             self.backend.verify_image(manifest)
             with tempfile.TemporaryDirectory(prefix='ngaturi-preflight-') as temporary:
