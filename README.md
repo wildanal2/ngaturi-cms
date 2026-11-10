@@ -17,6 +17,17 @@ Spesifikasi lengkap di `PRD.md`.
 - **Production target:** Cloudflare Workers + vinext + Cron Triggers (staging migration)
 - **Vitest** — unit test (`npm test`): integritas registry, entitlement, hydrate, DOKU
 
+## Operasional production (SSH + Docker + Neon)
+
+Panduan ringkas dengan langkah-langkah dan contoh perintah yang aman:
+
+- [Deployment release, auto-fetch artifact, verifikasi, dan rollback](docs/production-deployment.md)
+- [Migrasi awal Neon pada database kosong](docs/database-initial-migration.md)
+- [Migrasi lanjutan Neon untuk release berikutnya](docs/database-incremental-migration.md)
+
+**Catatan:** release aplikasi dan migrasi schema database adalah operasi terpisah.
+`rollback.sh` tidak membatalkan migrasi atau mengganti `DATABASE_URL`.
+
 ## Setup
 
 ```bash
