@@ -4,31 +4,59 @@ Repository source lives in `ops/production/`. **The production VM installation i
 
 ## Release unit and prerequisites
 
-The validated CI artifact `ngaturi-production-ops.tar.gz` contains the immutable image identity, Git revision, deployment protocol, every ops file and its SHA-256 checksum. CI also records the aggregate ops checksum in the image label `com.ngaturi.ops-sha256`. Deployment checks the registry image revision/source/platform and this checksum against the archive before changing runtime. An image tag/digest without its matching ops artifact is rejected. Download the artifact only from the successful official Git-tag workflow; the manifest binds integrity and identity, not the trustworthiness of an arbitrary download.
+The validated CI artifact `ngaturi-production-ops.tar.gz` contains the immutable image identity, Git revision, deployment protocol, every ops file and its SHA-256 checksum. CI also records the aggregate ops checksum in the image label `com.ngaturi.ops-sha256`. Deployment checks the registry image revision/source/platform and this checksum against the archive before changing runtime. An image tag/digest without its matching ops artifact is rejected. For new versions the official Git-tag workflow publishes the ops artifact as a **GitHub Release asset**, in addition to the short-lived GitHub Actions artifact. The controller downloads it automatically from the exact public Release tag (HTTPS), checks GitHub asset length/digest when present, and still verifies immutable image labels and all ops checksums. The manifest binds integrity and identity, not the trustworthiness of an arbitrary download. An explicit `--artifact` path is retained for historical/offline operations.
 
 The VM requires Python 3.9+, Bash, Docker Compose v2, Buildx, curl and iproute2. Keep the existing Docker login, `/etc/ngaturi/ngaturi.env` (root-owned `0600`), ingress/firewall and boot service. Use sudo for deployment and state inspection. Existing `deploy.env` must retain project `ngaturi-prod`, the audited bind/port, state `/var/lib/ngaturi-deploy` and **`SCHEDULER_ENABLED=true`**. No application secrets enter artifacts or deployment state. Runtime environment contents are external and are not rolled back; do not change them during this release.
 
 Both app and scheduler use the same immutable image. Scheduler runner and crontab are mounted read-only together. The fixed scheduler container name, existing Compose project, deployment lock and active-owner checks prevent a second managed scheduler. A disabled legacy timer is retained and must remain disabled/inactive.
 
-## First deployment of the Neon CU fix
+## Release download and staged controller test before main
 
-The example `v1.2.0` below must be replaced by the actual newly validated release tag. Obtain its matching `ngaturi-production-ops.tar.gz` from the official CI artifact and place it at the artifact path shown below. These are operator instructions; preparing this patch does not run them.
+On a **managed** VM, the new controller downloads `ngaturi-production-ops.tar.gz` from the published, non-prerelease GitHub Release for the exact `vX.Y.Z` tag. It checks the published asset's size and (where provided) SHA-256, validates its manifest/ops checksums and image registry identity, then performs the existing preflight. The container image is pulled only for a real deployment, **not** `--dry-run`. No release state or service is changed during dry-run. `--artifact` remains an explicit, fully validated path override for audited historical/offline releases. Automatic download cannot target `latest`, `stable`, candidates, or an unqualified SHA digest.
+
+To test the **new controller on production before merging Staging into main**, do not overwrite `/home/okee/ngaturi/deploy.sh`, `/var/lib/ngaturi-deploy/units/`, or any active symlink. Use a temporary directory with just two Staging controller files. This is a read-only smoke test of the new downloader and existing production preflight, **not** a production image deployment:
 
 ```sh
 cd /home/okee/ngaturi
-RELEASE_TAG=v1.2.0
-RELEASE_ARTIFACT="/home/okee/releases/$RELEASE_TAG/ngaturi-production-ops.tar.gz"
-STAGED_OPS="/home/okee/releases/$RELEASE_TAG/bootstrap"
-mkdir -p "$STAGED_OPS"
-# Extract the trusted control entry point outside the live runtime.
-tar -xzf "$RELEASE_ARTIFACT" -C "$STAGED_OPS" deploy.sh rollback.sh release.py
-sudo "$STAGED_OPS/deploy.sh" --dry-run "$RELEASE_TAG" --artifact "$RELEASE_ARTIFACT"
-sudo "$STAGED_OPS/deploy.sh" "$RELEASE_TAG" --artifact "$RELEASE_ARTIFACT"
+STAGED_OPS=$(mktemp -d /tmp/ngaturi-controller-test.XXXXXX)
+# For this public repository only; review the Staging branch first.
+curl -fsSL 'https://raw.githubusercontent.com/wildanal2/ngaturi-cms/Staging/ops/production/deploy.sh' -o "$STAGED_OPS/deploy.sh"
+curl -fsSL 'https://raw.githubusercontent.com/wildanal2/ngaturi-cms/Staging/ops/production/release.py' -o "$STAGED_OPS/release.py"
+chmod 700 "$STAGED_OPS/deploy.sh"
+# Replace the tag with one whose GitHub Release already contains ngaturi-production-ops.tar.gz.
+sudo "$STAGED_OPS/deploy.sh" --dry-run v1.1.1
+# After inspection, remove temporary files. Do not overwrite live files.
 ```
 
-Do not invoke the existing legacy VM `deploy.sh` for this first upgrade: it does not enforce artifact pairing. The staged controller validates and installs the complete archive. Afterward normal deployment can also use `sudo ./deploy.sh "$RELEASE_TAG" --artifact "$RELEASE_ARTIFACT"`. A bare tag/digest invocation fails. A digest target is accepted only when it exactly matches the supplied official artifact; `latest`, `stable`, arbitrary image names and Staging candidates are rejected on this production VM.
+The existing `v1.1.2` tag/image **does not automatically guarantee** a GitHub Release asset, because the v1.1.2 workflow only uploaded an Actions artifact. If its Release asset is absent, `--dry-run v1.1.2` without `--artifact` will intentionally fail closed. Backfill the *unchanged, verified* v1.1.2 ops archive as a Release asset (with manual release provenance verification), or use the original artifact via `--artifact` for historical operations. Do not reconstruct v1.1.2 from later sources, rewrite the tag or change its image. A negative error-path test for an absent asset does not prove successful auto-download.
 
-Read-only preflight checks fail if the cwd/runtime is wrong, current release is unknown, the audited baseline files/image have drifted, the artifact is absent/corrupt, image/ops revision or checksum differs, scheduler contains anything besides the two daily jobs, an extra Ngaturi container exists, scheduler activation is false, or the legacy reconciliation timer is active/enabled. Registry pulls, release staging, scheduler/app stop and replacement happen only after these checks. Dry-run does not pull or replace the runtime (it takes the deployment lock).
+## First deployment or upgrade after publishing v1.1.3
+
+Once a strict `v1.1.3` tag is reachable from `main`, the release workflow packages the ops archive, publishes it as a GitHub Release asset, and only then moves `stable`. The VM does not need a source checkout or the archive copied over SCP. **If the VM already uses a managed release controller containing this patch**, run:
+
+```sh
+cd /home/okee/ngaturi
+sudo ./deploy.sh --dry-run v1.1.3
+sudo ./deploy.sh v1.1.3
+```
+
+**If the VM is still running an older controller (including audited legacy v1.1.0 or managed v1.1.2), use the staged controller for this first v1.1.3 deployment.** To avoid relying on the mutable Staging branch for an actual deployment, stage the two controller files from the immutable release tag only after `v1.1.3` has been published:
+
+```sh
+cd /home/okee/ngaturi
+RELEASE_TAG=v1.1.3
+STAGED_OPS=$(mktemp -d /tmp/ngaturi-release-bootstrap.XXXXXX)
+curl -fsSL "https://raw.githubusercontent.com/wildanal2/ngaturi-cms/$RELEASE_TAG/ops/production/deploy.sh" -o "$STAGED_OPS/deploy.sh"
+curl -fsSL "https://raw.githubusercontent.com/wildanal2/ngaturi-cms/$RELEASE_TAG/ops/production/release.py" -o "$STAGED_OPS/release.py"
+chmod 700 "$STAGED_OPS/deploy.sh"
+sudo "$STAGED_OPS/deploy.sh" --dry-run "$RELEASE_TAG"
+# Only after the dry-run passes and during an approved maintenance window:
+sudo "$STAGED_OPS/deploy.sh" "$RELEASE_TAG"
+```
+
+The staged controller validates and installs the complete official artifact; after success, managed `./deploy.sh` and `./rollback.sh` come from the installed release unit. On the audited legacy v1.1.0 VM, the existing exact baseline/ownership checks **must** pass. Do not invoke the old legacy controller for initial bootstrap, overwrite active release symlinks, or bypass these guards.
+
+Preflight fails if the cwd/runtime or baseline is wrong, current release is unknown, a transaction is pending, the GitHub artifact is absent/corrupt, the image/ops revisions or checksums disagree, the scheduler contains anything besides the two daily jobs, an extra Ngaturi container exists, scheduler activation is false, or the legacy reconciliation timer is active/enabled. Registry pulls, release staging, scheduler/app stop and replacement happen only after these checks. A real deployment may cause downtime while app and scheduler are replaced; schema migrations and external environment secrets are not rolled back.
 
 ## v1.1.0 fallback and transaction state
 

@@ -1,5 +1,6 @@
 """Disposable filesystem + mocked Docker only. Never connects to the production VM."""
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -10,6 +11,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
@@ -161,12 +163,85 @@ class RuntimeTests(unittest.TestCase):
         self.assertFalse((self.state / 'units.json').exists())
         self.assertFalse((self.root / '.active-release').exists())
 
-    def test_artifact_required_and_wrong_directory_fail_before_mutation(self):
-        with self.assertRaisesRegex(RuntimeError, 'artifact required'):
-            self.manager().execute('v1.2.0')
+    def test_invalid_auto_fetch_tag_and_wrong_directory_fail_before_mutation(self):
+        with self.assertRaisesRegex(RuntimeError, 'strict vX.Y.Z tag'):
+            self.manager().execute('latest')
         os.chdir(self.directory)
         with self.assertRaisesRegex(RuntimeError, 'runtime directory'):
             self.manager().execute('v1.2.0', self.artifact)
+        self.assert_no_runtime_mutation()
+
+    def mocked_github(self, *, release_tag='v1.2.0', artifact_data=None, asset_digest=None,
+                      asset_size=None, asset_url=None, draft=False, prerelease=False):
+        data = self.artifact.read_bytes() if artifact_data is None else artifact_data
+        metadata = dict(tag_name=release_tag, draft=draft, prerelease=prerelease, assets=[dict(
+            name=r.RELEASE_ASSET, state='uploaded', size=len(data) if asset_size is None else asset_size,
+            digest='sha256:' + r.sha(data) if asset_digest is None else asset_digest,
+            browser_download_url=asset_url or
+                f'https://github.com/{r.GITHUB_REPOSITORY}/releases/download/{release_tag}/{r.RELEASE_ASSET}')])
+        requests = []
+
+        def urlopen(request, timeout=None):
+            requests.append(request.full_url)
+            if request.full_url.startswith('https://api.github.com/'):
+                return io.BytesIO(json.dumps(metadata).encode())
+            if request.full_url.startswith('https://github.com/'):
+                return io.BytesIO(data)
+            raise AssertionError('unexpected HTTP request: ' + request.full_url)
+        return urlopen, requests
+
+    def test_auto_fetch_dry_run_is_read_only_and_uses_exact_tag(self):
+        fetch, requests = self.mocked_github()
+        with patch.object(r.urllib.request, 'urlopen', side_effect=fetch):
+            self.manager().execute('v1.2.0', dry_run=True)
+        self.assertEqual(requests, [
+            'https://api.github.com/repos/wildanal2/ngaturi-cms/releases/tags/v1.2.0',
+            'https://github.com/wildanal2/ngaturi-cms/releases/download/v1.2.0/ngaturi-production-ops.tar.gz'])
+        self.assert_no_runtime_mutation()
+
+    def test_auto_fetch_actual_deploy_uses_image_digest(self):
+        fetch, _ = self.mocked_github()
+        with patch.object(r.urllib.request, 'urlopen', side_effect=fetch):
+            self.manager().execute('v1.2.0')
+        self.assertEqual(self.manager().read_state()['current'].split('-')[0], 'v1.2.0')
+        self.assertIn(('pull', self.manifest['image']), self.backend.events)
+        self.assertEqual(self.backend.running, self.manifest['image'])
+
+    def test_explicit_artifact_never_fetches_from_github(self):
+        with patch.object(r.urllib.request, 'urlopen', side_effect=AssertionError('unexpected network')):
+            self.manager().execute('v1.2.0', self.artifact, dry_run=True)
+        self.assert_no_runtime_mutation()
+
+    def test_missing_release_fails_without_runtime_mutation(self):
+        error = urllib.error.HTTPError('https://api.github.com', 404, 'not found', {}, None)
+        with patch.object(r.urllib.request, 'urlopen', side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, 'not published or unavailable'):
+                self.manager().execute('v1.2.0')
+        self.assert_no_runtime_mutation()
+
+    def test_wrong_asset_identity_size_digest_and_release_status_fail_closed(self):
+        cases = [
+            ({'release_tag': 'v1.2.1'}, 'tag/status mismatch'),
+            ({'draft': True}, 'tag/status mismatch'),
+            ({'prerelease': True}, 'tag/status mismatch'),
+            ({'asset_size': r.MAX_RELEASE_ASSET_BYTES + 1}, 'size invalid'),
+            ({'asset_url': 'https://invalid.example/ops.tar.gz'}, 'unexpected GitHub Release asset URL'),
+            ({'asset_digest': 'sha256:' + 'f' * 64}, 'digest mismatch'),
+            ({'asset_size': 1}, 'length mismatch'),
+        ]
+        for arguments, error in cases:
+            with self.subTest(arguments=arguments):
+                fetch, _ = self.mocked_github(**arguments)
+                with patch.object(r.urllib.request, 'urlopen', side_effect=fetch):
+                    with self.assertRaisesRegex(RuntimeError, error):
+                        self.manager().execute('v1.2.0')
+                self.assert_no_runtime_mutation()
+
+    def test_auto_fetch_cannot_deploy_a_different_manifest(self):
+        fetch, _ = self.mocked_github(release_tag='v1.2.1')
+        with patch.object(r.urllib.request, 'urlopen', side_effect=fetch):
+            with self.assertRaisesRegex(RuntimeError, 'identity differ'):
+                self.manager().execute('v1.2.1')
         self.assert_no_runtime_mutation()
 
     def test_bootstrap_identity_and_pinned_ops_must_match(self):

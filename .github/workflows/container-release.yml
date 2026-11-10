@@ -65,7 +65,7 @@ jobs:
       group: ngaturi-ghcr-publication
       cancel-in-progress: false
     permissions:
-      contents: read
+      contents: write
       packages: write
     env:
       RELEASE_IMAGE: ghcr.io/wildanal2/ngaturi-cms
@@ -115,6 +115,39 @@ jobs:
             release-manifest.json
             ngaturi-production-ops.tar.gz
           if-no-files-found: error
+      - name: Publish and verify exact ops asset on GitHub Release
+        if: steps.release.outputs.kind == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          asset=ngaturi-production-ops.tar.gz
+          repo="$GITHUB_REPOSITORY"
+          existing="$RUNNER_TEMP/ngaturi-existing-asset"
+          verified="$RUNNER_TEMP/ngaturi-verified-asset"
+          mkdir -p "$existing" "$verified"
+          if gh release view "$RELEASE_TAG" -R "$repo" >/dev/null 2>&1; then
+            draft=$(gh release view "$RELEASE_TAG" -R "$repo" --json isDraft --jq .isDraft)
+            if gh release download "$RELEASE_TAG" -R "$repo" --pattern "$asset" --dir "$existing"; then
+              cmp "$asset" "$existing/$asset" || { echo 'Existing release asset differs; refusing overwrite' >&2; exit 1; }
+            elif [[ "$draft" == true ]]; then
+              gh release upload "$RELEASE_TAG" "$asset" -R "$repo"
+            else
+              echo 'Published release lacks its ops asset; refusing silent mutation' >&2
+              exit 1
+            fi
+          else
+            gh release create "$RELEASE_TAG" "$asset" -R "$repo" --verify-tag \
+              --title "$RELEASE_TAG" --notes "Immutable Ngaturi CMS release ops asset." \
+              --draft --latest=false
+            draft=true
+          fi
+          if [[ "$draft" == true ]]; then
+            gh release edit "$RELEASE_TAG" -R "$repo" --draft=false
+          fi
+          gh release download "$RELEASE_TAG" -R "$repo" --pattern "$asset" --dir "$verified"
+          cmp "$asset" "$verified/$asset" || { echo 'Published asset verification failed' >&2; exit 1; }
       - name: Move stable only after complete release and artifact upload
         if: steps.release.outputs.kind == 'release'
         env:
