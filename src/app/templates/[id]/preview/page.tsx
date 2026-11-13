@@ -1,10 +1,9 @@
+import { connection } from "next/server";
+import { getActiveTemplate } from "@/lib/templates/availability";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import {
-  getTemplate,
-  resolveTemplateComposition,
-} from "@/lib/templates/catalog";
+import { resolveTemplateComposition } from "@/lib/templates/catalog";
 import { hydrateTemplateSections } from "@/lib/templates/hydrate";
 import { InvitationRenderer } from "@/lib/invitation/renderer";
 import { InvitationCover } from "@/components/invitation/cover";
@@ -15,8 +14,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
+  await connection();
   const { id } = await params;
-  const t = getTemplate(id);
+  const t = await getActiveTemplate(id);
   return { title: t ? `Pratinjau ${t.name} — Ngaturi` : "Template" };
 }
 
@@ -25,8 +25,9 @@ export default async function TemplatePreviewPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await connection();
   const { id } = await params;
-  const t = getTemplate(id);
+  const t = await getActiveTemplate(id);
   if (!t) notFound();
 
   const sections: SectionData[] = hydrateTemplateSections(t);

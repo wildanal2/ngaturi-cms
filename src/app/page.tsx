@@ -19,7 +19,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { ShowcaseGrid } from "@/components/marketing/showcase-grid";
 import { Reveal } from "@/components/marketing/reveal";
 import { getRecentInvitations } from "@/lib/invitation/showcase";
-import { TEMPLATES } from "@/lib/templates/catalog";
+import { getActiveTemplates } from "@/lib/templates/availability";
 import {
   CornerFloral,
   LeafSprig,
@@ -63,6 +63,7 @@ const FAQ = [
 
 export default async function Home() {
   await connection();
+  const activeTemplates = await getActiveTemplates();
   const recent = await getRecentInvitations(6);
 
   return (
@@ -227,7 +228,7 @@ export default async function Home() {
             </Link>
           </Reveal>
           <Reveal stagger className="mt-12 grid gap-6 sm:grid-cols-3">
-            {TEMPLATES.slice(0, 3).map((t) => (
+            {activeTemplates.slice(0, 3).map((t) => (
               <Link
                 key={t.id}
                 href={`/templates/${t.id}/preview`}

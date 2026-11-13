@@ -1,8 +1,9 @@
+import { connection } from "next/server";
 import { ThumbnailImage as Image } from "@/components/ui/thumbnail-image";
 import type { Metadata } from "next";
 import { MarketingPage, PageHeading } from "@/components/marketing/page-shell";
 import { ButtonLink } from "@/components/ui/button";
-import { TEMPLATES } from "@/lib/templates/catalog";
+import { getActiveTemplates } from "@/lib/templates/availability";
 
 export const metadata: Metadata = { title: "Template — Ngaturi" };
 
@@ -12,7 +13,9 @@ const TIER_LABEL: Record<string, string> = {
   premium: "Premium",
 };
 
-export default function TemplatesPage() {
+export default async function TemplatesPage() {
+  await connection();
+  const activeTemplates = await getActiveTemplates();
   return (
     <MarketingPage>
       <PageHeading
@@ -21,7 +24,7 @@ export default function TemplatesPage() {
       />
 
       <div className="mt-10 grid gap-6 sm:mt-12 sm:grid-cols-2 lg:grid-cols-3">
-        {TEMPLATES.map((t) => (
+        {activeTemplates.map((t) => (
           <article
             key={t.id}
             className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-paper transition-shadow hover:shadow-md"
@@ -44,7 +47,9 @@ export default function TemplatesPage() {
             </a>
             <div className="flex flex-1 flex-col p-5">
               <h2 className="text-lg leading-snug">{t.name}</h2>
-              <p className="mt-1 flex-1 text-sm text-ink-soft">{t.description}</p>
+              <p className="mt-1 flex-1 text-sm text-ink-soft">
+                {t.description}
+              </p>
               <div className="mt-4 flex gap-2">
                 <ButtonLink
                   href={`/templates/${t.id}/preview`}

@@ -1,3 +1,4 @@
+import { getActiveTemplates } from "@/lib/templates/availability";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -8,7 +9,6 @@ import { getCompositionPolicy } from "@/lib/templates/composition-policy";
 import {
   getTemplate,
   resolveTemplateComposition,
-  TEMPLATES,
 } from "@/lib/templates/catalog";
 import { filterTemplatesByCategory } from "@/lib/templates/compatibility";
 import { BuilderShell } from "@/components/builder/builder-shell";
@@ -40,7 +40,7 @@ export default async function BuilderPage({
   const sourceTemplate = inv.sourceTemplate
     ? getTemplate(inv.sourceTemplate)
     : undefined;
-  const templateOptions = TEMPLATES.map(
+  const templateOptions = (await getActiveTemplates()).map(
     ({ id, name, description, category, tier, thumbnail }) => ({
       id,
       name,
