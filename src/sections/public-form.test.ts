@@ -3,6 +3,15 @@ import { postInvitationForm } from "./public-form";
 
 afterEach(() => vi.unstubAllGlobals());
 describe("Shared public form transport", () => {
+  it("forwards the existing personal link token for backend authorization", async () => {
+    vi.stubGlobal("window", { location: { search: "?to=personal-secret" } });
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+    await postInvitationForm("invitation", "rsvp", new FormData());
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      guest_token: "personal-secret",
+    });
+  });
   it.each(["rsvp", "guestbook"] as const)(
     "preserves existing %s payload fields, including spam controls",
     async (capability) => {
