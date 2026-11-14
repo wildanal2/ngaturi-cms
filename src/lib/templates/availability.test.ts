@@ -39,6 +39,13 @@ describe("public template status", () => {
 });
 
 describe("availability policy", () => {
+  it("excludes removed source even when its orphaned database row is active", async () => {
+    mocks.rows = [{ id: "heritage-gate-motion", isActive: true }];
+    expect(await getActiveTemplate("heritage-gate-motion")).toBeUndefined();
+    expect(
+      (await getActiveTemplates()).some((t) => t.id === "heritage-gate-motion"),
+    ).toBe(false);
+  });
   it("keeps unseeded and active presets available and ignores database-only entries", async () => {
     mocks.rows = [
       { id: TEMPLATES[0].id, isActive: true },
