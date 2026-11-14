@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Music2, Pause, Play } from "lucide-react";
 import type { SectionRenderProps } from "../types";
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
 import { usePlayer, type MusicProps } from "../music/shared";
 import { NavIcon } from "../navigation/nav-shared";
 import { LAKON_NAV } from "./data";
@@ -110,7 +111,10 @@ export function NavigationLakon({ inCanvas }: SectionRenderProps) {
 }
 export function MusicLakon({ props, inCanvas, global }: SectionRenderProps) {
   const p = props as MusicProps;
-  const url = p.audio_url || global.music_url;
+  const url = musicPlaybackUrl(
+    p.audio_url || global.music_url || "",
+    p.track_id,
+  );
   const { stage } = useLakon();
   const { ref, playing, toggle } = usePlayer(
     !!url,

@@ -1,5 +1,7 @@
 "use client";
 
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
+
 import { Music, Pause } from "lucide-react";
 import type { SectionRenderProps } from "../types";
 import { Fab, usePlayer, type MusicProps } from "./shared";
@@ -12,14 +14,26 @@ export function MusicPill({ props, inCanvas }: SectionRenderProps) {
 
   return (
     <Fab inCanvas={inCanvas} position={p.s_position} bottom="bottom-20">
-      {p.audio_url ? <audio ref={ref} src={p.audio_url} preload="none" /> : null}
+      {p.audio_url ? (
+        <audio
+          ref={ref}
+          src={musicPlaybackUrl(p.audio_url, p.track_id)}
+          preload="none"
+        />
+      ) : null}
       <button
         onClick={toggle}
         aria-label={playing ? "Jeda musik" : "Putar musik"}
         className="flex items-center gap-2 rounded-full bg-black/70 py-2 pl-2.5 pr-3 text-xs text-white shadow-lg backdrop-blur"
       >
-        {playing ? <Pause size={14} /> : <Music size={14} className="animate-pulse" />}
-        {p.track_title ? <span className="max-w-28 truncate">{p.track_title}</span> : null}
+        {playing ? (
+          <Pause size={14} />
+        ) : (
+          <Music size={14} className="animate-pulse" />
+        )}
+        {p.track_title ? (
+          <span className="max-w-28 truncate">{p.track_title}</span>
+        ) : null}
       </button>
     </Fab>
   );

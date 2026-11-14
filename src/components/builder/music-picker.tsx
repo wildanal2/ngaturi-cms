@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
 import type { FieldContext } from "./field-editors";
 
 interface Track {
@@ -131,7 +132,7 @@ export function MusicPickerField({
     }
     setPreviewId(null);
     setLoadingId(t.id);
-    a.src = t.audioUrl;
+    a.src = musicPlaybackUrl(t.audioUrl, t.id);
     a.play()
       .then(() => {
         setPreviewId(t.id);
@@ -148,7 +149,7 @@ export function MusicPickerField({
       toast.error("Memilih musik baru memerlukan paket Premium.");
       return;
     }
-    ctx.write("audio_url", t.audioUrl);
+    ctx.write("audio_url", musicPlaybackUrl(t.audioUrl, t.id));
     ctx.write("track_id", t.id);
     ctx.write("track_title", t.title);
     ctx.write("track_artist", t.artist ?? "");
