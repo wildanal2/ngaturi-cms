@@ -24,3 +24,22 @@ export async function readUploadResponse(
   }
   return { publicUrl: data.publicUrl };
 }
+
+/** Mirrors MAX_AUDIO_BYTES / the 10 MB image cap enforced by POST /api/uploads. */
+export const CLIENT_MAX_AUDIO_BYTES = 15 * 1024 * 1024;
+export const CLIENT_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * The server answers an oversized upload with 413 before reading the body, and
+ * on DEV that early reply never reached Chromium through the tunnel: the
+ * Builder spinner ran forever. Refuse files the server is sure to reject.
+ */
+export function uploadSizeError(
+  file: Pick<File, "size">,
+  kind: "audio" | "image",
+): string | null {
+  const max =
+    kind === "audio" ? CLIENT_MAX_AUDIO_BYTES : CLIENT_MAX_IMAGE_BYTES;
+  if (file.size <= max) return null;
+  return `File terlalu besar (maks ${max / 1024 / 1024} MB). Kompres atau pilih file lain.`;
+}

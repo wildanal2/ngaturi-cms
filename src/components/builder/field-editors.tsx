@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Field } from "@/sections/types";
-import { readUploadResponse } from "@/lib/uploads/client";
+import { readUploadResponse, uploadSizeError } from "@/lib/uploads/client";
 import { getDeep } from "@/stores/builder-store";
 import { CropDialog, type CropResult } from "./crop-dialog";
 import { MusicPickerField } from "./music-picker";
@@ -309,6 +309,11 @@ export function ImageInput({
   function pickFile(f: File) {
     if (!f.type.startsWith("image/")) {
       toast.error("File harus berupa gambar.");
+      return;
+    }
+    const tooBig = uploadSizeError(f, "image");
+    if (tooBig) {
+      toast.error(tooBig);
       return;
     }
     setPending({ kind: "file", file: f, url: URL.createObjectURL(f) });

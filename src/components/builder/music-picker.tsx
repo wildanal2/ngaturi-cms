@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { musicPlaybackUrl } from "@/lib/music/playback-url";
-import { readUploadResponse } from "@/lib/uploads/client";
+import { readUploadResponse, uploadSizeError } from "@/lib/uploads/client";
 import {
   browserCanPlayType,
   playableInBrowser,
@@ -244,6 +244,11 @@ export function MusicPickerField({
     }
     if (!file.type.startsWith("audio/")) {
       toast.error("File harus berupa audio (mp3).");
+      return;
+    }
+    const tooBig = uploadSizeError(file, "audio");
+    if (tooBig) {
+      toast.error(tooBig);
       return;
     }
     setUploading(true);

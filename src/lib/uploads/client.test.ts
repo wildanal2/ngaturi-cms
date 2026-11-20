@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { readUploadResponse } from "./client";
+import { MAX_AUDIO_BYTES } from "@/lib/image-processing/upload-safety";
+import {
+  CLIENT_MAX_AUDIO_BYTES,
+  readUploadResponse,
+  uploadSizeError,
+} from "./client";
 
 describe("readUploadResponse", () => {
   it("returns the uploaded public URL", async () => {
@@ -43,6 +48,25 @@ describe("readUploadResponse", () => {
   it("rejects a 200 without a public URL", async () => {
     await expect(readUploadResponse(Response.json({}))).rejects.toThrow(
       "Upload gagal (HTTP 200). Coba lagi.",
+    );
+  });
+});
+
+describe("uploadSizeError", () => {
+  it("keeps the client audio limit equal to the server limit", () => {
+    expect(CLIENT_MAX_AUDIO_BYTES).toBe(MAX_AUDIO_BYTES);
+  });
+
+  // Regression (#18 DEV QA): a 16 MB MP3 left the Builder spinner running
+  // forever because the server's early 413 never reached the browser.
+  it("rejects files the server would refuse, before any request", () => {
+    expect(uploadSizeError({ size: MAX_AUDIO_BYTES }, "audio")).toBeNull();
+    expect(uploadSizeError({ size: MAX_AUDIO_BYTES + 1 }, "audio")).toMatch(
+      /maks 15 MB/,
+    );
+    expect(uploadSizeError({ size: 10 * 1024 * 1024 }, "image")).toBeNull();
+    expect(uploadSizeError({ size: 10 * 1024 * 1024 + 1 }, "image")).toMatch(
+      /maks 10 MB/,
     );
   });
 });
