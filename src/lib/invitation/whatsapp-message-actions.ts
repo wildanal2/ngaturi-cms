@@ -12,18 +12,16 @@ import {
   validateWhatsappMessage,
   type WhatsappTemplate,
 } from "./whatsapp-message";
+import {
+  defaultWhatsappTemplate,
+  readWhatsappTemplate,
+  whatsappMessageKey,
+} from "./whatsapp-template-store";
 
 type Result =
   { ok: true; template: WhatsappTemplate } | { ok: false; error: string };
 
-function defaultTemplate(): WhatsappTemplate {
-  return {
-    message: DEFAULT_WHATSAPP_MESSAGE,
-    source: "default",
-    isCustom: false,
-  };
-}
-
+const defaultTemplate = defaultWhatsappTemplate;
 async function ownedInvitation(invitationId: string) {
   const session = await requireUser();
   if (
@@ -45,7 +43,7 @@ async function ownedInvitation(invitationId: string) {
   if (!inv) throw new Error("Undangan tidak ditemukan.");
   return {
     inv,
-    key: `ngaturi:whatsapp:message:v1:${encodeURIComponent(session.user.id)}:${encodeURIComponent(inv.id)}`,
+    key: whatsappMessageKey(session.user.id, inv.id),
   };
 }
 
@@ -54,19 +52,7 @@ export async function getWhatsappTemplate(
   invitationId: string,
 ): Promise<WhatsappTemplate> {
   const { key } = await ownedInvitation(invitationId);
-  try {
-    const message = await redis.get(key);
-    if (message === null) return defaultTemplate();
-    if (validateWhatsappMessage(message))
-      throw new Error("Invalid stored template");
-    return { message, source: "custom", isCustom: true };
-  } catch {
-    return {
-      ...defaultTemplate(),
-      readError:
-        "Pesan tersimpan belum dapat dibaca. Pesan default digunakan sementara. Muat ulang sebelum mengubah pesan.",
-    };
-  }
+  return readWhatsappTemplate(key);
 }
 
 /** PUT equivalent. No TTL and no database writes. */

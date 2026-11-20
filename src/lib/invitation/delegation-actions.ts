@@ -1,0 +1,122 @@
+"use server";
+
+import { and, eq } from "drizzle-orm";
+import { customAlphabet } from "nanoid";
+import { revalidatePath } from "next/cache";
+import { requireUser } from "@/lib/auth/helpers";
+import { db } from "@/lib/db";
+import { invitations } from "@/lib/db/schema";
+import {
+  createDelegatedGuest,
+  issueDelegateGrant,
+  isUuid,
+  loadDelegateView,
+  markDelegatedGuestSent,
+  readDelegateStatus,
+  resolveDelegate,
+  revokeDelegateGrant,
+  type DelegateFailure,
+  type DelegateStatus,
+  type DelegateView,
+} from "./delegation";
+
+const guestToken = customAlphabet("abcdefghijkmnpqrstuvwxyz23456789", 10);
+
+async function ownedInvitation(invitationId: unknown) {
+  const session = await requireUser();
+  if (!isUuid(invitationId)) throw new Error("Undangan tidak ditemukan.");
+  const [inv] = await db
+    .select()
+    .from(invitations)
+    .where(
+      and(
+        eq(invitations.id, invitationId),
+        eq(invitations.userId, session.user.id),
+      ),
+    )
+    .limit(1);
+  if (!inv) throw new Error("Undangan tidak ditemukan.");
+  return inv;
+}
+
+/* -------------------------------- owner -------------------------------- */
+
+export async function getDelegateStatus(
+  invitationId: string,
+): Promise<DelegateStatus> {
+  const inv = await ownedInvitation(invitationId);
+  return readDelegateStatus(inv.id);
+}
+
+/** The raw token is returned exactly once; only its hash is stored. */
+export async function createDelegateLink(invitationId: string, days: number) {
+  const inv = await ownedInvitation(invitationId);
+  const res = await issueDelegateGrant(inv, days);
+  revalidatePath(`/invitations/${inv.id}`);
+  return res;
+}
+
+export async function revokeDelegateLink(invitationId: string) {
+  const inv = await ownedInvitation(invitationId);
+  const res = await revokeDelegateGrant(inv.id);
+  revalidatePath(`/invitations/${inv.id}`);
+  return res;
+}
+
+/* ------------------------------- delegate ------------------------------- */
+
+export type DelegateResult =
+  | { ok: true; view: DelegateView; error?: string }
+  | { ok: false; reason: DelegateFailure };
+
+export async function fetchDelegateView(
+  token: string,
+): Promise<DelegateResult> {
+  const r = await resolveDelegate(token);
+  if (!r.ok) return r;
+  try {
+    return { ok: true, view: await loadDelegateView(r) };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
+export async function addDelegateGuest(
+  token: string,
+  formData: FormData,
+): Promise<DelegateResult> {
+  const r = await resolveDelegate(token);
+  if (!r.ok) return r;
+  const created = await createDelegatedGuest(
+    r,
+    {
+      name: formData.get("guest_name"),
+      group: formData.get("guest_group"),
+      phone: formData.get("whatsapp_phone"),
+      maxGuests: formData.get("max_guests"),
+    },
+    guestToken,
+  );
+  try {
+    const view = await loadDelegateView(r);
+    return created.ok
+      ? { ok: true, view }
+      : { ok: true, view, error: created.error };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
+export async function markDelegateGuestSent(
+  token: string,
+  guestId: string,
+): Promise<DelegateResult> {
+  const r = await resolveDelegate(token);
+  if (!r.ok) return r;
+  try {
+    await markDelegatedGuestSent(r, guestId);
+    return { ok: true, view: await loadDelegateView(r) };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}

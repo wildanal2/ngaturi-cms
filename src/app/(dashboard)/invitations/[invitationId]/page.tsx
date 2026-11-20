@@ -15,6 +15,8 @@ import { ShareBox } from "@/components/dashboard/share-box";
 import { ViewsChart } from "@/components/dashboard/views-chart";
 import { DeleteInvitation } from "@/components/dashboard/delete-invitation";
 import { InvitationLink } from "@/components/dashboard/invitation-link";
+import { DelegateAccess } from "@/components/dashboard/delegate-access";
+import { readDelegateStatus } from "@/lib/invitation/delegation";
 import { PaymentSandboxNotice } from "@/components/payment-sandbox-notice";
 
 export default async function InvitationDetailPage({
@@ -41,7 +43,8 @@ export default async function InvitationDetailPage({
   // eslint-disable-next-line react-hooks/purity
   const nowMs = Date.now();
   const since = new Date(nowMs - 14 * 86_400_000);
-  const [rsvps, messages, viewRows] = await Promise.all([
+  const [delegateStatus, rsvps, messages, viewRows] = await Promise.all([
+    readDelegateStatus(inv.id),
     db
       .select()
       .from(rsvpResponses)
@@ -139,6 +142,14 @@ export default async function InvitationDetailPage({
       />
 
       {inv.status === "published" ? <ShareBox url={url} /> : null}
+
+      <DelegateAccess
+        invitationId={inv.id}
+        initial={{
+          active: delegateStatus.active,
+          expiresAt: delegateStatus.expiresAt,
+        }}
+      />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <Stat label="Total RSVP" value={rsvps.length} />
