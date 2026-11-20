@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Field } from "@/sections/types";
+import { readUploadResponse } from "@/lib/uploads/client";
 import { getDeep } from "@/stores/builder-store";
 import { CropDialog, type CropResult } from "./crop-dialog";
 import { MusicPickerField } from "./music-picker";
@@ -294,8 +295,7 @@ export function ImageInput({
     setBusy(true);
     try {
       const res = await fetch("/api/uploads", { method: "POST", body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Gagal upload");
+      const data = await readUploadResponse(res);
       onChange(data.publicUrl);
       toast.success("Foto disimpan & dioptimasi");
     } catch (e) {
