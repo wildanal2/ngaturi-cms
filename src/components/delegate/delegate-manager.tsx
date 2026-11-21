@@ -17,8 +17,10 @@ import {
 } from "@/lib/invitation/delegation-format";
 import {
   renderWhatsappMessage,
+  validateWhatsappMessage,
   whatsappUrl,
 } from "@/lib/invitation/whatsapp-message";
+import { DelegateMessageEditor } from "./delegate-message-editor";
 
 const field = "rounded-lg border border-line bg-paper px-3 py-2 text-sm";
 
@@ -31,6 +33,8 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
   const [tab, setTab] = useState<"share" | "rsvp">("share");
   const [pending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
+  // Session-only edit of the reseller's message; never persisted or sent.
+  const [draft, setDraft] = useState(initial.template.message);
 
   function apply(res: DelegateResult) {
     if (!res.ok) {
@@ -58,14 +62,10 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
   }
 
   const link = (g: DelegateGuest) => `${view.baseUrl}?to=${g.slugToken}`;
+  const draftError = validateWhatsappMessage(draft);
   const wa = (g: DelegateGuest) =>
     whatsappUrl(
-      renderWhatsappMessage(
-        view.template.message,
-        g.guestName,
-        link(g),
-        view.coupleNames,
-      ),
+      renderWhatsappMessage(draft, g.guestName, link(g), view.coupleNames),
       g.whatsappPhone,
     );
   const count = (s: string) =>
@@ -181,6 +181,15 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
             </p>
           )}
 
+          <DelegateMessageEditor
+            base={view.template.message}
+            draft={draft}
+            onChange={setDraft}
+            coupleNames={view.coupleNames}
+            sampleName={view.guests[0]?.guestName ?? "Budi Santoso"}
+            sampleLink={`${view.baseUrl}?to=contoh`}
+          />
+
           <ul className="space-y-2">
             {view.guests.map((g) => (
               <li
@@ -221,20 +230,33 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
                   >
                     Salin link
                   </button>
-                  <a
-                    href={wa(g)}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() =>
-                      startTransition(
-                        async () =>
-                          void apply(await markDelegateGuestSent(token, g.id)),
-                      )
-                    }
-                    className="rounded-full bg-forest px-3 py-1.5 font-medium text-cream"
-                  >
-                    Kirim WA
-                  </a>
+                  {draftError ? (
+                    <button
+                      type="button"
+                      disabled
+                      title={draftError}
+                      className="rounded-full bg-forest px-3 py-1.5 font-medium text-cream opacity-50"
+                    >
+                      Kirim WA
+                    </button>
+                  ) : (
+                    <a
+                      href={wa(g)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() =>
+                        startTransition(
+                          async () =>
+                            void apply(
+                              await markDelegateGuestSent(token, g.id),
+                            ),
+                        )
+                      }
+                      className="rounded-full bg-forest px-3 py-1.5 font-medium text-cream"
+                    >
+                      Kirim WA
+                    </a>
+                  )}
                 </div>
               </li>
             ))}

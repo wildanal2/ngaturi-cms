@@ -21,3 +21,7 @@ Pemilik membuat tautan `/kelola-tamu/<token>` agar pelanggan tanpa akun Ngaturi 
 
 ## Kontrak Redis REST
 `redis/rest.ts` memakai `automaticDeserialization: false`. `RedisStore` menyimpan dan mengembalikan string; tanpa opsi ini klien Upstash me-`JSON.parse` balasan sehingga string JSON kembali sebagai objek (tautan valid dianggap tidak valid, cabut/buat ulang gagal). Grant lama (string JSON biasa) tetap terbaca. Regression: `delegation.rest.test.ts` menjalankan klien Upstash asli terhadap emulator protokol (`src/test/fake-upstash-rest.ts`).
+
+## Edit pesan WhatsApp pelanggan & pratinjau tautan
+- Tab Share Undangan punya "Edit Pesan WhatsApp": draf hanya di state halaman (tidak disimpan, hilang saat muat ulang), memakai `validateWhatsappMessage` / `renderWhatsappMessage`, dan tidak menyentuh template milik pemilik (#23). Pesan tidak valid menonaktifkan "Kirim WA". Reset kembali ke pesan reseller (atau bawaan).
+- Pratinjau WhatsApp: metadata OG undangan publik sudah benar (200, tanpa redirect, `og:url` tanpa token `?to=`, `og:image` absolut). Kartu OG berfoto bisa ±490 KB sebagai PNG, di atas batas ±300 KB yang dipakai WhatsApp untuk thumbnail, sehingga `opengraph-image` mengkodekan ulang kartu > 250 KB menjadi JPEG (±45 KB, `og-compress.ts`; Node saja, Workers tetap PNG). WhatsApp tetap memiliki cache/kebijakan sendiri; pratinjau nyata harus dicek manual di aplikasi.

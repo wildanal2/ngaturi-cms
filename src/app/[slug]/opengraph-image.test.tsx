@@ -12,6 +12,7 @@ vi.mock("next/og", () => ({
     }
   },
 }));
+vi.mock("@/lib/invitation/og-compress", () => ({ fitOgImage: async (r: unknown) => r }));
 vi.mock("next/headers", () => ({
   headers: () => {
     throw new Error("OG must not read request headers");
