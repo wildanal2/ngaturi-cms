@@ -1,5 +1,7 @@
 "use client";
 
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
+
 import { Pause, Play } from "lucide-react";
 import type { SectionRenderProps } from "../types";
 import { Sleeve, usePlayer, type MusicProps } from "./shared";
@@ -19,12 +21,20 @@ export function MusicBar({ props, inCanvas }: SectionRenderProps) {
           : "fixed inset-x-0 bottom-16 z-40 mx-auto max-w-sm px-3"
       }
     >
-      {p.audio_url ? <audio ref={ref} src={p.audio_url} preload="none" /> : null}
+      {p.audio_url ? (
+        <audio
+          ref={ref}
+          src={musicPlaybackUrl(p.audio_url, p.track_id)}
+          preload="none"
+        />
+      ) : null}
       <div className="flex items-center gap-3 rounded-full bg-ink/85 py-1.5 pl-1.5 pr-3 text-white shadow-lg backdrop-blur">
         <Sleeve cover={p.cover_url} playing={spinning} size={36} />
         <span className="min-w-0 flex-1 truncate text-xs">
           {p.track_title ?? "Musik latar"}
-          {p.track_artist ? <span className="opacity-60"> · {p.track_artist}</span> : null}
+          {p.track_artist ? (
+            <span className="opacity-60"> · {p.track_artist}</span>
+          ) : null}
         </span>
         <button
           onClick={toggle}

@@ -1,5 +1,7 @@
 "use client";
 
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
+
 import { Music2, VolumeX } from "lucide-react";
 import type { SectionRenderProps } from "../types";
 import { usePlayer, type MusicProps } from "./shared";
@@ -24,7 +26,12 @@ export function MusicCinematicVintage({
       data-side={p.s_position}
     >
       {p.audio_url ? (
-        <audio data-loading-audio ref={ref} src={p.audio_url} preload="none" />
+        <audio
+          data-loading-audio
+          ref={ref}
+          src={musicPlaybackUrl(p.audio_url, p.track_id)}
+          preload="none"
+        />
       ) : null}
       <button
         type="button"

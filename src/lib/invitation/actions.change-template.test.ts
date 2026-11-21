@@ -10,6 +10,7 @@ import type { TemplatePreset } from "@/lib/templates/catalog";
 import { LEGACY_SEKAR_JAWA_ID, SEKAR_JAWA_ID } from "@/lib/templates/identity";
 
 const mocks = vi.hoisted(() => ({
+  assertTemplateActive: vi.fn(),
   transaction: vi.fn(),
   select: vi.fn(),
   update: vi.fn(),
@@ -18,6 +19,10 @@ const mocks = vi.hoisted(() => ({
   updateTag: vi.fn(),
   refresh: vi.fn(),
   redirect: vi.fn(),
+}));
+
+vi.mock("@/lib/templates/availability", () => ({
+  assertTemplateActive: mocks.assertTemplateActive,
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -38,6 +43,7 @@ vi.mock("next/cache", () => ({
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 import {
+  applyInitialTemplate,
   changeInvitationTemplate,
   createInvitation,
   deleteInvitation,
@@ -691,5 +697,66 @@ describe("edit-expiry mutation enforcement", () => {
     expect(updateTargets).not.toContain(userProfiles);
     expect(deleteTargets).toEqual([invitations]);
     expect(mocks.redirect).toHaveBeenCalledWith("/invitations");
+  });
+});
+
+describe("inactive template selection", () => {
+  it("rejects a manipulated create request without creating an invitation", async () => {
+    mocks.getTemplate.mockReturnValue(targetTemplate);
+    mocks.assertTemplateActive.mockRejectedValueOnce(
+      new Error("Template nonaktif"),
+    );
+    const insert = vi.fn(() => ({
+      values: vi.fn(() => ({ onConflictDoNothing: vi.fn() })),
+    }));
+    const tx = {
+      insert,
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            for: vi.fn(() => ({ limit: vi.fn(async () => [{ bonus: 0 }]) })),
+            then: (resolve: (value: unknown) => unknown) =>
+              resolve([{ count: 0 }]),
+          })),
+        })),
+      })),
+    };
+    mocks.transaction.mockImplementationOnce(async (callback) => callback(tx));
+    await expect(createInvitation(targetTemplate.id)).rejects.toThrow(
+      "Template nonaktif",
+    );
+    expect(insert).toHaveBeenCalledTimes(2);
+    expect(insert).toHaveBeenLastCalledWith(templates);
+  });
+});
+
+describe("inactive template mutations", () => {
+  it.each(["initial", "change"])(
+    "rejects an inactive target on %s selection without updating the invitation",
+    async (mode) => {
+      const { set } = transactionBuilder(
+        mode === "initial"
+          ? { ...invitation, sourceTemplate: null }
+          : invitation,
+      );
+      mocks.assertTemplateActive.mockRejectedValueOnce(
+        new Error("Template nonaktif"),
+      );
+      const result = await (
+        mode === "initial" ? applyInitialTemplate : changeInvitationTemplate
+      )(invitation.id, targetTemplate.id);
+      expect(result.ok).toBe(false);
+      expect(set).not.toHaveBeenCalled();
+      expect(mocks.updateTag).not.toHaveBeenCalled();
+    },
+  );
+  it("keeps an inactive current template without changing existing data", async () => {
+    const { set, insert } = transactionBuilder();
+    expect(
+      await changeInvitationTemplate(invitation.id, sourceTemplate.id),
+    ).toEqual({ ok: true });
+    expect(mocks.assertTemplateActive).not.toHaveBeenCalled();
+    expect(set).not.toHaveBeenCalled();
+    expect(insert).not.toHaveBeenCalled();
   });
 });

@@ -31,6 +31,19 @@ import type { SectionData } from "@/sections/types";
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
+  try {
+    return await handleUpload(req);
+  } catch (error) {
+    // Storage/DB/auth failures must still answer JSON: the Builder parses it.
+    console.error("[uploads] unexpected failure", error);
+    return NextResponse.json(
+      { error: "Upload gagal diproses server. Coba lagi beberapa saat lagi." },
+      { status: 500 },
+    );
+  }
+}
+
+async function handleUpload(req: Request) {
   const db = getDb();
   const session = await getSession();
   if (!session) {

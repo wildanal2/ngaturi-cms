@@ -6,6 +6,8 @@ import { guestInvites, invitations } from "@/lib/db/schema";
 import { env } from "@/lib/env";
 import { GuestManager } from "@/components/dashboard/guest-manager";
 import { hasProFeatures, isTrialActive } from "@/lib/invitation/entitlement";
+import { getWhatsappTemplate } from "@/lib/invitation/whatsapp-message-actions";
+import { whatsappCoupleNames } from "@/lib/invitation/whatsapp-message";
 
 export default async function GuestsPage({
   params,
@@ -35,6 +37,7 @@ export default async function GuestsPage({
   const canCreate = hasProFeatures(inv);
   const viaTrial = isTrialActive(inv);
   const baseUrl = `${env.BETTER_AUTH_URL}/${inv.slug}`;
+  const whatsappTemplate = await getWhatsappTemplate(inv.id);
 
   return (
     <div className="space-y-6">
@@ -66,8 +69,11 @@ export default async function GuestsPage({
         </p>
       ) : null}
       <GuestManager
+        key={inv.id}
         invitationId={inv.id}
+        initialWhatsappTemplate={whatsappTemplate}
         baseUrl={baseUrl}
+        coupleNames={whatsappCoupleNames(inv.sections, inv.eventTitle)}
         canCreate={canCreate}
         guests={guests.map((g) => ({
           id: g.id,

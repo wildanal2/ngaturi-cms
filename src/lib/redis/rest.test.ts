@@ -60,6 +60,7 @@ describe("Redis REST adapter", () => {
     expect(mocks.constructor).toHaveBeenCalledWith({
       url: "https://redis.example.com",
       token: "secret",
+      automaticDeserialization: false,
     });
     expect(mocks.set).toHaveBeenNthCalledWith(1, "plain", "value");
     expect(mocks.set).toHaveBeenNthCalledWith(2, "expiring", "value", {
