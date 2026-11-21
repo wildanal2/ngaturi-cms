@@ -15,6 +15,7 @@ import {
   canonicalTemplateId,
   templateIdentityAliases,
 } from "@/lib/templates/identity";
+import { assertTemplateActive } from "@/lib/templates/availability";
 import { getTemplate } from "@/lib/templates/catalog";
 import {
   hydrateTemplateSections,
@@ -102,6 +103,8 @@ export async function createInvitation(templateId: string): Promise<never> {
         isActive: true,
       })
       .onConflictDoNothing();
+
+    await assertTemplateActive(tx, template.id);
 
     const createdAt = new Date();
     const [row] = await tx
@@ -212,6 +215,8 @@ export async function applyInitialTemplate(
           isActive: true,
         })
         .onConflictDoNothing();
+
+      await assertTemplateActive(tx, template.id);
 
       await tx
         .update(invitations)
@@ -342,6 +347,8 @@ export async function changeInvitationTemplate(
           isActive: true,
         })
         .onConflictDoNothing();
+
+      await assertTemplateActive(tx, targetTemplate.id);
 
       await tx
         .update(invitations)

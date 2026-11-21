@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { SectionRenderProps } from "../types";
 import { SectionShell, SectionTitle } from "../shared";
+import { postInvitationForm } from "../public-form";
 import { TurnstileField } from "../turnstile-field";
 
 type Msg = { id: string; name: string; message: string; createdAt: string };
@@ -15,6 +16,7 @@ export function GuestbookCards({
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
   const [pendingNote, setPendingNote] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isPreview || !invitationId) return;
@@ -26,22 +28,21 @@ export function GuestbookCards({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (isPreview) return;
+    if (isPreview || !invitationId) return;
     const form = e.currentTarget;
     const fd = new FormData(form);
     setState("sending");
-    const res = await fetch(`/api/public/${invitationId}/guestbook`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(Object.fromEntries(fd)),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (res.ok) {
+    setError(null);
+    try {
+      const body = await postInvitationForm(invitationId, "guestbook", fd);
       form.reset();
       setState("done");
       if (body.pending) setPendingNote(true);
       else if (body.message) setMsgs((m) => [body.message, ...m]);
-    } else {
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Gagal mengirim. Coba lagi.",
+      );
       setState("idle");
     }
   }
@@ -69,6 +70,7 @@ export function GuestbookCards({
           className="inv-input"
         />
         <TurnstileField />
+        {error ? <p role="alert">{error}</p> : null}
         <button
           type="submit"
           disabled={state === "sending"}

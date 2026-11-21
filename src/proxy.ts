@@ -26,7 +26,7 @@ export function proxy(request: NextRequest) {
   let response = NextResponse.next();
   if (needsAuth && !getSessionCookie(request)) {
     const url = new URL("/login", canonicalApplicationOrigin());
-    url.searchParams.set("next", pathname);
+    url.searchParams.set("next", pathname + request.nextUrl.search);
     response = NextResponse.redirect(url);
   }
   if (!siteIndexingEnabled()) {

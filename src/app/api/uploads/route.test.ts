@@ -450,6 +450,31 @@ describe("upload entitlement enforcement", () => {
     expect(images.info).not.toHaveBeenCalled();
   });
 
+  // Regression (#18 QA): storage errors escaped as an HTML/empty HTTP 500 and
+  // the Builder crashed parsing it. Every failure must stay JSON.
+  it("answers JSON when object storage rejects an audio upload", async () => {
+    premiumInvitation();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.putObject.mockRejectedValue(
+      new Error("Object upload failed with status 411"),
+    );
+    const response = await POST(uploadRequest("audio"));
+    expect(response.status).toBe(500);
+    expect(response.headers.get("content-type")).toMatch(/application\/json/);
+    await expect(response.json()).resolves.toEqual({
+      error: "Upload gagal diproses server. Coba lagi beberapa saat lagi.",
+    });
+    expect(log).toHaveBeenCalled();
+  });
+
+  it("answers JSON when session lookup throws before validation", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.getSession.mockRejectedValue(new Error("redis down"));
+    const response = await POST(uploadRequest("image"));
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toHaveProperty("error");
+  });
+
   it("fails closed if a Worker invocation lacks IMAGES", async () => {
     premiumInvitation();
     mocks.getWorkerEnv.mockReturnValue({});

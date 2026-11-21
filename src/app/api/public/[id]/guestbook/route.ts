@@ -11,6 +11,7 @@ import {
   isInvitationPubliclyActive,
 } from "@/lib/invitation/visibility";
 import { getSession } from "@/lib/auth/helpers";
+import { authorizeGuest } from "@/lib/invitation/guest-authorization";
 import { trustedClientIp } from "@/lib/security/request-metadata";
 
 export async function GET(
@@ -62,9 +63,10 @@ export async function GET(
 }
 
 const Body = z.object({
+  guest_token: z.string().min(1).max(40).optional(),
   _hp: z.string().optional(),
   "cf-turnstile-response": z.string().optional(),
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(255),
   message: z.string().min(1).max(1000),
 });
 
@@ -75,6 +77,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  if (!z.uuid().safeParse(id).success)
+    return NextResponse.json({ error: "Data tidak valid." }, { status: 400 });
   const h = await headers();
   const ip = trustedClientIp(h) ?? "unknown";
 
@@ -115,6 +119,17 @@ export async function POST(
     );
   }
 
+  const guest = await authorizeGuest(
+    id,
+    parsed.data.guest_token,
+    parsed.data.name,
+  );
+  if (!guest)
+    return NextResponse.json(
+      { error: "Gunakan link undangan personal dengan nama tamu yang sesuai." },
+      { status: 403 },
+    );
+
   const gbSection = (
     inv.sections as Array<{ type: string; props?: Record<string, unknown> }>
   ).find((s) => s.type === "guestbook");
@@ -130,7 +145,7 @@ export async function POST(
     .insert(guestbookMessages)
     .values({
       invitationId: id,
-      name: parsed.data.name,
+      name: guest.guestName,
       message: parsed.data.message,
       status,
       ipAddress: ip.slice(0, 64),

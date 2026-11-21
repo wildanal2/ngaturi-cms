@@ -3,13 +3,14 @@ import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations, userProfiles } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { TEMPLATES } from "@/lib/templates/catalog";
+import { getActiveTemplates } from "@/lib/templates/availability";
 import { createInvitation } from "@/lib/invitation/actions";
 import { maxInvitationsFor } from "@/lib/invitation/entitlement";
 import { ButtonLink } from "@/components/ui/button";
 
 export default async function NewInvitationPage() {
   const session = await requireUser();
+  const activeTemplates = await getActiveTemplates();
   const [[{ count }], [profile]] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
@@ -45,7 +46,7 @@ export default async function NewInvitationPage() {
       ) : null}
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {TEMPLATES.map((t) => (
+        {activeTemplates.map((t) => (
           <form
             key={t.id}
             action={createInvitation.bind(null, t.id)}

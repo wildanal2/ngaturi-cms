@@ -28,6 +28,23 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  // Dev-only request log must not print bearer-token delegation URLs.
+  logging: { incomingRequests: { ignore: [/\/kelola-tamu\//] } },
+
+  // Delegation URLs carry a bearer token: no caching, indexing or Referer.
+  headers() {
+    return [
+      {
+        source: "/kelola-tamu/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+        ],
+      },
+    ];
+  },
+
   turbopack: {
     root: import.meta.dirname,
   },

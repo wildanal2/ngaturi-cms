@@ -1,3 +1,5 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runWithInvocationContext } from "@/lib/runtime/context";
 import { env } from "@/lib/env";
@@ -35,11 +37,11 @@ describe("public media origins", () => {
         body: new Uint8Array([1, 2]),
         contentType: "audio/wav",
       });
-      const request = fetchMock.mock.calls[0][0] as Request;
-      expect(request.url).toBe(
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe(
         `https://example.r2.cloudflarestorage.com/dev-fixture/${key}`,
       );
-      expect(request.headers.get("authorization")).toMatch(
+      expect(new Headers(init.headers).get("authorization")).toMatch(
         /^AWS4-HMAC-SHA256 /,
       );
       expect(publicUrl(key)).toBe(`https://media.example.com/${key}`);
@@ -168,11 +170,65 @@ describe("public media origins", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const request = fetchMock.mock.calls[0][0] as Request;
-    expect(request.method).toBe("PUT");
-    expect(request.url).toBe(
-      "https://s3.example.com/test/invitations/test/audio.mp3",
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe("PUT");
+    expect(url).toBe("https://s3.example.com/test/invitations/test/audio.mp3");
+    expect(new Headers(init.headers).get("authorization")).toMatch(
+      /^AWS4-HMAC-SHA256 /,
     );
-    expect(request.headers.get("authorization")).toMatch(/^AWS4-HMAC-SHA256 /);
+  });
+
+  // Regression (#18 QA): every DEV upload returned HTTP 500 because R2 answered
+  // 411 Length Required. Next's patched fetch rebuilds a Request input around
+  // its body stream, which Node sends chunked without Content-Length.
+  it("sends a sized body even when fetch rebuilds Request inputs like Next.js", async () => {
+    const received: { length?: string; chunked?: string; bytes: number }[] = [];
+    const server = createServer((req, res) => {
+      let bytes = 0;
+      req.on("data", (chunk: Buffer) => (bytes += chunk.length));
+      req.on("end", () => {
+        received.push({
+          length: req.headers["content-length"],
+          chunked: req.headers["transfer-encoding"],
+          bytes,
+        });
+        // R2 behaviour: a PUT without Content-Length is rejected.
+        res.statusCode = req.headers["content-length"] ? 200 : 411;
+        res.end();
+      });
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const { port } = server.address() as AddressInfo;
+    const realFetch = globalThis.fetch;
+    // Mirrors next/dist/server/lib/patch-fetch.js doOriginalFetch.
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+      input instanceof Request
+        ? realFetch(
+            new Request(input.url, {
+              method: input.method,
+              headers: input.headers,
+              body: input.body,
+              duplex: "half",
+            } as RequestInit),
+          )
+        : realFetch(input, init),
+    );
+    const original = env.AWS_ENDPOINT_URL_S3;
+    Object.assign(env, { AWS_ENDPOINT_URL_S3: `http://127.0.0.1:${port}` });
+    try {
+      await putObject({
+        key: "invitations/test/audio/fixture.mp3",
+        body: new Uint8Array(1234),
+        contentType: "audio/mpeg",
+      });
+    } finally {
+      Object.assign(env, { AWS_ENDPOINT_URL_S3: original });
+      await new Promise((resolve) => server.close(resolve));
+    }
+    expect(received).toEqual([
+      { length: "1234", chunked: undefined, bytes: 1234 },
+    ]);
   });
 });

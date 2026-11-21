@@ -1,5 +1,6 @@
 import { ThumbnailImage } from "@/components/ui/thumbnail-image";
 import Link from "next/link";
+import { getTemplate } from "@/lib/templates/catalog";
 import { Eye, MessageCircleHeart, PencilLine, Users } from "lucide-react";
 import type { InferSelectModel } from "drizzle-orm";
 import type { invitations } from "@/lib/db/schema";
@@ -49,10 +50,13 @@ export function InvitationCard({
   const url = `${appUrl.replace(/\/$/, "")}/${inv.slug}`;
   const title = inv.eventTitle ?? "Undangan tanpa judul";
 
-  // Reuse the template card endpoint for listing previews.
-  const thumb = inv.sourceTemplate
-    ? `/templates/${inv.sourceTemplate}/card`
-    : null;
+  // Source availability is independent of active status: legacy invitations
+  // can still preview inactive presets whose source remains available.
+  const template = inv.sourceTemplate
+    ? getTemplate(inv.sourceTemplate)
+    : undefined;
+  const removedTemplate = Boolean(inv.sourceTemplate && !template);
+  const thumb = template?.thumbnail;
 
   const cd = countdown(inv.eventDate);
 
@@ -105,6 +109,12 @@ export function InvitationCard({
         </div>
 
         <p className="text-xs leading-relaxed text-ink-soft">{stage.hint}</p>
+        {removedTemplate ? (
+          <p role="status" className="text-xs text-muted">
+            Template tidak tersedia. Konten undangan tetap tersimpan; hubungi
+            admin untuk migrasi manual.
+          </p>
+        ) : null}
 
         {inv.status === "published" ? (
           <div className="flex items-center gap-3 text-xs text-ink-soft">
