@@ -15,6 +15,9 @@ Pemilik membuat tautan `/kelola-tamu/<token>` agar pelanggan tanpa akun Ngaturi 
 - Default 7 hari, maks 30 hari, tidak melebihi `invitations.expires_at`. Tautan ditampilkan sekali; membuat baru otomatis mencabut yang lama (diserialkan dengan kunci Redis).
 - Create/revoke hanya pemilik (`requireUser` + kepemilikan). Setiap baca/tulis delegasi lewat `resolveDelegate`; ID undangan selalu dari grant, bukan dari browser.
 - Pencabutan efektif langsung (tombstone 24 jam agar statusnya jelas) dan tidak menyentuh `guest_invites`, sehingga tautan RSVP personal tetap sah.
-- Rate limit: 120 req/menit per IP, 20 token tidak valid/10 menit per IP, 20 tulis/menit dan 100 tamu per grant, 10 pembuatan tautan/jam per pemilik.
+- Rate limit: 120 req/menit per grant (token valid), 20 token tidak valid/10 menit per pemanggil (tidak pernah memblokir token valid), 20 tulis/menit dan 100 tamu per grant, 10 pembuatan tautan/jam per pemilik.
 - `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `noindex` (header + metadata); request-log dev mengabaikan `/kelola-tamu/`. Token RSVP tamu tidak pernah diterima sebagai token delegasi.
 - Rute berada di luar prefix yang dilindungi `proxy.ts`; proxy/layout dashboard tidak diubah.
+
+## Kontrak Redis REST
+`redis/rest.ts` memakai `automaticDeserialization: false`. `RedisStore` menyimpan dan mengembalikan string; tanpa opsi ini klien Upstash me-`JSON.parse` balasan sehingga string JSON kembali sebagai objek (tautan valid dianggap tidak valid, cabut/buat ulang gagal). Grant lama (string JSON biasa) tetap terbaca. Regression: `delegation.rest.test.ts` menjalankan klien Upstash asli terhadap emulator protokol (`src/test/fake-upstash-rest.ts`).

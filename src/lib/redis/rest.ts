@@ -17,9 +17,12 @@ export function createRedisRestAdapter(config: RedisRestConfig): RedisStore {
       );
     }
 
+    // RedisStore stores and returns strings. Without this the client
+    // JSON.parse()s replies, so a stored JSON string comes back as an object.
     redisClient ??= new Redis({
       url: config.url,
       token: config.token,
+      automaticDeserialization: false,
     });
     return redisClient;
   }

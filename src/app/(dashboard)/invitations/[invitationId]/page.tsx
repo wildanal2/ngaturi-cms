@@ -148,6 +148,7 @@ export default async function InvitationDetailPage({
         initial={{
           active: delegateStatus.active,
           expiresAt: delegateStatus.expiresAt,
+          unavailable: delegateStatus.unavailable,
         }}
       />
 

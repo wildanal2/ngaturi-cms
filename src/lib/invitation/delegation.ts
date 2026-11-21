@@ -77,6 +77,15 @@ function newToken(): string {
     .replace(/=+$/, "");
 }
 
+function parsePointer(raw: string | null): { hash?: string } | null {
+  try {
+    const p = raw ? JSON.parse(raw) : null;
+    return p && typeof p === "object" ? p : null;
+  } catch {
+    return null; // corrupt pointer: treated as absent so it can be replaced
+  }
+}
+
 function parseRecord(raw: string | null): GrantRecord | null {
   if (!raw) return null;
   try {
@@ -110,6 +119,8 @@ export interface DelegateStatus {
   active: boolean;
   createdAt: string | null;
   expiresAt: string | null;
+  /** Redis could not be read: "inactive" would be a guess, so say so. */
+  unavailable?: true;
 }
 
 export async function readDelegateStatus(
@@ -117,9 +128,7 @@ export async function readDelegateStatus(
 ): Promise<DelegateStatus> {
   const none = { active: false, createdAt: null, expiresAt: null };
   try {
-    const pointer = JSON.parse(
-      (await redis.get(activeKey(invitationId))) ?? "null",
-    ) as { hash?: string } | null;
+    const pointer = parsePointer(await redis.get(activeKey(invitationId)));
     if (!pointer?.hash) return none;
     const record = parseRecord(await redis.get(grantKey(pointer.hash)));
     if (
@@ -135,7 +144,7 @@ export async function readDelegateStatus(
       expiresAt: record.expiresAt,
     };
   } catch {
-    return none;
+    return { ...none, unavailable: true };
   }
 }
 
@@ -150,9 +159,7 @@ async function tombstone(hash: string) {
 }
 
 async function revokeActive(invitationId: string) {
-  const pointer = JSON.parse(
-    (await redis.get(activeKey(invitationId))) ?? "null",
-  ) as { hash?: string } | null;
+  const pointer = parsePointer(await redis.get(activeKey(invitationId)));
   if (pointer?.hash) await tombstone(pointer.hash);
   await redis.delete(activeKey(invitationId));
 }
@@ -244,25 +251,23 @@ export async function resolveDelegate(
   token: unknown,
   now = new Date(),
 ): Promise<Resolved> {
-  const ip = await callerKey();
   try {
-    if (!(await rateLimit(`delegate:ip:${ip}`, 120, 60)))
-      return { ok: false, reason: "rate_limited" };
-    if (typeof token !== "string" || !TOKEN_RE.test(token)) {
-      if (!(await rateLimit(`delegate:bad:${ip}`, 20, 600)))
-        return { ok: false, reason: "rate_limited" };
-      return { ok: false, reason: "invalid" };
-    }
+    // Unknown tokens are throttled per caller (a shared bucket when no trusted
+    // client IP exists); valid grants are throttled per grant, so one noisy
+    // caller can never lock real delegates out.
+    const reject = async (): Promise<Resolved> =>
+      (await rateLimit(`delegate:bad:${await callerKey()}`, 20, 600))
+        ? { ok: false, reason: "invalid" }
+        : { ok: false, reason: "rate_limited" };
+    if (typeof token !== "string" || !TOKEN_RE.test(token)) return reject();
     const hash = await hashDelegateToken(token);
     const record = parseRecord(await redis.get(grantKey(hash)));
-    if (!record) {
-      if (!(await rateLimit(`delegate:bad:${ip}`, 20, 600)))
-        return { ok: false, reason: "rate_limited" };
-      return { ok: false, reason: "invalid" };
-    }
+    if (!record) return reject();
     if (record.revoked) return { ok: false, reason: "revoked" };
     if (Date.parse(record.expiresAt) <= now.getTime())
       return { ok: false, reason: "expired" };
+    if (!(await rateLimit(`delegate:grant:${hash}`, 120, 60)))
+      return { ok: false, reason: "rate_limited" };
     const [inv] = await db
       .select()
       .from(invitations)

@@ -11,6 +11,7 @@ import { formatDelegateDate } from "@/lib/invitation/delegation-format";
 interface Status {
   active: boolean;
   expiresAt: string | null;
+  unavailable?: boolean;
 }
 
 export function DelegateAccess({
@@ -77,9 +78,11 @@ export function DelegateAccess({
         <span
           className={`rounded-full px-3 py-0.5 text-xs ${status.active ? "bg-forest/10 text-forest" : "bg-cream-200 text-ink-soft"}`}
         >
-          {status.active && status.expiresAt
-            ? `Aktif sampai ${formatDelegateDate(status.expiresAt)}`
-            : "Tidak aktif"}
+          {status.unavailable
+            ? "Status belum dapat dimuat"
+            : status.active && status.expiresAt
+              ? `Aktif sampai ${formatDelegateDate(status.expiresAt)}`
+              : "Tidak aktif"}
         </span>
       </div>
       <p className="text-sm text-ink-soft">
@@ -88,6 +91,12 @@ export function DelegateAccess({
         Pelanggan tidak dapat melihat kontak, tautan, atau pesan tamu lain,
         mengubah undangan, maupun menghapus data.
       </p>
+      {status.unavailable ? (
+        <p role="alert" className="text-xs text-wine">
+          Status akses belum dapat dibaca karena layanan penyimpanan sedang
+          bermasalah. Muat ulang halaman sebelum membuat atau mencabut tautan.
+        </p>
+      ) : null}
       {link ? (
         <div className="space-y-2">
           <input
