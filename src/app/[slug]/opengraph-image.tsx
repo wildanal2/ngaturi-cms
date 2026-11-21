@@ -8,6 +8,7 @@ import { trustedPublicMediaPrefixes } from "@/lib/storage";
 import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
 import { canonicalApplicationOrigin } from "@/lib/security/origin";
 import { fetchOgImageData } from "@/lib/security/og-image";
+import { fitOgImage } from "@/lib/invitation/og-compress";
 
 export const alt = "Undangan";
 export const size = { width: 1200, height: 630 };
@@ -26,7 +27,14 @@ function safe(text: string, fallback = ""): string {
   return cleaned || fallback;
 }
 
-export default async function OgImage({
+/** Photo-heavy cards are re-encoded to stay under WhatsApp's thumbnail limit. */
+export default async function OgImage(props: {
+  params: Promise<{ slug: string }>;
+}) {
+  return fitOgImage(await renderCard(props));
+}
+
+async function renderCard({
   params,
 }: {
   params: Promise<{ slug: string }>;

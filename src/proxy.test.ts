@@ -7,6 +7,16 @@ import { proxy } from "./proxy";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("protected route redirect", () => {
+  it("preserves the full protected destination including query", () => {
+    const location = proxy(
+      new NextRequest(
+        "https://example.com/invitations/new?template=lakon-kencana",
+      ),
+    ).headers.get("location")!;
+    expect(new URL(location).searchParams.get("next")).toBe(
+      "/invitations/new?template=lakon-kencana",
+    );
+  });
   it("sets review noindex on public responses and protected redirects", () => {
     vi.stubEnv("SITE_INDEXING_ENABLED", "false");
     for (const path of ["/", "/dashboard"]) {

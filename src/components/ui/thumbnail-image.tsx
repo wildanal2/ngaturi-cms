@@ -3,7 +3,7 @@
 import Image, { type ImageProps } from "next/image";
 import { useState } from "react";
 
-/** Keep failed requests observable without displaying an unrelated image. */
+/** Preserve geometry with the neutral preview fallback when an image fails. */
 export function ThumbnailImage(props: ImageProps) {
   return <ThumbnailAttempt key={String(props.src)} {...props} />;
 }
@@ -39,7 +39,6 @@ function ThumbnailAttempt({ onError, ...props }: ImageProps) {
       {...props}
       alt={props.alt}
       onError={(event) => {
-        console.error("Thumbnail failed to load:", props.src);
         setFailed(true);
         onError?.(event);
       }}

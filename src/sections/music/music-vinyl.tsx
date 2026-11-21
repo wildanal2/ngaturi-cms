@@ -1,5 +1,7 @@
 "use client";
 
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
+
 import { Music, Pause, Play } from "lucide-react";
 import Image from "next/image";
 import type { SectionRenderProps } from "../types";
@@ -14,7 +16,13 @@ export function MusicVinyl({ props, inCanvas }: SectionRenderProps) {
 
   return (
     <Fab inCanvas={inCanvas} position={p.s_position} bottom="bottom-24">
-      {p.audio_url ? <audio ref={ref} src={p.audio_url} preload="none" /> : null}
+      {p.audio_url ? (
+        <audio
+          ref={ref}
+          src={musicPlaybackUrl(p.audio_url, p.track_id)}
+          preload="none"
+        />
+      ) : null}
       <button
         onClick={toggle}
         aria-label={playing ? "Jeda musik" : "Putar musik"}
@@ -47,7 +55,11 @@ export function MusicVinyl({ props, inCanvas }: SectionRenderProps) {
           }`}
         />
         <span className="absolute -bottom-1 left-1/2 grid h-5 w-5 -translate-x-1/2 place-items-center rounded-full bg-white text-ink shadow">
-          {playing ? <Pause size={11} /> : <Play size={11} className="translate-x-[1px]" />}
+          {playing ? (
+            <Pause size={11} />
+          ) : (
+            <Play size={11} className="translate-x-[1px]" />
+          )}
         </span>
       </button>
     </Fab>

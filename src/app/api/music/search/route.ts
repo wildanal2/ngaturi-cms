@@ -16,7 +16,12 @@ interface Result {
   source: "catalog" | "deezer" | "itunes" | "jamendo" | "audius";
   previewOnly?: boolean;
   linkUrl?: string | null;
+  /** Media type of audioUrl, so the picker can hide what this browser cannot decode. */
+  format?: string | null;
 }
+
+/** iTunes previews are AAC in MP4 — not decodable by every browser build. */
+const ITUNES_FORMAT = 'audio/mp4; codecs="mp4a.40.2"';
 
 /** GET /api/music/search?q=... — our catalog + iTunes previews + (opt) Jamendo. */
 export async function GET(req: Request) {
@@ -30,25 +35,30 @@ export async function GET(req: Request) {
     return NextResponse.json({ results: [], sources: [] });
   }
 
+  const unavailable: string[] = [];
   const guard = (name: string) => (e: unknown) => {
     console.error(`[music/search] ${name}`, e);
+    unavailable.push(name);
     return [] as Result[];
   };
 
   const [local, deezer, itunes, jamendo, audius] = await Promise.all([
     searchCatalog(q),
-    searchDeezer(q).catch(guard("deezer")),
-    searchItunes(q).catch(guard("itunes")),
+    searchDeezer(q).catch(guard("Deezer")),
+    searchItunes(q).catch(guard("iTunes")),
     env.JAMENDO_CLIENT_ID
-      ? searchJamendo(q).catch(guard("jamendo"))
+      ? searchJamendo(q).catch(guard("Jamendo"))
       : Promise.resolve([] as Result[]),
-    searchAudius(q).catch(guard("audius")),
+    searchAudius(q).catch(guard("Audius")),
   ]);
 
   // de-dupe commercial previews (title+artist appears on both deezer & itunes)
   const seen = new Set<string>();
   const commercial = [...deezer, ...itunes].filter((t) => {
-    const k = `${t.title}|${t.artist}`.toLowerCase().replace(/\s+/g, " ").trim();
+    const k = `${t.title}|${t.artist}`
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
@@ -63,6 +73,8 @@ export async function GET(req: Request) {
       ...(audius.length ? ["Audius"] : []),
       ...(jamendo.length ? ["Jamendo"] : []),
     ],
+    // Providers that errored, so the picker can say so instead of "no results".
+    unavailable,
   });
 }
 
@@ -93,6 +105,9 @@ interface AudiusTrack {
   genre?: string;
   mood?: string;
   duration?: number;
+  is_delete?: boolean;
+  is_streamable?: boolean;
+  access?: { stream?: boolean };
   user?: { name?: string };
   artwork?: { "150x150"?: string; "480x480"?: string };
 }
@@ -108,7 +123,12 @@ async function searchAudius(q: string): Promise<Result[]> {
   });
   if (!res.ok) throw new Error(`audius ${res.status}`);
   const data = (await res.json()) as { data?: AudiusTrack[] };
-  return (data.data ?? []).slice(0, 12).map((t) => ({
+  // Search still lists deleted (stream → 404) and gated (→ 403) tracks.
+  const playable = (data.data ?? []).filter(
+    (t) =>
+      !t.is_delete && t.is_streamable !== false && t.access?.stream !== false,
+  );
+  return playable.slice(0, 12).map((t) => ({
     id: `audius:${t.id}`,
     title: t.title,
     artist: t.user?.name ?? null,
@@ -117,6 +137,7 @@ async function searchAudius(q: string): Promise<Result[]> {
     license: "Audius · streaming bebas",
     genre: t.genre ?? t.mood ?? null,
     source: "audius" as const,
+    format: "audio/mpeg",
   }));
 }
 
@@ -139,17 +160,19 @@ async function searchDeezer(q: string): Promise<Result[]> {
   if (!res.ok) throw new Error(`deezer ${res.status}`);
   const data = (await res.json()) as { data?: DeezerTrack[] };
   return (data.data ?? [])
-    .filter((t) => t.preview)
+    .filter((t) => t.preview && /^[1-9]\d{0,19}$/.test(String(t.id)))
     .map((t) => ({
       id: `deezer:${t.id}`,
       title: t.title,
       artist: t.artist?.name ?? null,
-      audioUrl: t.preview!,
+      // Signed preview URLs expire ~15 min after search; never hand them out.
+      audioUrl: `/api/music/deezer/${t.id}`,
       coverUrl: t.album?.cover_big ?? t.album?.cover_medium ?? null,
       license: "Cuplikan 30 dtk",
       genre: null,
       source: "deezer" as const,
       previewOnly: true,
+      format: "audio/mpeg",
     }));
 }
 
@@ -180,12 +203,14 @@ async function searchItunes(q: string): Promise<Result[]> {
       title: t.trackName,
       artist: t.artistName ?? null,
       audioUrl: t.previewUrl!,
-      coverUrl: (t.artworkUrl100 ?? "").replace("100x100bb", "400x400bb") || null,
+      coverUrl:
+        (t.artworkUrl100 ?? "").replace("100x100bb", "400x400bb") || null,
       license: "Cuplikan 30 dtk",
       genre: t.primaryGenreName ?? null,
       source: "itunes" as const,
       previewOnly: true,
       linkUrl: t.trackViewUrl ?? null,
+      format: ITUNES_FORMAT,
     }));
 }
 
@@ -218,7 +243,15 @@ async function searchJamendo(q: string): Promise<Result[]> {
     signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) throw new Error(`jamendo ${res.status}`);
-  const data = (await res.json()) as { results?: JamendoTrack[] };
+  const data = (await res.json()) as {
+    headers?: { status?: string; code?: number };
+    results?: JamendoTrack[];
+  };
+  // Jamendo reports API errors (bad client_id, rate limit) inside HTTP 200.
+  if (data.headers?.status && data.headers.status !== "success")
+    throw new Error(
+      `jamendo ${data.headers.status} ${data.headers.code ?? ""}`,
+    );
   return (data.results ?? [])
     .filter((t) => t.audio)
     .map((t) => ({
@@ -231,5 +264,6 @@ async function searchJamendo(q: string): Promise<Result[]> {
       genre: t.musicinfo?.tags?.genres?.[0] ?? null,
       source: "jamendo" as const,
       linkUrl: t.shareurl ?? t.license_ccurl ?? null,
+      format: "audio/mpeg",
     }));
 }

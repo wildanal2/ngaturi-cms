@@ -1,5 +1,7 @@
 "use client";
 
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
+
 import { Pause, Play } from "lucide-react";
 import type { SectionRenderProps } from "../types";
 import { Fab, usePlayer, type MusicProps } from "./shared";
@@ -20,7 +22,11 @@ export function MusicSerambiDelima({ props, inCanvas }: SectionRenderProps) {
     >
       <Fab inCanvas={inCanvas} position={p.s_position} bottom="bottom-4">
         {p.audio_url ? (
-          <audio ref={ref} src={p.audio_url} preload="none" />
+          <audio
+            ref={ref}
+            src={musicPlaybackUrl(p.audio_url, p.track_id)}
+            preload="none"
+          />
         ) : null}
         <button
           type="button"

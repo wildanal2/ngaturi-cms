@@ -1,6 +1,7 @@
+import { connection } from "next/server";
+import { getActiveTemplate } from "@/lib/templates/availability";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/helpers";
-import { getTemplate } from "@/lib/templates/catalog";
 import { createInvitation } from "@/lib/invitation/actions";
 
 /**
@@ -13,8 +14,9 @@ export default async function UseTemplatePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await connection();
   const { id } = await params;
-  if (!getTemplate(id)) redirect("/templates");
+  if (!(await getActiveTemplate(id))) redirect("/templates");
 
   const session = await getSession();
   if (!session)

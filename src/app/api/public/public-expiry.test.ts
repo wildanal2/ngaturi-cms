@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runWithInvocationContext } from "@/lib/runtime/context";
 
 const mocks = vi.hoisted(() => ({
+  authorizeGuest: vi.fn(),
+  transaction: vi.fn(),
   select: vi.fn(),
   insert: vi.fn(),
   headers: vi.fn(),
@@ -11,7 +13,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/db", () => ({
-  db: { select: mocks.select, insert: mocks.insert },
+  db: {
+    select: mocks.select,
+    insert: mocks.insert,
+    transaction: mocks.transaction,
+  },
+}));
+vi.mock("@/lib/invitation/guest-authorization", () => ({
+  authorizeGuest: mocks.authorizeGuest,
 }));
 vi.mock("next/headers", () => ({ headers: mocks.headers }));
 vi.mock("@/lib/rate-limit", () => ({ rateLimit: mocks.rateLimit }));
@@ -51,7 +60,9 @@ function selectedGuestbookRead(invitation: object, messages: object[]) {
 }
 
 function context() {
-  return { params: Promise.resolve({ id: "invitation-1" }) };
+  return {
+    params: Promise.resolve({ id: "11111111-1111-4111-8111-111111111111" }),
+  };
 }
 
 beforeEach(() => {
@@ -62,6 +73,19 @@ beforeEach(() => {
   mocks.rateLimit.mockResolvedValue(true);
   mocks.verifyTurnstile.mockResolvedValue(true);
   mocks.getSession.mockResolvedValue(null);
+  mocks.authorizeGuest.mockResolvedValue({
+    id: "guest-1",
+    guestName: "Tamu",
+    maxGuests: 2,
+  });
+  mocks.transaction.mockImplementation((callback) =>
+    callback({
+      select: () => ({
+        from: () => ({ where: () => ({ limit: async () => [] }) }),
+      }),
+      insert: mocks.insert,
+    }),
+  );
 });
 
 describe("public submission expiry enforcement", () => {
@@ -77,7 +101,9 @@ describe("public submission expiry enforcement", () => {
     );
 
     const response = await getGuestbook(
-      new Request("http://localhost/api/public/invitation-1/guestbook"),
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/guestbook",
+      ),
       context(),
     );
 
@@ -94,7 +120,9 @@ describe("public submission expiry enforcement", () => {
     });
 
     const response = await getGuestbook(
-      new Request("http://localhost/api/public/invitation-1/guestbook"),
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/guestbook",
+      ),
       context(),
     );
 
@@ -117,7 +145,9 @@ describe("public submission expiry enforcement", () => {
     mocks.getSession.mockResolvedValue({ user: { id: "owner-1" } });
 
     const response = await getGuestbook(
-      new Request("http://localhost/api/public/invitation-1/guestbook"),
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/guestbook",
+      ),
       context(),
     );
 
@@ -143,11 +173,14 @@ describe("public submission expiry enforcement", () => {
     });
 
     const response = await postGuestbook(
-      new Request("http://localhost/api/public/invitation-1/guestbook", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Tamu", message: "Selamat" }),
-      }),
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/guestbook",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Tamu", message: "Selamat" }),
+        },
+      ),
       context(),
     );
 
@@ -160,7 +193,7 @@ describe("public submission expiry enforcement", () => {
 
   it("accepts RSVP submissions before public expires_at", async () => {
     selectedInvitation({
-      id: "invitation-1",
+      id: "11111111-1111-4111-8111-111111111111",
       status: "published",
       expiresAt: new Date("2099-01-01T00:00:00.000Z"),
     });
@@ -169,15 +202,18 @@ describe("public submission expiry enforcement", () => {
     });
 
     const response = await postRsvp(
-      new Request("http://localhost/api/public/invitation-1/rsvp", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name: "Tamu",
-          status: "attending",
-          guest_count: 1,
-        }),
-      }),
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/rsvp",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: "Tamu",
+            status: "attending",
+            guest_count: 1,
+          }),
+        },
+      ),
       context(),
     );
 
@@ -196,11 +232,14 @@ describe("public submission expiry enforcement", () => {
 
     const response = await runWithInvocationContext({}, () =>
       postGuestbook(
-        new Request("http://localhost/api/public/invitation-1/guestbook", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: "{}",
-        }),
+        new Request(
+          "http://localhost/api/public/11111111-1111-4111-8111-111111111111/guestbook",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: "{}",
+          },
+        ),
         context(),
       ),
     );
@@ -218,11 +257,14 @@ describe("public submission expiry enforcement", () => {
     );
     mocks.rateLimit.mockResolvedValue(false);
     const response = await postRsvp(
-      new Request("http://localhost/api/public/invitation-1/rsvp", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: "{}",
-      }),
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/rsvp",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        },
+      ),
       context(),
     );
     expect(response.status).toBe(429);
@@ -234,11 +276,14 @@ describe("public submission expiry enforcement", () => {
 
     await expect(
       postRsvp(
-        new Request("http://localhost/api/public/invitation-1/rsvp", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: "{}",
-        }),
+        new Request(
+          "http://localhost/api/public/11111111-1111-4111-8111-111111111111/rsvp",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: "{}",
+          },
+        ),
         context(),
       ),
     ).rejects.toThrow("redis unavailable");
@@ -254,11 +299,14 @@ describe("public submission expiry enforcement", () => {
     });
 
     const response = await postGuestbook(
-      new Request("http://localhost/api/public/invitation-1/guestbook", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Tamu", message: "Selamat" }),
-      }),
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/guestbook",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Tamu", message: "Selamat" }),
+        },
+      ),
       context(),
     );
 
@@ -271,21 +319,24 @@ describe("public submission expiry enforcement", () => {
 
   it("rejects RSVP submission for an expired published invitation", async () => {
     selectedInvitation({
-      id: "invitation-1",
+      id: "11111111-1111-4111-8111-111111111111",
       status: "published",
       expiresAt: new Date("2020-01-01T00:00:00.000Z"),
     });
 
     const response = await postRsvp(
-      new Request("http://localhost/api/public/invitation-1/rsvp", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name: "Tamu",
-          status: "attending",
-          guest_count: 1,
-        }),
-      }),
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/rsvp",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: "Tamu",
+            status: "attending",
+            guest_count: 1,
+          }),
+        },
+      ),
       context(),
     );
 
@@ -294,5 +345,109 @@ describe("public submission expiry enforcement", () => {
       error: "Undangan tidak aktif.",
     });
     expect(mocks.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("personal RSVP and message authorization", () => {
+  const active = {
+    id: "11111111-1111-4111-8111-111111111111",
+    status: "published",
+    expiresAt: null,
+    sections: [],
+  };
+  const submit = (route: typeof postRsvp, payload: unknown) =>
+    route(
+      new Request(
+        "http://localhost/api/public/11111111-1111-4111-8111-111111111111/rsvp",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      ),
+      context(),
+    );
+  it.each([postRsvp, postGuestbook])(
+    "rejects unauthorized direct payloads without writing",
+    async (route) => {
+      selectedInvitation(active);
+      mocks.authorizeGuest.mockResolvedValue(undefined);
+      const response = await submit(route, {
+        name: "Other guest",
+        guest_token: "invalid-token",
+        guest_id: "victim",
+        invitation_id: "other",
+        status: "attending",
+        message: "Fake",
+      });
+      expect(response.status).toBe(403);
+      expect(mocks.insert).not.toHaveBeenCalled();
+    },
+  );
+  it.each([postRsvp, postGuestbook])(
+    "rejects invalid request bodies",
+    async (route) => {
+      expect((await submit(route, { guest_token: 42 })).status).toBe(400);
+      expect(mocks.insert).not.toHaveBeenCalled();
+    },
+  );
+  it("rejects an RSVP already linked to the authorized guest", async () => {
+    selectedInvitation(active);
+    mocks.transaction.mockImplementation((callback) =>
+      callback({
+        select: () => ({
+          from: () => ({
+            where: () => ({ limit: async () => [{ id: "previous" }] }),
+          }),
+        }),
+        insert: mocks.insert,
+      }),
+    );
+    expect(
+      (
+        await submit(postRsvp, {
+          name: "Tamu",
+          guest_token: "valid",
+          status: "maybe",
+        })
+      ).status,
+    ).toBe(409);
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+  it("enforces the authorized guest's party size", async () => {
+    selectedInvitation(active);
+    expect(
+      (
+        await submit(postRsvp, {
+          name: "Tamu",
+          guest_token: "valid",
+          status: "attending",
+          guest_count: 3,
+        })
+      ).status,
+    ).toBe(400);
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+  it("persists the server-derived guest identity and ignores injected IDs", async () => {
+    selectedInvitation(active);
+    const values = vi.fn(async () => undefined);
+    mocks.insert.mockReturnValue({ values });
+    expect(
+      (
+        await submit(postRsvp, {
+          name: "Tamu",
+          guest_token: "valid",
+          guest_id: "victim",
+          invitation_id: "other",
+          status: "attending",
+        })
+      ).status,
+    ).toBe(200);
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invitationId: "11111111-1111-4111-8111-111111111111",
+        guestInviteId: "guest-1",
+        name: "Tamu",
+      }),
+    );
   });
 });

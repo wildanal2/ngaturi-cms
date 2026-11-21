@@ -133,17 +133,23 @@ export async function putObject({
     return;
   }
 
-  const request = await signingClient().sign(
-    new Request(objectUrl(key), {
-      method: "PUT",
-      headers: {
-        "content-type": contentType,
-        ...(cacheControl ? { "cache-control": cacheControl } : {}),
-      },
-      body: body as BodyInit,
-    }),
-  );
-  const response = await fetch(request);
+  const signed = await signingClient().sign(objectUrl(key).toString(), {
+    method: "PUT",
+    headers: {
+      "content-type": contentType,
+      ...(cacheControl ? { "cache-control": cacheControl } : {}),
+    },
+    body: body as BodyInit,
+  });
+  // Send the original bytes, not the signed Request: Next.js' patched fetch
+  // rebuilds Request inputs around a body stream, which goes out chunked
+  // without Content-Length and R2 rejects it with 411 Length Required.
+  const response = await fetch(signed.url, {
+    method: "PUT",
+    headers: signed.headers,
+    body: body as BodyInit,
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new Error(`Object upload failed with status ${response.status}`);
   }

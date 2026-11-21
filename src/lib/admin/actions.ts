@@ -81,6 +81,12 @@ export async function toggleTemplateActive(
     .set({ isActive, updatedAt: new Date() })
     .where(eq(templates.id, templateId));
   revalidatePath("/admin/templates");
+  revalidatePath("/");
+  revalidatePath("/templates");
+  revalidatePath("/invitations/new");
+  revalidatePath("/builder/[invitationId]", "page");
+  revalidatePath("/templates/[id]/preview", "page");
+  revalidatePath("/templates/[id]/use", "page");
 }
 
 export async function toggleTemplateFeatured(

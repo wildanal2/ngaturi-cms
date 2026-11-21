@@ -1,5 +1,7 @@
 "use client";
 
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
+
 import { useState } from "react";
 import type { SectionRenderProps } from "../types";
 import { usePlayer, type MusicProps } from "./shared";
@@ -43,7 +45,7 @@ export function MusicGerbangPuspa({ props, inCanvas }: SectionRenderProps) {
       {p.audio_url && (
         <audio
           ref={ref}
-          src={p.audio_url}
+          src={musicPlaybackUrl(p.audio_url, p.track_id)}
           preload="none"
           onError={() => setFailed(p.audio_url)}
         />

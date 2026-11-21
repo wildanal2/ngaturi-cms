@@ -12,6 +12,13 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { musicPlaybackUrl } from "@/lib/music/playback-url";
+import { readUploadResponse, uploadSizeError } from "@/lib/uploads/client";
+import {
+  browserCanPlayType,
+  playableInBrowser,
+  probePlayable,
+} from "@/lib/music/browser-playback";
 import type { FieldContext } from "./field-editors";
 
 interface Track {
@@ -26,7 +33,16 @@ interface Track {
   source?: "catalog" | "deezer" | "itunes" | "jamendo" | "audius";
   previewOnly?: boolean;
   linkUrl?: string | null;
+  format?: string | null;
 }
+
+const SOURCE_LABEL: Record<NonNullable<Track["source"]>, string> = {
+  catalog: "Katalog",
+  deezer: "Deezer",
+  itunes: "iTunes",
+  jamendo: "Jamendo",
+  audius: "Audius",
+};
 
 const POPULAR: { group: string; songs: { label: string; term: string }[] }[] = [
   {
@@ -73,10 +89,16 @@ export function MusicPickerField({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [previewTime, setPreviewTime] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [choosingId, setChoosingId] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<{ q: string; items: Track[] } | null>(null);
+  const [hits, setHits] = useState<{
+    q: string;
+    items: Track[];
+    error?: string;
+  } | null>(null);
   const [sources, setSources] = useState<string[]>([]);
+  const [unavailable, setUnavailable] = useState<string[]>([]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -101,12 +123,33 @@ export function MusicPickerField({
       fetch(`/api/music/search?q=${encodeURIComponent(q)}`, {
         signal: ctrl.signal,
       })
-        .then((r) => (r.ok ? r.json() : { results: [], sources: [] }))
+        .then((r) => {
+          if (r.ok) return r.json();
+          throw new Error(
+            r.status === 401
+              ? "Sesi berakhir. Muat ulang halaman lalu masuk lagi."
+              : `Pencarian gagal (HTTP ${r.status}). Coba lagi atau pakai tab “Upload / URL”.`,
+          );
+        })
         .then((d) => {
           setHits({ q, items: d.results ?? [] });
           setSources(d.sources ?? []);
+          setUnavailable(d.unavailable ?? []);
         })
-        .catch(() => {});
+        .catch((e) => {
+          if (ctrl.signal.aborted) return;
+          // Never leave the list stuck on "Mencari…" or claim "no results".
+          setHits({
+            q,
+            items: [],
+            error:
+              e instanceof Error &&
+              !(e instanceof TypeError || e instanceof SyntaxError)
+                ? e.message
+                : "Pencarian musik gagal. Periksa koneksi lalu coba lagi.",
+          });
+          setUnavailable([]);
+        });
     }, 350);
     return () => {
       clearTimeout(t);
@@ -131,7 +174,7 @@ export function MusicPickerField({
     }
     setPreviewId(null);
     setLoadingId(t.id);
-    a.src = t.audioUrl;
+    a.src = musicPlaybackUrl(t.audioUrl, t.id);
     a.play()
       .then(() => {
         setPreviewId(t.id);
@@ -143,12 +186,33 @@ export function MusicPickerField({
       });
   }
 
-  function choose(t: Track) {
+  async function choose(t: Track) {
     if (!ctx.premiumFeatures) {
       toast.error("Memilih musik baru memerlukan paket Premium.");
       return;
     }
-    ctx.write("audio_url", t.audioUrl);
+    if (choosingId) return;
+    const url = musicPlaybackUrl(t.audioUrl, t.id);
+    // Never replace a working selection with a source that cannot load.
+    if (previewId !== t.id) {
+      setChoosingId(t.id);
+      try {
+        await probePlayable(url);
+      } catch {
+        toast.error(
+          `“${t.title}” tidak bisa diputar dari ${SOURCE_LABEL[t.source ?? "catalog"]} saat ini.`,
+          {
+            description: currentUrl
+              ? "Lagu sebelumnya tetap dipakai. Silakan pilih lagu lain."
+              : "Silakan pilih lagu lain.",
+          },
+        );
+        return;
+      } finally {
+        setChoosingId(null);
+      }
+    }
+    ctx.write("audio_url", url);
     ctx.write("track_id", t.id);
     ctx.write("track_title", t.title);
     ctx.write("track_artist", t.artist ?? "");
@@ -182,6 +246,11 @@ export function MusicPickerField({
       toast.error("File harus berupa audio (mp3).");
       return;
     }
+    const tooBig = uploadSizeError(file, "audio");
+    if (tooBig) {
+      toast.error(tooBig);
+      return;
+    }
     setUploading(true);
     try {
       const fd = new FormData();
@@ -189,8 +258,7 @@ export function MusicPickerField({
       fd.set("invitationId", ctx.invitationId);
       fd.set("kind", "audio");
       const res = await fetch("/api/uploads", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Gagal upload");
+      const data = await readUploadResponse(res);
       ctx.write("audio_url", data.publicUrl);
       ctx.write("track_id", "");
       toast.success("Musik diunggah");
@@ -203,7 +271,13 @@ export function MusicPickerField({
 
   const q = query.trim();
   const searchMode = q.length >= 2;
-  const freshHits = hits && hits.q === q ? hits.items : null;
+  const freshHit = hits && hits.q === q ? hits : null;
+  const freshHits = freshHit
+    ? playableInBrowser(freshHit.items, browserCanPlayType)
+    : null;
+  const hiddenCount = freshHit
+    ? freshHit.items.length - (freshHits?.length ?? 0)
+    : 0;
   const list: Track[] = searchMode ? (freshHits ?? []) : (tracks ?? []);
   const maxPicks = Math.max(1, ...(tracks?.map((t) => t.picks ?? 0) ?? [1]));
 
@@ -289,14 +363,23 @@ export function MusicPickerField({
           </div>
           <button
             onClick={() => choose(t)}
-            disabled={ctx.disabled || !ctx.premiumFeatures}
+            disabled={
+              ctx.disabled || !ctx.premiumFeatures || choosingId !== null
+            }
+            aria-busy={choosingId === t.id}
             className={`shrink-0 rounded-full px-3 py-1 text-xs ${
               active
                 ? "bg-forest text-cream"
                 : "border border-line hover:bg-cream-200"
             }`}
           >
-            {active ? "Dipakai" : "Pakai"}
+            {choosingId === t.id ? (
+              <Loader2 size={12} className="animate-spin" />
+            ) : active ? (
+              "Dipakai"
+            ) : (
+              "Pakai"
+            )}
           </button>
         </div>
       </li>
@@ -447,6 +530,13 @@ export function MusicPickerField({
               <p className="flex items-center justify-center gap-1.5 py-4 text-xs text-muted">
                 <Loader2 size={13} className="animate-spin" /> Mencari…
               </p>
+            ) : freshHit?.error ? (
+              <p
+                role="alert"
+                className="rounded-lg border border-wine/40 bg-wine/5 p-3 text-xs text-wine"
+              >
+                {freshHit.error}
+              </p>
             ) : list.length === 0 ? (
               <p className="rounded-lg border border-dashed border-line p-3 text-xs text-muted">
                 Tidak ada hasil untuk “{query}”. Coba judul yang lebih pendek,
@@ -466,6 +556,19 @@ export function MusicPickerField({
               {list.map((t, i) => renderRow(t, i))}
             </ul>
           )}
+
+          {searchMode && freshHit && !freshHit.error && unavailable.length ? (
+            <p role="status" className="text-[11px] text-wine">
+              {unavailable.join(", ")} sedang tidak tersedia — hasil dari sumber
+              lain tetap bisa dipakai.
+            </p>
+          ) : null}
+          {searchMode && hiddenCount > 0 ? (
+            <p className="text-[10px] text-muted">
+              {hiddenCount} hasil disembunyikan karena formatnya tidak didukung
+              browser ini.
+            </p>
+          ) : null}
 
           <p className="pt-1 text-[10px] leading-relaxed text-muted">
             {searchMode
