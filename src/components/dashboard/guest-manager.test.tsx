@@ -12,6 +12,7 @@ vi.mock("sonner", () => ({
 }));
 vi.mock("@/lib/invitation/guests", () => ({
   createGuestInvite: vi.fn(),
+  createGuestInvitesBulk: vi.fn(),
   deleteGuestInvite: vi.fn(),
   markGuestSent: vi.fn(),
 }));
@@ -142,5 +143,23 @@ describe("guest WhatsApp rendering integration", () => {
     expect(html).toMatch(
       /<button[^>]+disabled=""[^>]*>Reset ke Default<\/button>/,
     );
+  });
+});
+
+describe("contact import entry point (owner)", () => {
+  const template = {
+    message: DEFAULT_WHATSAPP_MESSAGE,
+    source: "default" as const,
+    isCustom: false,
+  };
+  it("offers .vcf import next to manual entry, collapsed, with no file picker until opened", () => {
+    const html = render(template);
+    expect(html).toContain("Impor kontak dari file (.vcf)");
+    expect(html).toContain('name="guest_name"');
+    expect(html).not.toContain('type="file"');
+    expect(html).not.toContain("Ambil dari Kontak HP");
+  });
+  it("hides import without creation entitlement", () => {
+    expect(render(template, false)).not.toContain("Impor kontak");
   });
 });

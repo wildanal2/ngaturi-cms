@@ -14,6 +14,7 @@ vi.mock("sonner", () => ({
 }));
 vi.mock("@/lib/invitation/delegation-actions", () => ({
   addDelegateGuest: vi.fn(),
+  addDelegateGuestsBulk: vi.fn(),
   fetchDelegateView: vi.fn(),
   markDelegateGuestSent: vi.fn(),
 }));
@@ -80,5 +81,20 @@ describe("DelegateMessageEditor", () => {
       />,
     );
     expect(html).toContain("Pesan diubah");
+  });
+});
+
+describe("DelegateManager contact import", () => {
+  const html = (v: DelegateView) =>
+    renderToStaticMarkup(<DelegateManager initial={v} />);
+  it("offers import on the Share tab only, collapsed, keeping manual entry", () => {
+    const out = html(view);
+    expect(out).toContain("Impor kontak dari file (.vcf)");
+    expect(out).toContain('name="guest_name"');
+    expect(out).not.toContain('type="file"');
+  });
+  it("hides import when adding is disabled or the ceiling is reached", () => {
+    expect(html({ ...view, canCreate: false })).not.toContain("Impor kontak");
+    expect(html({ ...view, limit: 1 })).not.toContain("Impor kontak");
   });
 });

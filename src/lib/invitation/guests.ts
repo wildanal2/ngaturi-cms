@@ -7,6 +7,12 @@ import { db } from "@/lib/db";
 import { guestInvites, invitations } from "@/lib/db/schema";
 import { requireUser } from "@/lib/auth/helpers";
 import { hasProFeatures } from "./entitlement";
+import {
+  findBulkDuplicates,
+  sanitizeBulk,
+  type BulkItemStatus,
+  type BulkResult,
+} from "./contact-import";
 
 const token = customAlphabet("abcdefghijkmnpqrstuvwxyz23456789", 10);
 
@@ -54,6 +60,69 @@ export async function createGuestInvite(
   });
   revalidatePath(`/invitations/${invitationId}/guests`);
   return { ok: true };
+}
+
+/**
+ * Adds several guests chosen from the device contacts. Input is re-validated
+ * here; an item that already exists (same number, or same name when neither has
+ * one) is skipped, so a retry after a partial failure cannot duplicate guests.
+ * Nothing is sent over WhatsApp.
+ */
+export async function createGuestInvitesBulk(
+  invitationId: string,
+  input: unknown,
+): Promise<BulkResult> {
+  const inv = await ownedInvitation(invitationId);
+  if (!hasProFeatures(inv)) {
+    return {
+      ok: false,
+      error:
+        "Undangan per-tamu tersedia gratis selama masa coba, atau dengan paket Premium.",
+    };
+  }
+  const items = sanitizeBulk(input, 10);
+  if (!items)
+    return {
+      ok: false,
+      error: "Daftar tamu tidak valid (1 sampai 100 kontak).",
+    };
+
+  const statuses: BulkItemStatus[] = [];
+  let added = 0;
+  try {
+    const existing = await db
+      .select({
+        name: guestInvites.guestName,
+        phone: guestInvites.whatsappPhone,
+      })
+      .from(guestInvites)
+      .where(eq(guestInvites.invitationId, invitationId));
+    const duplicates = findBulkDuplicates(items, existing);
+    for (const [i, item] of items.entries()) {
+      if (!item.name) statuses.push("invalid");
+      else if (duplicates[i]) statuses.push("duplicate");
+      else {
+        try {
+          await db.insert(guestInvites).values({
+            invitationId,
+            guestName: item.name,
+            slugToken: token(),
+            guestGroup: item.group,
+            maxGuests: item.maxGuests,
+            whatsappPhone: item.phone,
+          });
+          statuses.push("added");
+          added++;
+        } catch {
+          statuses.push("failed");
+        }
+      }
+    }
+  } catch {
+    return { ok: false, error: "Gagal menyimpan tamu. Silakan coba lagi." };
+  }
+  if (added) revalidatePath(`/invitations/${invitationId}/guests`);
+  return { ok: true, statuses, added };
 }
 
 export async function deleteGuestInvite(

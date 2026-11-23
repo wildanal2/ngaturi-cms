@@ -20,7 +20,12 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/auth/helpers", () => ({ requireUser: mocks.requireUser }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
-import { createGuestInvite, deleteGuestInvite, markGuestSent } from "./guests";
+import {
+  createGuestInvite,
+  createGuestInvitesBulk,
+  deleteGuestInvite,
+  markGuestSent,
+} from "./guests";
 
 function ownedInvitation(row: object) {
   mocks.select.mockReturnValue({
@@ -135,5 +140,140 @@ describe("personalized guest entitlement", () => {
       markGuestSent("invitation-1", "guest-1"),
     ).resolves.toBeUndefined();
     expect(where).toHaveBeenCalledOnce();
+  });
+});
+
+describe("bulk contact import (owner)", () => {
+  const active = {
+    id: "invitation-1",
+    userId: "user-1",
+    plan: "free_trial",
+    isPaid: false,
+    isEditLocked: false,
+    editExpiresAt: new Date("2099-01-01T00:00:00.000Z"),
+  };
+  /** First select = ownership lookup, second = existing guests. */
+  function setup(
+    inv: object | null,
+    existing: { name: string; phone: string | null }[] = [],
+    insert: (row: { guestName: string }) => Promise<unknown> = async () =>
+      undefined,
+  ) {
+    let call = 0;
+    mocks.select.mockImplementation(() => ({
+      from: () => ({
+        where: () =>
+          ++call === 1
+            ? { limit: async () => (inv ? [inv] : []) }
+            : Promise.resolve(existing),
+      }),
+    }));
+    const values = vi.fn(insert);
+    mocks.insert.mockReturnValue({ values });
+    return values;
+  }
+
+  it("adds valid contacts, skips duplicates and invalid items, and reports each", async () => {
+    const values = setup(active, [{ name: "Ani", phone: "+62 812-0000-1111" }]);
+    const res = await createGuestInvitesBulk("invitation-1", [
+      { name: "Budi", phone: "0812 0000 2222", maxGuests: 3 },
+      { name: "Ani lagi", phone: "081200001111" },
+      { name: "", phone: "081200003333" },
+      { name: "Cici", phone: null },
+      { name: "Budi dobel", phone: "+6281200002222" },
+    ]);
+    expect(res).toEqual({
+      ok: true,
+      added: 2,
+      statuses: ["added", "duplicate", "invalid", "added", "duplicate"],
+    });
+    expect(values).toHaveBeenCalledTimes(2);
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invitationId: "invitation-1",
+        guestName: "Budi",
+        whatsappPhone: "081200002222",
+        maxGuests: 3,
+        slugToken: expect.stringMatching(/^[a-z2-9]{10}$/),
+      }),
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledOnce();
+  });
+
+  it("reports partial failure per item instead of claiming success", async () => {
+    setup(active, [], async (row) => {
+      if (row.guestName === "Gagal") throw new Error("db down");
+    });
+    const res = await createGuestInvitesBulk("invitation-1", [
+      { name: "Ok", phone: "081200004444" },
+      { name: "Gagal", phone: "081200005555" },
+    ]);
+    expect(res).toEqual({ ok: true, added: 1, statuses: ["added", "failed"] });
+  });
+
+  it("makes a retry idempotent: guests already saved are skipped", async () => {
+    setup(active, [{ name: "Ok", phone: "081200004444" }]);
+    const res = await createGuestInvitesBulk("invitation-1", [
+      { name: "Ok", phone: "081200004444" },
+      { name: "Gagal", phone: "081200005555" },
+    ]);
+    expect(res).toEqual({
+      ok: true,
+      added: 1,
+      statuses: ["duplicate", "added"],
+    });
+  });
+
+  it("refuses without entitlement, ownership, or a sane batch, and never writes", async () => {
+    const values = setup({ ...active, plan: "basic", isPaid: true });
+    await expect(
+      createGuestInvitesBulk("invitation-1", [{ name: "A" }]),
+    ).resolves.toMatchObject({ ok: false });
+    for (const bad of [undefined, [], "x", Array(101).fill({ name: "A" })]) {
+      setup(active);
+      await expect(
+        createGuestInvitesBulk("invitation-1", bad),
+      ).resolves.toMatchObject({ ok: false });
+    }
+    setup(null);
+    await expect(
+      createGuestInvitesBulk("invitation-1", [{ name: "A" }]),
+    ).rejects.toThrow("Undangan tidak ditemukan");
+    expect(values).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it("ignores client-supplied ownership fields and stays on the owned invitation", async () => {
+    const values = setup(active);
+    await createGuestInvitesBulk("invitation-1", [
+      {
+        name: "A",
+        phone: "081200006666",
+        invitationId: "other",
+        slugToken: "evil",
+      },
+    ]);
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        invitationId: "invitation-1",
+        slugToken: expect.not.stringMatching(/^evil$/),
+      }),
+    );
+  });
+
+  it("does not log contact data on failure", async () => {
+    const spies = [
+      vi.spyOn(console, "error"),
+      vi.spyOn(console, "log"),
+      vi.spyOn(console, "warn"),
+    ];
+    setup(active, [], async () => {
+      throw new Error("boom");
+    });
+    await createGuestInvitesBulk("invitation-1", [
+      { name: "Rahasia", phone: "081200007777" },
+    ]);
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+    spies.forEach((spy) => spy.mockRestore());
   });
 });

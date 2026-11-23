@@ -386,4 +386,178 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
     await expect(A.createDelegateLink("not-a-uuid", 7)).rejects.toThrow();
     ctx.user = userIds[0];
   });
+
+  describe("bulk contact import (issue #20)", () => {
+    const A32 = "abcdefghijkmnpqrstuvwxyz23456789";
+    let n = 0;
+    const gen = () => {
+      let v = ++n + 100_000;
+      let out = "";
+      for (let i = 0; i < 10; i++, v = Math.floor(v / 32))
+        out = A32[v % 32] + out;
+      return out;
+    };
+    const phone = (i: number) => `0812${String(70_000_000 + i)}`;
+    async function grant(ip: string) {
+      ctx.ip = ip;
+      await redisAdapter.delete("rl:delegate:issue:" + userIds[0]);
+      const r = await D.issueDelegateGrant(invA, 7);
+      if (!r.ok) throw new Error(r.error);
+      const res = await D.resolveDelegate(r.token);
+      if (!res.ok) throw new Error("resolve");
+      return { token: r.token, res };
+    }
+
+    it("adds guests, skips duplicates and never reveals the owner's contacts", async () => {
+      const { res } = await grant("198.51.100.20");
+      await db.insert(schema.guestInvites).values({
+        invitationId: invA.id,
+        guestName: "Tamu Pemilik",
+        slugToken: "zzzzzzzzzz",
+        whatsappPhone: phone(500),
+      });
+      // The owner's own guest (same number as "Pemilik") exists but is outside the delegate's scope.
+      const out = await D.createDelegatedGuestsBulk(
+        res,
+        [
+          { name: "Bulk Satu", phone: phone(1), maxGuests: 99 },
+          { name: "Bulk Dua", phone: "+62 " + phone(2).slice(1) },
+          { name: "Bulk Satu Lagi", phone: "+62" + phone(1).slice(1) },
+          { name: "Pemilik", phone: phone(500) },
+          { name: "", phone: phone(3) },
+          { name: "Tanpa Nomor" },
+          { name: "tanpa  nomor" },
+        ],
+        gen,
+      );
+      expect(out).toEqual({
+        ok: true,
+        added: 4,
+        statuses: [
+          "added",
+          "added",
+          "duplicate",
+          "added",
+          "invalid",
+          "added",
+          "duplicate",
+        ],
+      });
+      const rows = (await guests(invA.id)).filter((g) =>
+        g.guestName.startsWith("Bulk"),
+      );
+      expect(rows).toHaveLength(2);
+      expect(Math.max(...rows.map((g) => g.maxGuests))).toBe(10);
+      expect(rows.every((g) => g.slugToken.startsWith("dg"))).toBe(true);
+      // Retrying the same batch (e.g. after a dropped response) adds nothing.
+      await redisAdapter.delete(`rl:delegate:bulk:${res.hash}`);
+      const retry = await D.createDelegatedGuestsBulk(
+        res,
+        [
+          { name: "Bulk Satu", phone: phone(1) },
+          { name: "Bulk Dua", phone: phone(2) },
+        ],
+        gen,
+      );
+      expect(retry).toEqual({
+        ok: true,
+        added: 0,
+        statuses: ["duplicate", "duplicate"],
+      });
+    });
+
+    it("never exceeds the 100-guest ceiling and reports the overflow as skipped", async () => {
+      const { res } = await grant("198.51.100.21");
+      const before = (await guests(invA.id)).filter((g) =>
+        g.slugToken.startsWith("dg"),
+      ).length;
+      const room = 100 - before;
+      const out = await D.createDelegatedGuestsBulk(
+        res,
+        Array.from({ length: 100 }, (_, i) => ({
+          name: `Kuota ${i}`,
+          phone: phone(1000 + i),
+        })),
+        gen,
+      );
+      if (!out.ok) throw new Error(out.error);
+      expect(out.added).toBe(room);
+      expect(out.statuses.filter((x) => x === "added")).toHaveLength(room);
+      expect(out.statuses.filter((x) => x === "limit")).toHaveLength(
+        100 - room,
+      );
+      const after = (await guests(invA.id)).filter((g) =>
+        g.slugToken.startsWith("dg"),
+      ).length;
+      expect(after).toBe(100);
+      // A further batch is entirely "limit": nothing is written.
+      await redisAdapter.delete(`rl:delegate:bulk:${res.hash}`);
+      const more = await D.createDelegatedGuestsBulk(
+        res,
+        [{ name: "Lagi", phone: phone(5000) }],
+        gen,
+      );
+      expect(more).toEqual({ ok: true, added: 0, statuses: ["limit"] });
+    });
+
+    it("rate-limits repeated bulk calls and rejects bad batches without writing", async () => {
+      await db
+        .delete(schema.guestInvites)
+        .where(eq(schema.guestInvites.invitationId, invA.id));
+      const { res } = await grant("198.51.100.22");
+      for (const bad of [undefined, [], "x", Array(101).fill({ name: "A" })])
+        expect(await D.createDelegatedGuestsBulk(res, bad, gen)).toMatchObject({
+          ok: false,
+        });
+      expect(await guests(invA.id)).toHaveLength(0);
+      const calls = [];
+      for (let i = 0; i < 7; i++)
+        calls.push(
+          await D.createDelegatedGuestsBulk(
+            res,
+            [{ name: `RL${i}`, phone: phone(9000 + i) }],
+            gen,
+          ),
+        );
+      expect(calls.filter((c) => c.ok).length).toBeLessThanOrEqual(5);
+      expect(calls.some((c) => !c.ok)).toBe(true);
+    });
+
+    it("refuses once revoked or when the invitation lost its entitlement", async () => {
+      const { token, res } = await grant("198.51.100.23");
+      const locked = {
+        ...res,
+        inv: {
+          ...res.inv,
+          plan: "free_trial" as const,
+          isPaid: false,
+          editExpiresAt: new Date(Date.now() - 1000),
+        },
+      };
+      expect(
+        await D.createDelegatedGuestsBulk(locked, [{ name: "X" }], gen),
+      ).toMatchObject({ ok: false });
+      expect(
+        await A.addDelegateGuestsBulk(token, [
+          { name: "Sebelum Revoke", phone: phone(7000) },
+        ]),
+      ).toMatchObject({
+        ok: true,
+        bulk: { ok: true, added: 1 },
+      });
+      await A.revokeDelegateLink(invA.id);
+      expect(
+        await A.addDelegateGuestsBulk(token, [{ name: "Setelah Revoke" }]),
+      ).toEqual({
+        ok: false,
+        reason: "revoked",
+      });
+      expect(
+        await A.addDelegateGuestsBulk("x".repeat(43), [{ name: "Palsu" }]),
+      ).toMatchObject({ ok: false });
+      const names = (await guests(invA.id)).map((g) => g.guestName);
+      expect(names).toContain("Sebelum Revoke");
+      expect(names).not.toContain("Setelah Revoke");
+    });
+  });
 });

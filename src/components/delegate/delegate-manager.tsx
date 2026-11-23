@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { toast, Toaster } from "sonner";
 import {
   addDelegateGuest,
+  addDelegateGuestsBulk,
   fetchDelegateView,
   markDelegateGuestSent,
   type DelegateResult,
@@ -20,6 +21,12 @@ import {
   validateWhatsappMessage,
   whatsappUrl,
 } from "@/lib/invitation/whatsapp-message";
+import { ContactImporter } from "@/components/guests/contact-importer";
+import {
+  ContactPhoneChoice,
+  ContactPickButton,
+} from "@/components/guests/contact-prefill-fields";
+import { useContactPrefill } from "@/components/guests/use-contact-prefill";
 import { DelegateMessageEditor } from "./delegate-message-editor";
 
 const field = "rounded-lg border border-line bg-paper px-3 py-2 text-sm";
@@ -33,6 +40,7 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
   const [tab, setTab] = useState<"share" | "rsvp">("share");
   const [pending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
+  const prefill = useContactPrefill(view.guests.map((g) => g.whatsappPhone));
   // Session-only edit of the reseller's message; never persisted or sent.
   const [draft, setDraft] = useState(initial.template.message);
 
@@ -126,14 +134,19 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
                     if (apply(await addDelegateGuest(token, fd))) {
                       toast.success("Tamu ditambahkan");
                       setFormKey((k) => k + 1);
+                      prefill.reset();
                     }
                   })
                 }
                 className="grid gap-3 rounded-xl border border-line bg-paper p-4 sm:grid-cols-2"
               >
+                <ContactPickButton prefill={prefill} disabled={pending} />
                 <input
                   name="guest_name"
                   aria-label="Nama tamu"
+                  value={prefill.name}
+                  onChange={(event) => prefill.setName(event.target.value)}
+                  readOnly={prefill.picking}
                   required
                   maxLength={100}
                   placeholder="Nama tamu"
@@ -149,6 +162,9 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
                 <input
                   name="whatsapp_phone"
                   aria-label="No. WhatsApp"
+                  value={prefill.phone}
+                  onChange={(event) => prefill.setPhone(event.target.value)}
+                  readOnly={prefill.picking}
                   inputMode="tel"
                   maxLength={50}
                   placeholder="No. WhatsApp (opsional)"
@@ -163,8 +179,13 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
                   defaultValue={2}
                   className={field}
                 />
-                <button
+                <ContactPhoneChoice
+                  prefill={prefill}
+                  existingPhones={view.guests.map((g) => g.whatsappPhone)}
                   disabled={pending}
+                />
+                <button
+                  disabled={pending || prefill.picking}
                   className="rounded-full bg-forest px-4 py-2 text-sm font-medium text-cream disabled:opacity-60 sm:col-span-2"
                 >
                   {pending ? "Menyimpan…" : "Tambah tamu"}
@@ -180,6 +201,26 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
               undangan.
             </p>
           )}
+
+          {view.canCreate && view.guests.length < view.limit ? (
+            <ContactImporter
+              existing={view.guests.map((g) => ({
+                name: g.guestName,
+                phone: g.whatsappPhone,
+              }))}
+              remaining={view.limit - view.guests.length}
+              disabled={pending}
+              onConfirm={async (items) => {
+                const res = await addDelegateGuestsBulk(token, items);
+                if (!res.ok) {
+                  setDead(res.reason);
+                  return { ok: false, error: "Akses tidak lagi berlaku." };
+                }
+                setView(res.view);
+                return res.bulk;
+              }}
+            />
+          ) : null}
 
           <DelegateMessageEditor
             base={view.template.message}

@@ -6,8 +6,10 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
+import type { BulkResult } from "./contact-import";
 import {
   createDelegatedGuest,
+  createDelegatedGuestsBulk,
   issueDelegateGrant,
   isUuid,
   loadDelegateView,
@@ -102,6 +104,24 @@ export async function addDelegateGuest(
     return created.ok
       ? { ok: true, view }
       : { ok: true, view, error: created.error };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
+export type DelegateBulkResult =
+  | { ok: true; view: DelegateView; bulk: BulkResult }
+  | { ok: false; reason: DelegateFailure };
+
+export async function addDelegateGuestsBulk(
+  token: string,
+  input: unknown,
+): Promise<DelegateBulkResult> {
+  const r = await resolveDelegate(token);
+  if (!r.ok) return r;
+  const bulk = await createDelegatedGuestsBulk(r, input, guestToken);
+  try {
+    return { ok: true, view: await loadDelegateView(r), bulk };
   } catch {
     return { ok: false, reason: "unavailable" };
   }
