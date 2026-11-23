@@ -1,14 +1,12 @@
 import { ImageResponse } from "next/og";
-import {
-  getPublicInvitation,
-  invitationSummary,
-} from "@/lib/invitation/query";
-import { getCardVisual } from "@/lib/invitation/card-visual";
+import { getPublicInvitation, invitationSummary } from "@/lib/invitation/query";
+import { getOgHero } from "@/lib/invitation/og-hero";
+import { ogCard, type OgCardAssets } from "@/lib/invitation/og-card";
 import { trustedPublicMediaPrefixes } from "@/lib/storage";
 import { isInvitationPubliclyActive } from "@/lib/invitation/visibility";
 import { canonicalApplicationOrigin } from "@/lib/security/origin";
 import { fetchOgImageData } from "@/lib/security/og-image";
-import { fitOgImage } from "@/lib/invitation/og-compress";
+import { fitOgImage, satoriImage } from "@/lib/invitation/og-compress";
 
 export const alt = "Undangan";
 export const size = { width: 1200, height: 630 };
@@ -27,6 +25,27 @@ function safe(text: string, fallback = ""): string {
   return cleaned || fallback;
 }
 
+const OG_FONT_PATH = "/themes/gerbang-puspa/fonts/Marcellus-Regular.ttf";
+
+/** Elegant Latin serif shipped with the app; any failure falls back to the default font. */
+async function loadOgFont(origin: string): Promise<ArrayBuffer | undefined> {
+  try {
+    const res = await fetch(new URL(OG_FONT_PATH, origin), {
+      redirect: "manual",
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return undefined;
+    const data = await res.arrayBuffer();
+    // TrueType magic: 0x00010000 or "true".
+    const head = new Uint8Array(data.slice(0, 4));
+    const ttf =
+      head[0] === 0 && head[1] === 1 && head[2] === 0 && head[3] === 0;
+    return ttf && data.byteLength < 1024 * 1024 ? data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Photo-heavy cards are re-encoded to stay under WhatsApp's thumbnail limit. */
 export default async function OgImage(props: {
   params: Promise<{ slug: string }>;
@@ -34,11 +53,7 @@ export default async function OgImage(props: {
   return fitOgImage(await renderCard(props));
 }
 
-async function renderCard({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+async function renderCard({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const loadedInvitation = await getPublicInvitation(slug);
   const inv =
@@ -46,19 +61,25 @@ async function renderCard({
       ? loadedInvitation
       : null;
   const g = inv?.global;
-  const primary = g?.color_primary ?? "#34503f";
-  const secondary = g?.color_secondary ?? "#7a2e3c";
-  const bg = g?.color_background ?? "#fbf8f3";
+  const colors = {
+    primary: g?.color_primary ?? "#34503f",
+    secondary: g?.color_secondary ?? "#7a2e3c",
+    background: g?.color_background ?? "#fbf8f3",
+  };
 
   const summary = inv ? invitationSummary(inv) : null;
   const cover = inv?.sections.find((s) => s.type === "cover");
-  const hero = inv?.sections.find((s) => s.type === "hero");
+  // The preview shows the opened invitation (hero), never the cover/gate.
+  const sections = inv?.sections ?? [];
+  const hero = getOgHero(sections);
 
-  const names = safe(summary?.names ?? "", "Undangan Digital");
+  // Names as shown in the opened hero, then the invitation summary.
+  const names = safe(
+    hero.names ?? summary?.names ?? "",
+    "Undangan Digital",
+  ).slice(0, 64);
   const tagline = safe(
-    (cover?.props?.tagline as string) ??
-      (hero?.props?.tagline as string) ??
-      "",
+    hero.tagline ?? (cover?.props?.tagline as string) ?? "",
     "Undangan",
   );
   const dateText = inv?.eventDate
@@ -70,139 +91,54 @@ async function renderCard({
     : "";
   const mediaPrefixes = trustedPublicMediaPrefixes();
   const origin = canonicalApplicationOrigin();
-  const visual = getCardVisual(inv?.sections ?? []);
-  const [photo, foreground, ornamentLeft, ornamentRight, seal] = await Promise.all([
-    fetchOgImageData(visual.background ?? summary?.photo ?? undefined, origin, mediaPrefixes),
-    fetchOgImageData(visual.foreground, origin, mediaPrefixes),
-    fetchOgImageData(visual.ornamentLeft, origin, mediaPrefixes),
-    fetchOgImageData(visual.ornamentRight, origin, mediaPrefixes),
-    fetchOgImageData(visual.seal, origin, mediaPrefixes),
-  ]);
-
-  try {
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            position: "relative",
-            background: bg,
-          }}
-        >
-          {photo ? (
-            <div
-              style={{
-                width: 540,
-                height: "100%",
-                display: "flex",
-                position: "relative",
-                overflow: "hidden",
-              }}
-            >
-              <img
-                src={photo}
-                alt=""
-                width={540}
-                height={630}
-                style={{ objectFit: "cover", height: "100%", width: 540 }}
-              />
-              {ornamentLeft ? (
-                <img
-                  src={ornamentLeft}
-                  alt=""
-                  width={150}
-                  height={280}
-                  style={{ position: "absolute", bottom: 0, left: 0, width: 150, height: 280, objectFit: "contain" }}
-                />
-              ) : null}
-              {ornamentRight ? (
-                <img
-                  src={ornamentRight}
-                  alt=""
-                  width={150}
-                  height={280}
-                  style={{ position: "absolute", bottom: 0, right: 0, width: 150, height: 280, objectFit: "contain" }}
-                />
-              ) : null}
-              {foreground ? (
-                <img
-                  src={foreground}
-                  alt=""
-                  width={300}
-                  height={360}
-                  style={{ position: "absolute", bottom: 30, left: 120, width: 300, height: 360, objectFit: "contain" }}
-                />
-              ) : null}
-              {seal ? (
-                <img
-                  src={seal}
-                  alt=""
-                  width={72}
-                  height={72}
-                  style={{ position: "absolute", top: 28, right: 28, width: 72, height: 72, objectFit: "contain" }}
-                />
-              ) : null}
-            </div>
-          ) : null}
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 64,
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 26,
-                letterSpacing: 8,
-                textTransform: "uppercase",
-                color: secondary,
-              }}
-            >
-              {tagline}
-            </div>
-            <div
-              style={{
-                fontSize: photo ? 72 : 92,
-                lineHeight: 1.05,
-                color: primary,
-                margin: "22px 0",
-              }}
-            >
-              {names}
-            </div>
-            <div style={{ width: 120, height: 2, background: secondary }} />
-            {dateText ? (
-              <div style={{ fontSize: 30, color: primary, marginTop: 22 }}>
-                {dateText}
-              </div>
-            ) : null}
-            <div
-              style={{
-                position: "absolute",
-                bottom: 34,
-                fontSize: 20,
-                color: secondary,
-                opacity: 0.7,
-              }}
-            >
-              ngaturi.com
-            </div>
-          </div>
-        </div>
-      ),
-      { ...size },
+  const fontPromise = loadOgFont(origin);
+  const [photo, backdrop, ornamentLeft, ornamentRight] = await Promise.all(
+    [hero.photo, hero.backdrop, hero.ornamentLeft, hero.ornamentRight].map(
+      async (src) =>
+        satoriImage(await fetchOgImageData(src, origin, mediaPrefixes)),
+    ),
+  );
+  const font = await fontPromise;
+  const fonts = font
+    ? [
+        {
+          name: "OgSerif",
+          data: font,
+          weight: 400 as const,
+          style: "normal" as const,
+        },
+      ]
+    : undefined;
+  const card = (assets: OgCardAssets) =>
+    new ImageResponse(
+      ogCard({
+        hero,
+        assets,
+        names,
+        tagline,
+        dateText,
+        colors,
+        fontFamily: fonts ? "OgSerif" : undefined,
+      }),
+      { ...size, fonts },
     );
+
+  // ImageResponse decodes images lazily while streaming, so a corrupt photo
+  // only fails when the body is read — settle it here to be able to fall back.
+  const settle = async (res: Response) =>
+    new Response(await res.arrayBuffer(), {
+      status: res.status,
+      headers: res.headers,
+    });
+  try {
+    return await settle(card({ photo, backdrop, ornamentLeft, ornamentRight }));
   } catch {
-    // last-resort card: solid colour + name only
-    return new ImageResponse(
-      (
+    try {
+      // Elegant fallback: palette + names only.
+      return await settle(card({}));
+    } catch {
+      // last-resort card: solid colour + name only
+      return new ImageResponse(
         <div
           style={{
             width: "100%",
@@ -210,7 +146,7 @@ async function renderCard({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: primary,
+            background: colors.primary,
             color: "#fff",
             fontSize: 72,
             textAlign: "center",
@@ -218,9 +154,9 @@ async function renderCard({
           }}
         >
           {names}
-        </div>
-      ),
-      { ...size },
-    );
+        </div>,
+        { ...size },
+      );
+    }
   }
 }
