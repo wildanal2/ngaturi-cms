@@ -560,4 +560,273 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
       expect(names).not.toContain("Setelah Revoke");
     });
   });
+
+  describe("quota counts stored guests only (issue #20 follow-up)", () => {
+    const A32 = "abcdefghijkmnpqrstuvwxyz23456789";
+    let n = 0;
+    const gen = () => {
+      let v = ++n + 1_000_000;
+      let out = "";
+      for (let i = 0; i < 10; i++, v = Math.floor(v / 32))
+        out = A32[v % 32] + out;
+      return out;
+    };
+    const phone = (i: number) => `0813${String(10_000_000 + i)}`;
+    let seq = 0;
+    async function fresh() {
+      const [inv] = await db
+        .insert(schema.invitations)
+        .values({
+          slug: `qa20q-${sfx}-${++seq}`,
+          userId: userIds[0],
+          plan: "premium",
+          isPaid: true,
+          status: "published",
+          eventTitle: "Kuota",
+        })
+        .returning();
+      ctx.ip = `198.51.101.${seq}`;
+      ctx.user = userIds[0];
+      await redisAdapter.delete("rl:delegate:issue:" + userIds[0]);
+      const r = await D.issueDelegateGrant(inv, 7);
+      if (!r.ok) throw new Error(r.error);
+      const res = await D.resolveDelegate(r.token);
+      if (!res.ok) throw new Error("resolve");
+      return { inv, res, token: r.token };
+    }
+    const dg = async (invId: string) =>
+      (await guests(invId)).filter((g) => g.slugToken.startsWith("dg"));
+    /** Distinct grants so the per-grant rate limiter never interferes. */
+    const as = (res: Awaited<ReturnType<typeof fresh>>["res"], i: number) => ({
+      ...res,
+      hash: `${res.hash}-p${i}`,
+    });
+    const items = (from: number, count: number, tag = "K") =>
+      Array.from({ length: count }, (_, i) => ({
+        name: `${tag} ${from + i}`,
+        phone: phone(from + i),
+      }));
+
+    it("a failed INSERT does not consume quota", async () => {
+      const { inv, res } = await fresh();
+      // Constant token: the first row lands, the next 19 violate the unique index.
+      const out = await D.createDelegatedGuestsBulk(
+        res,
+        items(0, 20),
+        () => "aaaaaaaaaa",
+      );
+      if (!out.ok) throw new Error(out.error);
+      expect(out.added).toBe(1);
+      expect(out.statuses.filter((x) => x === "failed")).toHaveLength(19);
+      expect(out.statuses[0]).toBe("added");
+      expect(await dg(inv.id)).toHaveLength(1);
+      // The remaining 99 slots are all still usable.
+      await redisAdapter.delete(`rl:delegate:bulk:${res.hash}`);
+      const rest = await D.createDelegatedGuestsBulk(res, items(100, 99), gen);
+      expect(rest).toMatchObject({ ok: true, added: 99 });
+      expect(await dg(inv.id)).toHaveLength(100);
+    });
+
+    it("a single add that fails does not consume quota either", async () => {
+      const { inv, res } = await fresh();
+      expect(
+        await D.createDelegatedGuest(
+          res,
+          { name: "A", group: "", phone: "", maxGuests: 2 },
+          () => "bbbbbbbbbb",
+        ),
+      ).toEqual({ ok: true });
+      for (let i = 0; i < 5; i++) {
+        await redisAdapter.delete(`rl:delegate:write:${res.hash}`);
+        expect(
+          (
+            await D.createDelegatedGuest(
+              res,
+              { name: `B${i}`, group: "", phone: "", maxGuests: 2 },
+              () => "bbbbbbbbbb",
+            )
+          ).ok,
+        ).toBe(false);
+      }
+      expect(await dg(inv.id)).toHaveLength(1);
+    });
+
+    it("attempts at a full quota consume nothing: a freed slot is usable again", async () => {
+      const { inv, res } = await fresh();
+      expect(
+        await D.createDelegatedGuestsBulk(res, items(0, 100), gen),
+      ).toMatchObject({ added: 100 });
+      for (let i = 0; i < 3; i++) {
+        await redisAdapter.delete(`rl:delegate:bulk:${res.hash}`);
+        await redisAdapter.delete(`rl:delegate:write:${res.hash}`);
+        expect(
+          await D.createDelegatedGuestsBulk(res, items(500 + i, 1), gen),
+        ).toEqual({ ok: true, added: 0, statuses: ["limit"] });
+        expect(
+          await D.createDelegatedGuest(
+            res,
+            { name: "Penuh", group: "", phone: "", maxGuests: 2 },
+            gen,
+          ),
+        ).toEqual({ ok: false, error: "Batas 100 tamu tercapai." });
+      }
+      const [first] = await dg(inv.id);
+      await db
+        .delete(schema.guestInvites)
+        .where(eq(schema.guestInvites.id, first.id));
+      await redisAdapter.delete(`rl:delegate:write:${res.hash}`);
+      expect(
+        await D.createDelegatedGuest(
+          res,
+          { name: "Pengganti", group: "", phone: "", maxGuests: 2 },
+          gen,
+        ),
+      ).toEqual({ ok: true });
+      expect(await dg(inv.id)).toHaveLength(100);
+    });
+
+    it("never exceeds 100 under parallel single and bulk requests", async () => {
+      const { inv, res } = await fresh();
+      const jobs = [
+        ...Array.from({ length: 25 }, (_, i) =>
+          D.createDelegatedGuestsBulk(
+            as(res, i),
+            items(i * 10, 10, "P"),
+            gen,
+          ).then((r) => (r.ok ? r.added : 0)),
+        ),
+        ...Array.from({ length: 40 }, (_, i) =>
+          D.createDelegatedGuest(
+            as(res, 100 + i),
+            { name: `S${i}`, group: "", phone: "", maxGuests: 2 },
+            gen,
+          ).then((r) => (r.ok ? 1 : 0)),
+        ),
+      ];
+      const added = (await Promise.all(jobs)).reduce<number>(
+        (a, b) => a + b,
+        0,
+      );
+      expect(added).toBe(100);
+      expect(await dg(inv.id)).toHaveLength(100);
+    });
+
+    it("single and bulk adds share one limit", async () => {
+      const { inv, res } = await fresh();
+      expect(
+        await D.createDelegatedGuestsBulk(res, items(0, 98), gen),
+      ).toMatchObject({ added: 98 });
+      expect(
+        await D.createDelegatedGuest(
+          res,
+          { name: "Satu", group: "", phone: "", maxGuests: 2 },
+          gen,
+        ),
+      ).toEqual({ ok: true });
+      await redisAdapter.delete(`rl:delegate:bulk:${res.hash}`);
+      const last = await D.createDelegatedGuestsBulk(res, items(200, 5), gen);
+      if (!last.ok) throw new Error(last.error);
+      expect(last.statuses).toEqual([
+        "added",
+        "limit",
+        "limit",
+        "limit",
+        "limit",
+      ]);
+      expect(await dg(inv.id)).toHaveLength(100);
+    });
+
+    it("ignores any legacy Redis counter", async () => {
+      const { inv, res } = await fresh();
+      await redisAdapter.set(
+        `ngaturi:delegate:count:v1:${res.hash}`,
+        "5000",
+        600,
+      );
+      expect(
+        await D.createDelegatedGuestsBulk(res, items(0, 3), gen),
+      ).toMatchObject({ added: 3 });
+      expect(
+        await D.createDelegatedGuest(
+          res,
+          { name: "X", group: "", phone: "", maxGuests: 2 },
+          gen,
+        ),
+      ).toEqual({ ok: true });
+      await redisAdapter.delete(`ngaturi:delegate:count:v1:${res.hash}`);
+      expect(await dg(inv.id)).toHaveLength(4);
+      // Nothing in the code path writes the old counter any more.
+      expect(
+        await redisAdapter.get(`ngaturi:delegate:count:v1:${res.hash}`),
+      ).toBeNull();
+    });
+
+    it("parallel retries and overlapping imports never create duplicate numbers", async () => {
+      const { inv, res } = await fresh();
+      const batch = items(0, 15, "D");
+      const all = await Promise.all(
+        Array.from({ length: 8 }, (_, i) =>
+          D.createDelegatedGuestsBulk(as(res, i), batch, gen),
+        ),
+      );
+      expect(all.reduce((a, r) => a + (r.ok ? r.added : 0), 0)).toBe(15);
+      const rows = await dg(inv.id);
+      expect(new Set(rows.map((g) => g.whatsappPhone)).size).toBe(15);
+      expect(rows).toHaveLength(15);
+    });
+
+    it("partial failure yields a consistent per-contact outcome and a safe retry", async () => {
+      const { inv, res } = await fresh();
+      let call = 0;
+      // Every 3rd insert collides on the unique token index.
+      const flaky = () => (++call % 3 === 0 ? "cccccccccc" : gen());
+      const first = await D.createDelegatedGuestsBulk(
+        res,
+        [...items(0, 7), { name: "" }],
+        flaky,
+      );
+      if (!first.ok) throw new Error(first.error);
+      expect(first.statuses).toHaveLength(8);
+      expect(first.statuses[7]).toBe("invalid");
+      expect(first.added).toBe(
+        first.statuses.filter((x) => x === "added").length,
+      );
+      expect((await dg(inv.id)).length).toBe(first.added);
+      await redisAdapter.delete(`rl:delegate:bulk:${res.hash}`);
+      const retry = await D.createDelegatedGuestsBulk(res, items(0, 7), gen);
+      if (!retry.ok) throw new Error(retry.error);
+      expect(retry.statuses.filter((x) => x === "failed")).toHaveLength(0);
+      expect((await dg(inv.id)).length).toBe(7);
+    });
+
+    it("a revoked grant cannot create guests through either path, and owner data stays hidden", async () => {
+      const { inv, res, token } = await fresh();
+      await db.insert(schema.guestInvites).values({
+        invitationId: inv.id,
+        guestName: "Rahasia Pemilik",
+        slugToken: "yyyyyyyyyy",
+        whatsappPhone: phone(900),
+      });
+      const ok = await A.addDelegateGuestsBulk(token, [
+        { name: "Sama", phone: phone(900) },
+      ]);
+      expect(ok).toMatchObject({
+        ok: true,
+        bulk: { ok: true, statuses: ["added"] },
+      });
+      expect(JSON.stringify(ok)).not.toContain("Rahasia Pemilik");
+      await A.revokeDelegateLink(inv.id);
+      const fd = new FormData();
+      fd.set("guest_name", "Setelah Revoke");
+      expect(await A.addDelegateGuest(token, fd)).toEqual({
+        ok: false,
+        reason: "revoked",
+      });
+      expect(
+        await A.addDelegateGuestsBulk(token, [{ name: "Setelah Revoke 2" }]),
+      ).toEqual({ ok: false, reason: "revoked" });
+      expect((await dg(inv.id)).map((g) => g.guestName)).toEqual(["Sama"]);
+      void res;
+    });
+  });
 });

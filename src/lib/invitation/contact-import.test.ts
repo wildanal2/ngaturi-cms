@@ -6,6 +6,7 @@ import {
   VCF_MAX_CONTACTS,
   buildBulkItems,
   classifyContacts,
+  duplicateTracker,
   findBulkDuplicates,
   normalizePhone,
   normalizePhones,
@@ -418,5 +419,19 @@ describe("native picker fill", () => {
         "+62 812345678",
       ]),
     ).toEqual({ kind: "duplicate" });
+  });
+});
+
+describe("duplicate tracker", () => {
+  it("only remembers items that were actually saved", () => {
+    const t = duplicateTracker([{ name: "X", phone: "081200001111" }]);
+    const a = { name: "A", phone: "081200002222", group: null, maxGuests: 2 };
+    expect(t.has(a)).toBe(false);
+    expect(t.has(a)).toBe(false); // a failed save is never added, so a retry is not a duplicate
+    t.add(a);
+    expect(t.has({ ...a, phone: "+62 812 0000 2222" })).toBe(true);
+    expect(
+      t.has({ name: "Z", phone: "081200001111", group: null, maxGuests: 2 }),
+    ).toBe(true);
   });
 });

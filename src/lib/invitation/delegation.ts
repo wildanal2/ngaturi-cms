@@ -7,10 +7,11 @@ import { redis } from "@/lib/redis";
 import { rateLimit } from "@/lib/rate-limit";
 import { trustedClientIp } from "@/lib/security/request-metadata";
 import {
-  findBulkDuplicates,
+  duplicateTracker,
   sanitizeBulk,
   type BulkItemStatus,
   type BulkResult,
+  type CleanBulkItem,
 } from "./contact-import";
 import { hasProFeatures } from "./entitlement";
 import {
@@ -419,41 +420,91 @@ export async function createDelegatedGuest(
         ok: false,
         error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
       };
-    const [{ n }] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(guestInvites)
-      .where(delegatedOnly(inv.id));
-    if (n >= DELEGATE_MAX_GUESTS)
+    const [status] = await insertDelegatedGuests(
+      inv.id,
+      [
+        {
+          name: guestName,
+          phone: phone || null,
+          group: cleanText(input.group, 100) || null,
+          maxGuests,
+        },
+      ],
+      makeToken,
+      false,
+    );
+    if (status === "limit")
       return {
         ok: false,
         error: `Batas ${DELEGATE_MAX_GUESTS} tamu tercapai.`,
       };
-    // Atomic per-grant ceiling, independent of the racy count above.
-    const ttl = Math.max(
-      1,
-      Math.ceil((Date.parse(r.record.expiresAt) - Date.now()) / 1000),
-    );
-    const used = await redis.incrementWithTtl(
-      `ngaturi:delegate:count:v1:${hash}`,
-      ttl,
-    );
-    if (used > DELEGATE_MAX_GUESTS)
-      return {
-        ok: false,
-        error: `Batas ${DELEGATE_MAX_GUESTS} tamu tercapai.`,
-      };
-    await db.insert(guestInvites).values({
-      invitationId: inv.id,
-      guestName,
-      slugToken: DELEGATE_TOKEN_PREFIX + makeToken(),
-      guestGroup: cleanText(input.group, 100) || null,
-      maxGuests,
-      whatsappPhone: phone || null,
-    });
-    return { ok: true };
+    return status === "added"
+      ? { ok: true }
+      : { ok: false, error: "Gagal menambah tamu. Silakan coba lagi." };
   } catch {
     return { ok: false, error: "Gagal menambah tamu. Silakan coba lagi." };
   }
+}
+
+/**
+ * The only writer of delegated guests. The 100-guest ceiling covers every `dg`
+ * guest of the invitation and is counted from rows actually stored, inside a
+ * transaction that holds the invitation row lock, so parallel requests (single
+ * or bulk) serialise here and can never exceed it. Each insert runs in its own
+ * savepoint: one failing row does not abort the rest of the batch. Duplicates
+ * are checked only against delegated guests, never the owner's contacts.
+ */
+async function insertDelegatedGuests(
+  invitationId: string,
+  items: CleanBulkItem[],
+  makeToken: () => string,
+  dedupe: boolean,
+): Promise<BulkItemStatus[]> {
+  return db.transaction(async (tx) => {
+    await tx
+      .select({ id: invitations.id })
+      .from(invitations)
+      .where(eq(invitations.id, invitationId))
+      .for("update");
+    const existing = await tx
+      .select({
+        name: guestInvites.guestName,
+        phone: guestInvites.whatsappPhone,
+      })
+      .from(guestInvites)
+      .where(delegatedOnly(invitationId));
+    const tracker = duplicateTracker(existing);
+    let room = DELEGATE_MAX_GUESTS - existing.length;
+    const statuses: BulkItemStatus[] = [];
+    for (const item of items) {
+      if (!item.name) {
+        statuses.push("invalid");
+      } else if (dedupe && tracker.has(item)) {
+        statuses.push("duplicate");
+      } else if (room <= 0) {
+        statuses.push("limit");
+      } else {
+        try {
+          await tx.transaction((sp) =>
+            sp.insert(guestInvites).values({
+              invitationId,
+              guestName: item.name,
+              slugToken: DELEGATE_TOKEN_PREFIX + makeToken(),
+              guestGroup: item.group,
+              maxGuests: item.maxGuests,
+              whatsappPhone: item.phone,
+            }),
+          );
+          room--;
+          tracker.add(item);
+          statuses.push("added");
+        } catch {
+          statuses.push("failed");
+        }
+      }
+    }
+    return statuses;
+  });
 }
 
 export async function markDelegatedGuestSent(
@@ -470,10 +521,8 @@ export async function markDelegatedGuestSent(
 }
 
 /**
- * Bulk variant of createDelegatedGuest for contacts picked on the device.
- * Duplicates are checked only against this grant's own guests, so the owner's
- * guest list is never revealed. The per-grant Redis ceiling is consumed one
- * guest at a time, exactly like single adds.
+ * Bulk variant of createDelegatedGuest for contacts picked on the device. Shares
+ * `insertDelegatedGuests`, so single and bulk adds use one quota and one lock.
  */
 export async function createDelegatedGuestsBulk(
   r: Extract<Resolved, { ok: true }>,
@@ -498,60 +547,17 @@ export async function createDelegatedGuestsBulk(
         ok: false,
         error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
       };
-    const existing = await db
-      .select({
-        name: guestInvites.guestName,
-        phone: guestInvites.whatsappPhone,
-      })
-      .from(guestInvites)
-      .where(delegatedOnly(inv.id));
-    const duplicates = findBulkDuplicates(items, existing);
-    const ttl = Math.max(
-      1,
-      Math.ceil((Date.parse(r.record.expiresAt) - Date.now()) / 1000),
+    const statuses = await insertDelegatedGuests(
+      inv.id,
+      items,
+      makeToken,
+      true,
     );
-    const statuses: BulkItemStatus[] = [];
-    let room = DELEGATE_MAX_GUESTS - existing.length;
-    let added = 0;
-    for (const [i, item] of items.entries()) {
-      if (!item.name) {
-        statuses.push("invalid");
-        continue;
-      }
-      if (duplicates[i]) {
-        statuses.push("duplicate");
-        continue;
-      }
-      if (room <= 0) {
-        statuses.push("limit");
-        continue;
-      }
-      try {
-        const used = await redis.incrementWithTtl(
-          `ngaturi:delegate:count:v1:${hash}`,
-          ttl,
-        );
-        if (used > DELEGATE_MAX_GUESTS) {
-          room = 0;
-          statuses.push("limit");
-          continue;
-        }
-        await db.insert(guestInvites).values({
-          invitationId: inv.id,
-          guestName: item.name,
-          slugToken: DELEGATE_TOKEN_PREFIX + makeToken(),
-          guestGroup: item.group,
-          maxGuests: item.maxGuests,
-          whatsappPhone: item.phone,
-        });
-        room--;
-        added++;
-        statuses.push("added");
-      } catch {
-        statuses.push("failed");
-      }
-    }
-    return { ok: true, statuses, added };
+    return {
+      ok: true,
+      statuses,
+      added: statuses.filter((s) => s === "added").length,
+    };
   } catch {
     return { ok: false, error: "Gagal menambah tamu. Silakan coba lagi." };
   }

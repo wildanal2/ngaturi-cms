@@ -328,23 +328,41 @@ export function sanitizeBulk(
   });
 }
 
-/** Marks which items of a clean batch are duplicates of existing or earlier ones. */
-export function findBulkDuplicates(
-  items: CleanBulkItem[],
+/**
+ * Duplicate lookup that only remembers guests that really exist. Call `add`
+ * after a successful save so a failed insert never shadows a later retry.
+ */
+export function duplicateTracker(
   existing: { name?: string | null; phone: string | null }[],
-): boolean[] {
+) {
   const keys = new Set(
     existing.map((g) => (g.phone ? phoneKey(g.phone) : "")).filter(Boolean),
   );
   const names = new Set(
     existing.filter((g) => !g.phone && g.name).map((g) => nameKey(g.name!)),
   );
+  return {
+    has: (item: CleanBulkItem) =>
+      item.phone
+        ? keys.has(phoneKey(item.phone))
+        : names.has(nameKey(item.name)),
+    add: (item: CleanBulkItem) => {
+      if (item.phone) keys.add(phoneKey(item.phone));
+      else names.add(nameKey(item.name));
+    },
+  };
+}
+
+/** Marks which items of a clean batch are duplicates of existing or earlier ones. */
+export function findBulkDuplicates(
+  items: CleanBulkItem[],
+  existing: { name?: string | null; phone: string | null }[],
+): boolean[] {
+  const tracker = duplicateTracker(existing);
   return items.map((item) => {
     if (!item.name) return false;
-    const key = item.phone ? phoneKey(item.phone) : `n:${nameKey(item.name)}`;
-    const dup = item.phone ? keys.has(key) : names.has(nameKey(item.name));
-    if (item.phone) keys.add(key);
-    else names.add(nameKey(item.name));
+    const dup = tracker.has(item);
+    tracker.add(item);
     return dup;
   });
 }
