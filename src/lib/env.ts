@@ -15,6 +15,20 @@ const schema = z.object({
   // Node uses verified TLS directly. Workers use the HYPERDRIVE binding.
   DATABASE_URL: z.string().min(1).optional(),
   DATABASE_POOL_SIZE: z.coerce.number().int().positive().default(5),
+  // Optional TLS server name (SNI + certificate identity) for a database whose
+  // certificate SAN differs from the DATABASE_URL host. Verification stays on.
+  // Blank is treated as unset so an empty line in the env file is harmless.
+  DATABASE_TLS_SERVERNAME: z
+    .string()
+    .trim()
+    .transform((value) => value || undefined)
+    .pipe(
+      z
+        .string()
+        .regex(/^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/)
+        .optional(),
+    )
+    .optional(),
 
   // Node defaults to REST. TCP is an explicit legacy fallback; Workers use REST.
   REDIS_TRANSPORT: z.enum(["rest", "tcp"]).default("rest"),

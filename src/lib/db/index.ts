@@ -35,7 +35,15 @@ function getNodeDatabase(): Database {
       max: env.DATABASE_POOL_SIZE,
       // Explicit options override sslmode=require, which disables certificate
       // verification in Postgres.js. Keep Node's default hostname verification.
-      ssl: { rejectUnauthorized: true },
+      // DATABASE_TLS_SERVERNAME only changes which name the certificate must
+      // match (e.g. a self-signed cert issued for localhost.localdomain); trust
+      // for a private CA comes from NODE_EXTRA_CA_CERTS.
+      ssl: {
+        rejectUnauthorized: true,
+        ...(env.DATABASE_TLS_SERVERNAME
+          ? { servername: env.DATABASE_TLS_SERVERNAME }
+          : {}),
+      },
       connect_timeout: 10,
       idle_timeout: 20,
       max_lifetime: 300,
