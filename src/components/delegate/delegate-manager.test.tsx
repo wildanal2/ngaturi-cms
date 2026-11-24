@@ -114,11 +114,11 @@ describe("DelegateManager guest list", () => {
     expect(out).toContain("Sudah dibuka");
     expect(out).toContain("Teman Kantor");
     expect(out).toContain('role="combobox"');
-    expect(out).not.toContain(">Hapus<");
+    expect(out).not.toContain("Hapus tamu");
   });
   it("offers edits only when adding is allowed", () => {
-    expect(html(view)).toContain("Edit nama");
-    expect(html({ ...view, canCreate: false })).not.toContain("Edit nama");
+    expect(html(view)).toContain("Lainnya");
+    expect(html({ ...view, canCreate: false })).not.toContain("Lainnya");
   });
   it("keeps the RSVP tab content out of the Share tab", () => {
     expect(html(view)).not.toContain("Status RSVP");

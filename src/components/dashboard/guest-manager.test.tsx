@@ -177,14 +177,13 @@ describe("guest list features (owner)", () => {
     expect(html).toContain('role="combobox"');
     expect(html).toContain('name="guest_group"');
     expect(html).toContain("Daftar Tamu");
-    expect(html).toContain("Edit nama");
-    expect(html).toContain("Hapus");
+    expect(html).toContain("Lainnya");
+    expect(html).toContain("Salin link");
   });
   it("is read-only for edits without entitlement but keeps sending and delete", () => {
     const html = render(template, false);
-    expect(html).not.toContain("Edit nama");
-    expect(html).not.toContain("Ubah kategori");
     expect(html).toContain("Kirim WA");
-    expect(html).toContain("Hapus");
+    // Owner can still delete guests (menu stays), but there is no edit entry point.
+    expect(html).toContain("Lainnya");
   });
 });

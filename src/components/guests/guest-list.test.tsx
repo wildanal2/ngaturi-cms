@@ -70,8 +70,8 @@ describe("GuestList markup", () => {
   it("shows stats, result count, 25 cards per page and pagination controls", () => {
     const html = render(Array.from({ length: 60 }, (_, i) => guest(i)));
     expect(html).toContain("Total Tamu");
-    expect(html).toContain("Sudah Dikirim");
-    expect(html).toContain("Sudah Dibuka");
+    expect(html).toContain("Dikirim");
+    expect(html).toContain("Dibuka");
     expect(html).toContain("Menampilkan 60 dari 60 tamu");
     expect(html.match(/Salin link/g)).toHaveLength(25);
     expect(html).toContain("Halaman 1 dari 3");
@@ -85,32 +85,27 @@ describe("GuestList markup", () => {
     const html = render([guest(1, { guestGroup: "Teman Kantor" }), guest(2)]);
     expect(html.match(/bg-cream-200 px-2\.5/g)).toHaveLength(1);
     expect(html).toContain("Teman Kantor");
-    expect(html.match(/Ubah kategori/g)).toHaveLength(2);
-    expect(html.match(/Hapus kategori/g)).toHaveLength(1);
+    // Secondary actions live in a per-card menu that is closed on first paint.
+    expect(html.match(/aria-haspopup="menu"/g)).toHaveLength(2);
+    expect(html).not.toContain('role="menu"');
     expect(html).toContain("Semua kategori");
     expect(html).toContain("Tanpa kategori");
   });
-  it("locks Edit nama once sent or opened but keeps Ubah kategori", () => {
+  it("explains the name lock in the always-visible note and keeps the menu closed", () => {
     const html = render([
       guest(1, { isSent: true }),
       guest(2, { opened: true }),
       guest(3),
     ]);
-    expect(
-      html.match(/<button[^>]+disabled=""[^>]*>Edit nama<\/button>/g),
-    ).toHaveLength(2);
-    expect(html.match(/Edit nama/g)).toHaveLength(3);
     expect(html).toContain(NAME_LOCKED_MESSAGE);
-    expect(html).not.toMatch(
-      /<button[^>]+disabled=""[^>]*>Ubah kategori<\/button>/,
-    );
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).not.toContain('role="menuitem"');
   });
-  it("hides edit actions without edit rights and Hapus unless the owner passes it", () => {
+  it("renders no menu without edit rights, and offers one when the owner can delete", () => {
     const view = render([guest(1)], { canEdit: false });
-    expect(view).not.toContain("Edit nama");
-    expect(view).not.toContain("Ubah kategori");
-    expect(view).not.toContain(">Hapus<");
-    expect(render([guest(1)], { onDelete: () => {} })).toContain(">Hapus<");
+    expect(view).not.toContain("Lainnya");
+    expect(render([guest(1)], { onDelete: () => {} })).toContain("Lainnya");
+    expect(render([guest(1)])).toContain("Tindakan lain untuk Tamu 1");
   });
   it("shows the delegate quota consistently from one limit", () => {
     const html = render(

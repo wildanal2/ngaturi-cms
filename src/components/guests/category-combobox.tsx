@@ -26,6 +26,7 @@ export function CategoryCombobox({
   disabled,
   name,
   compact,
+  autoFocus,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -35,6 +36,7 @@ export function CategoryCombobox({
   /** Renders a hidden input so the value travels with a plain form post. */
   name?: string;
   compact?: boolean;
+  autoFocus?: boolean;
 }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -114,6 +116,8 @@ export function CategoryCombobox({
         aria-autocomplete="list"
         aria-activedescendant={open ? `${id}-o${active}` : undefined}
         autoComplete="off"
+        autoFocus={autoFocus}
+        enterKeyHint="done"
         disabled={disabled}
         maxLength={CATEGORY_MAX}
         value={value}
@@ -142,7 +146,7 @@ export function CategoryCombobox({
             setOpen(false);
           }
         }}
-        className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm"
+        className="min-h-11 w-full rounded-lg border border-line bg-paper px-3 py-2 text-base sm:text-sm"
       />
       {name ? (
         <input type="hidden" name={name} value={normalizeCategory(value)} />

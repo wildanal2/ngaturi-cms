@@ -34,7 +34,8 @@ import {
 import { useContactPrefill } from "@/components/guests/use-contact-prefill";
 import { DelegateMessageEditor } from "./delegate-message-editor";
 
-const field = "rounded-lg border border-line bg-paper px-3 py-2 text-sm";
+const field =
+  "min-h-11 rounded-lg border border-line bg-paper px-3 py-2 text-base sm:text-sm";
 
 export function DelegateManager({ initial }: { initial: DelegateView }) {
   const { token } = useParams<{ token: string }>();
@@ -197,7 +198,7 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
                 />
                 <button
                   disabled={pending || prefill.picking}
-                  className="rounded-full bg-forest px-4 py-2 text-sm font-medium text-cream disabled:opacity-60 sm:col-span-2"
+                  className="min-h-11 rounded-full bg-forest px-4 py-2 text-sm font-medium text-cream disabled:opacity-60 sm:col-span-2"
                 >
                   {pending ? "Menyimpan…" : "Tambah tamu"}
                 </button>
