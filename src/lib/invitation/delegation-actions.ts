@@ -6,12 +6,16 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/helpers";
 import { db } from "@/lib/db";
 import { invitations } from "@/lib/db/schema";
+import type { BulkResult } from "./contact-import";
 import {
   createDelegatedGuest,
+  createDelegatedGuestsBulk,
   issueDelegateGrant,
   isUuid,
   loadDelegateView,
-  markDelegatedGuestSent,
+  markDelegatedGuestSentChecked,
+  renameDelegatedGuest,
+  setDelegatedGuestCategory,
   readDelegateStatus,
   resolveDelegate,
   revokeDelegateGrant,
@@ -99,9 +103,29 @@ export async function addDelegateGuest(
   );
   try {
     const view = await loadDelegateView(r);
+    if (!created.ok && created.dead) return { ok: false, reason: created.dead };
     return created.ok
       ? { ok: true, view }
       : { ok: true, view, error: created.error };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
+export type DelegateBulkResult =
+  | { ok: true; view: DelegateView; bulk: BulkResult }
+  | { ok: false; reason: DelegateFailure };
+
+export async function addDelegateGuestsBulk(
+  token: string,
+  input: unknown,
+): Promise<DelegateBulkResult> {
+  const r = await resolveDelegate(token);
+  if (!r.ok) return r;
+  const bulk = await createDelegatedGuestsBulk(r, input, guestToken);
+  if (!bulk.ok && bulk.dead) return { ok: false, reason: bulk.dead };
+  try {
+    return { ok: true, view: await loadDelegateView(r), bulk };
   } catch {
     return { ok: false, reason: "unavailable" };
   }
@@ -113,10 +137,49 @@ export async function markDelegateGuestSent(
 ): Promise<DelegateResult> {
   const r = await resolveDelegate(token);
   if (!r.ok) return r;
+  const sent = await markDelegatedGuestSentChecked(r, guestId);
+  if (!sent.ok && sent.dead) return { ok: false, reason: sent.dead };
   try {
-    await markDelegatedGuestSent(r, guestId);
     return { ok: true, view: await loadDelegateView(r) };
   } catch {
     return { ok: false, reason: "unavailable" };
   }
+}
+
+async function editDelegated(
+  token: string,
+  run: (
+    r: Extract<Awaited<ReturnType<typeof resolveDelegate>>, { ok: true }>,
+  ) => Promise<
+    { ok: true } | { ok: false; error: string; dead?: DelegateFailure }
+  >,
+): Promise<DelegateResult> {
+  const r = await resolveDelegate(token);
+  if (!r.ok) return r;
+  const done = await run(r);
+  if (!done.ok && done.dead) return { ok: false, reason: done.dead };
+  try {
+    const view = await loadDelegateView(r);
+    return done.ok ? { ok: true, view } : { ok: true, view, error: done.error };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
+export async function renameDelegateGuest(
+  token: string,
+  guestId: string,
+  name: string,
+): Promise<DelegateResult> {
+  return editDelegated(token, (r) => renameDelegatedGuest(r, guestId, name));
+}
+
+export async function setDelegateGuestCategory(
+  token: string,
+  guestId: string,
+  category: string | null,
+): Promise<DelegateResult> {
+  return editDelegated(token, (r) =>
+    setDelegatedGuestCategory(r, guestId, category),
+  );
 }

@@ -18,7 +18,7 @@ export function Logo({
       className={cn("inline-flex items-center gap-2", className)}
     >
       <Image
-        src="/logo/logo-icon.png"
+        src="/logo/logo-icon-sm.png"
         alt=""
         width={28}
         height={30}

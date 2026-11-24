@@ -12,8 +12,11 @@ vi.mock("sonner", () => ({
 }));
 vi.mock("@/lib/invitation/guests", () => ({
   createGuestInvite: vi.fn(),
+  createGuestInvitesBulk: vi.fn(),
   deleteGuestInvite: vi.fn(),
   markGuestSent: vi.fn(),
+  renameGuestInvite: vi.fn(),
+  setGuestCategory: vi.fn(),
 }));
 vi.mock("@/lib/invitation/whatsapp-message-actions", () => ({
   saveWhatsappTemplate: vi.fn(),
@@ -142,5 +145,45 @@ describe("guest WhatsApp rendering integration", () => {
     expect(html).toMatch(
       /<button[^>]+disabled=""[^>]*>Reset ke Default<\/button>/,
     );
+  });
+});
+
+describe("contact import entry point (owner)", () => {
+  const template = {
+    message: DEFAULT_WHATSAPP_MESSAGE,
+    source: "default" as const,
+    isCustom: false,
+  };
+  it("offers .vcf import next to manual entry, collapsed, with no file picker until opened", () => {
+    const html = render(template);
+    expect(html).toContain("Impor kontak dari file (.vcf)");
+    expect(html).toContain('name="guest_name"');
+    expect(html).not.toContain('type="file"');
+    expect(html).not.toContain("Ambil dari Kontak HP");
+  });
+  it("hides import without creation entitlement", () => {
+    expect(render(template, false)).not.toContain("Impor kontak");
+  });
+});
+
+describe("guest list features (owner)", () => {
+  const template = {
+    message: DEFAULT_WHATSAPP_MESSAGE,
+    source: "default" as const,
+    isCustom: false,
+  };
+  it("uses a category combobox in the add form and keeps the form field name", () => {
+    const html = render(template);
+    expect(html).toContain('role="combobox"');
+    expect(html).toContain('name="guest_group"');
+    expect(html).toContain("Daftar Tamu");
+    expect(html).toContain("Lainnya");
+    expect(html).toContain("Salin link");
+  });
+  it("is read-only for edits without entitlement but keeps sending and delete", () => {
+    const html = render(template, false);
+    expect(html).toContain("Kirim WA");
+    // Owner can still delete guests (menu stays), but there is no edit entry point.
+    expect(html).toContain("Lainnya");
   });
 });

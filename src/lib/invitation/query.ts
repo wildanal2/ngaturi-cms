@@ -107,9 +107,30 @@ export async function getGuestByToken(
   return g ?? null;
 }
 
-export async function markGuestOpened(guestId: string): Promise<void> {
-  await db
-    .update(guestInvites)
-    .set({ openedAt: new Date() })
-    .where(and(eq(guestInvites.id, guestId), isNull(guestInvites.openedAt)));
+/**
+ * Reads the guest of a personal link and records the first open in the same
+ * statement. Renaming is only allowed while `opened_at IS NULL`, so the name
+ * returned here is always the final one: a rename can no longer land between
+ * "page rendered with the old name" and "marked as opened". If the write fails
+ * the page still renders from a plain read.
+ */
+export async function openGuestByToken(
+  invitationId: string,
+  token: string,
+): Promise<{ id: string; name: string } | null> {
+  const match = and(
+    eq(guestInvites.invitationId, invitationId),
+    eq(guestInvites.slugToken, token),
+  );
+  try {
+    const [opened] = await db
+      .update(guestInvites)
+      .set({ openedAt: new Date() })
+      .where(and(match, isNull(guestInvites.openedAt)))
+      .returning({ id: guestInvites.id, name: guestInvites.guestName });
+    if (opened) return opened;
+  } catch {
+    // fall through to a read-only lookup
+  }
+  return getGuestByToken(invitationId, token);
 }

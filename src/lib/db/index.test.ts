@@ -119,3 +119,61 @@ describe("getDb", () => {
     expect(mocks.postgres).not.toHaveBeenCalled();
   });
 });
+
+describe("getDb TLS server name", () => {
+  async function nodeOptions(servername?: string) {
+    vi.resetModules();
+    vi.stubEnv("DATABASE_TLS_SERVERNAME", servername);
+    globalThis.__pgClient = undefined;
+    globalThis.__nodeDatabase = undefined;
+    const fresh = await import("./index");
+    fresh.getDb();
+    return mocks.postgres.mock.calls.at(-1)![1] as {
+      ssl: Record<string, unknown>;
+    };
+  }
+
+  it.each([undefined, "", "   "])(
+    "leaves TLS options unchanged when unset (%j)",
+    async (value) => {
+      expect((await nodeOptions(value)).ssl).toStrictEqual({
+        rejectUnauthorized: true,
+      });
+    },
+  );
+
+  it("uses DATABASE_TLS_SERVERNAME as ssl.servername and still verifies", async () => {
+    expect((await nodeOptions("localhost.localdomain")).ssl).toStrictEqual({
+      rejectUnauthorized: true,
+      servername: "localhost.localdomain",
+    });
+  });
+
+  it("keeps verification on in the real driver with a server name", async () => {
+    const options = await nodeOptions("localhost.localdomain");
+    const { default: postgres } = await vi.importActual<{
+      default: typeof import("postgres");
+    }>("postgres");
+    const client = postgres(
+      "postgres://user:pass@db.ngaturi.com:5432/test?sslmode=require",
+      options,
+    );
+    expect(client.options.ssl).toEqual({
+      rejectUnauthorized: true,
+      servername: "localhost.localdomain",
+    });
+    await client.end();
+  });
+
+  it("never applies the server name to the Worker Hyperdrive path", async () => {
+    vi.resetModules();
+    vi.stubEnv("DATABASE_TLS_SERVERNAME", "localhost.localdomain");
+    const fresh = await import("./index");
+    const ctx = await import("@/lib/runtime/context");
+    await ctx.runWithInvocationContext(
+      workerEnv("postgres://hyperdrive/x"),
+      async () => fresh.getDb(),
+    );
+    expect(mocks.postgres.mock.calls.at(-1)![1]).not.toHaveProperty("ssl");
+  });
+});

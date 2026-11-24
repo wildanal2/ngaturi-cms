@@ -9,8 +9,7 @@ import { InvitationRenderer } from "@/lib/invitation/renderer";
 import { getSession } from "@/lib/auth/helpers";
 import {
   getPublicInvitation,
-  getGuestByToken,
-  markGuestOpened,
+  openGuestByToken,
   invitationSummary,
 } from "@/lib/invitation/query";
 import { InvitationCover } from "@/components/invitation/cover";
@@ -106,7 +105,7 @@ export default async function InvitationPage({
   if (!canViewInvitation(inv, viewerUserId, now)) notFound();
   const isPreview = !isPubliclyActive;
 
-  const guest = to ? await getGuestByToken(inv.id, to) : null;
+  const guest = to ? await openGuestByToken(inv.id, to) : null;
   const guestName = guest?.name ?? null;
 
   // track view setelah response
@@ -126,7 +125,6 @@ export default async function InvitationPage({
         .update(invitations)
         .set({ viewCount: sql`${invitations.viewCount} + 1` })
         .where(eq(invitations.id, inv.id));
-      if (guest) await markGuestOpened(guest.id);
     } catch {
       console.warn(
         "Public invitation analytics failed",
@@ -193,10 +191,17 @@ export default async function InvitationPage({
       ) : null}
       <InvitationRenderer
         opening={
-          !hasCoverSection && inv.global.cover_enabled !== false &&
-          resolveTemplateComposition(inv.sourceTemplate) === "cinematic-vintage" ? (
+          !hasCoverSection &&
+          inv.global.cover_enabled !== false &&
+          resolveTemplateComposition(inv.sourceTemplate) ===
+            "cinematic-vintage" ? (
             <InvitationCover
-              names={(inv.sections.find((s) => s.type === "hero")?.props.couple_names as string) ?? inv.eventTitle ?? "Undangan"}
+              names={
+                (inv.sections.find((s) => s.type === "hero")?.props
+                  .couple_names as string) ??
+                inv.eventTitle ??
+                "Undangan"
+              }
               guestName={guestName}
               global={inv.global}
             />
