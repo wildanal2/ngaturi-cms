@@ -8,18 +8,16 @@ import { rateLimit } from "@/lib/rate-limit";
 import { trustedClientIp } from "@/lib/security/request-metadata";
 import {
   BULK_GUEST_MAX,
-  duplicateTracker,
   sanitizeBulk,
-  type BulkItemStatus,
   type BulkResult,
   type CleanBulkItem,
 } from "./contact-import";
 import {
   NAME_LOCKED_MESSAGE,
   canonicalCategory,
-  canonicalizeGroups,
 } from "./guest-list";
 import { hasProFeatures } from "./entitlement";
+import { insertGuestsLocked, lockInvitation, type Tx } from "./guest-writer";
 import {
   defaultWhatsappTemplate,
   readWhatsappTemplate,
@@ -327,11 +325,10 @@ export interface DelegateView {
   guests: DelegateGuest[];
 }
 
+/** Delegated guests: `dg` + 10 characters (owner tokens are exactly 10). */
+const delegatedScope = sql`${guestInvites.slugToken} like 'dg%' and length(${guestInvites.slugToken}) = 12`;
 const delegatedOnly = (invitationId: string) =>
-  and(
-    eq(guestInvites.invitationId, invitationId),
-    sql`${guestInvites.slugToken} like 'dg%' and length(${guestInvites.slugToken}) = 12`,
-  );
+  and(eq(guestInvites.invitationId, invitationId), delegatedScope);
 
 /** Explicit column lists: nothing private can leak by adding a column. */
 export async function loadDelegateView(
@@ -401,12 +398,56 @@ const cleanText = (v: unknown, max: number) =>
     .trim()
     .slice(0, max);
 
+/** Why a write was refused after the grant itself resolved. */
+export interface DelegateWriteFailure {
+  ok: false;
+  error: string;
+  /** The grant was revoked or expired while the request waited. */
+  dead?: DelegateFailure;
+}
+type WriteResult = { ok: true } | DelegateWriteFailure;
+
+const NO_WRITE: DelegateWriteFailure = {
+  ok: false,
+  error: "Akses ini tidak mengizinkan perubahan tamu.",
+};
+const hasScope = (record: GrantRecord, scope: string) =>
+  record.scopes.includes(scope);
+
+/**
+ * Re-reads the grant. A request may have resolved a valid grant and then waited
+ * for the invitation lock while the owner revoked or replaced it; the write must
+ * not go through in that case. Fails closed if Redis cannot be read.
+ */
+async function grantProblem(
+  r: Extract<Resolved, { ok: true }>,
+  now = new Date(),
+): Promise<DelegateFailure | null> {
+  const record = parseRecord(await redis.get(grantKey(r.hash)));
+  if (!record) return "invalid";
+  if (record.revoked) return "revoked";
+  if (Date.parse(record.expiresAt) <= now.getTime()) return "expired";
+  return null;
+}
+
+const FAILURE_MESSAGE: Partial<Record<DelegateFailure, string>> = {
+  revoked: "Akses telah dicabut.",
+  expired: "Akses sudah kedaluwarsa.",
+  invalid: "Akses tidak valid.",
+};
+const dead = (reason: DelegateFailure): DelegateWriteFailure => ({
+  ok: false,
+  error: FAILURE_MESSAGE[reason] ?? "Akses tidak valid.",
+  dead: reason,
+});
+
 export async function createDelegatedGuest(
   r: Extract<Resolved, { ok: true }>,
   input: { name: unknown; group: unknown; phone: unknown; maxGuests: unknown },
   makeToken: () => string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<WriteResult> {
   const { inv, hash } = r;
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
   if (!hasProFeatures(inv))
     return {
       ok: false,
@@ -427,8 +468,9 @@ export async function createDelegatedGuest(
         ok: false,
         error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
       };
-    const [status] = await insertDelegatedGuests(
-      inv.id,
+    // Manual add keeps its existing policy: no duplicate check.
+    const out = await insertDelegatedGuests(
+      r,
       [
         {
           name: guestName,
@@ -440,6 +482,8 @@ export async function createDelegatedGuest(
       makeToken,
       false,
     );
+    if (out.aborted) return dead(out.reason);
+    const [status] = out.statuses;
     if (status === "limit")
       return {
         ok: false,
@@ -454,95 +498,88 @@ export async function createDelegatedGuest(
 }
 
 /**
- * The only writer of delegated guests. The 100-guest ceiling covers every `dg`
- * guest of the invitation and is counted from rows actually stored, inside a
- * transaction that holds the invitation row lock, so parallel requests (single
- * or bulk) serialise here and can never exceed it. Each insert runs in its own
- * savepoint: one failing row does not abort the rest of the batch. Duplicates
- * are checked only against delegated guests, never the owner's contacts.
+ * Delegated writer: the invitation-wide ceiling (DELEGATE_MAX_GUESTS, counted
+ * over every `dg` guest of the invitation from stored rows) and duplicate checks
+ * run inside the shared locked transaction, after re-validating the grant.
+ * Duplicates never look at the owner's guests.
  */
 async function insertDelegatedGuests(
-  invitationId: string,
+  r: Extract<Resolved, { ok: true }>,
   items: CleanBulkItem[],
   makeToken: () => string,
   dedupe: boolean,
-): Promise<BulkItemStatus[]> {
-  return db.transaction(async (tx) => {
-    await tx
-      .select({ id: invitations.id })
-      .from(invitations)
-      .where(eq(invitations.id, invitationId))
-      .for("update");
-    const existing = await tx
-      .select({
-        name: guestInvites.guestName,
-        phone: guestInvites.whatsappPhone,
-        group: guestInvites.guestGroup,
-      })
-      .from(guestInvites)
-      .where(delegatedOnly(invitationId));
-    const tracker = duplicateTracker(existing);
-    // Spelling is matched only against this grant's own categories.
-    const grouped = canonicalizeGroups(
-      items,
-      existing.map((row) => row.group),
-    );
-    let room = DELEGATE_MAX_GUESTS - existing.length;
-    const statuses: BulkItemStatus[] = [];
-    for (const [i, item] of items.entries()) {
-      if (!item.name) {
-        statuses.push("invalid");
-      } else if (dedupe && tracker.has(item)) {
-        statuses.push("duplicate");
-      } else if (room <= 0) {
-        statuses.push("limit");
-      } else {
-        try {
-          await tx.transaction((sp) =>
-            sp.insert(guestInvites).values({
-              invitationId,
-              guestName: item.name,
-              slugToken: DELEGATE_TOKEN_PREFIX + makeToken(),
-              guestGroup: grouped[i].group,
-              maxGuests: item.maxGuests,
-              whatsappPhone: item.phone,
-            }),
-          );
-          room--;
-          tracker.add(item);
-          statuses.push("added");
-        } catch {
-          statuses.push("failed");
-        }
-      }
-    }
-    return statuses;
+) {
+  const out = await insertGuestsLocked({
+    database: db,
+    invitationId: r.inv.id,
+    scope: delegatedScope,
+    items,
+    makeToken: () => DELEGATE_TOKEN_PREFIX + makeToken(),
+    dedupe,
+    cap: DELEGATE_MAX_GUESTS,
+    afterLock: () => grantProblem(r),
   });
+  return out.aborted
+    ? { aborted: true as const, reason: out.reason as DelegateFailure }
+    : out;
+}
+
+/**
+ * Runs `fn` in the shared locked transaction (so it is ordered against bulk and
+ * other writes) after re-validating the grant.
+ */
+async function withDelegateLock<T>(
+  r: Extract<Resolved, { ok: true }>,
+  fn: (tx: Tx) => Promise<T>,
+): Promise<T | DelegateWriteFailure> {
+  return db.transaction(async (tx) => {
+    await lockInvitation(tx, r.inv.id);
+    const problem = await grantProblem(r);
+    return problem ? dead(problem) : fn(tx);
+  });
+}
+
+export async function markDelegatedGuestSentChecked(
+  r: Extract<Resolved, { ok: true }>,
+  guestId: unknown,
+): Promise<WriteResult> {
+  if (!isUuid(guestId)) return { ok: false, error: "Tamu tidak ditemukan." };
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
+  try {
+    const res = await withDelegateLock(r, (tx) =>
+      tx
+        .update(guestInvites)
+        .set({ isSent: true, sentAt: new Date() })
+        .where(and(eq(guestInvites.id, guestId), delegatedOnly(r.inv.id)))
+        .returning({ id: guestInvites.id }),
+    );
+    if (!Array.isArray(res)) return res;
+    return res.length > 0
+      ? { ok: true }
+      : { ok: false, error: "Tamu tidak ditemukan." };
+  } catch {
+    return { ok: false, error: "Gagal menyimpan status. Silakan coba lagi." };
+  }
 }
 
 export async function markDelegatedGuestSent(
   r: Extract<Resolved, { ok: true }>,
   guestId: unknown,
 ): Promise<boolean> {
-  if (!isUuid(guestId)) return false;
-  const res = await db
-    .update(guestInvites)
-    .set({ isSent: true, sentAt: new Date() })
-    .where(and(eq(guestInvites.id, guestId), delegatedOnly(r.inv.id)))
-    .returning({ id: guestInvites.id });
-  return res.length > 0;
+  return (await markDelegatedGuestSentChecked(r, guestId)).ok;
 }
 
 /**
- * Bulk variant of createDelegatedGuest for contacts picked on the device. Shares
- * `insertDelegatedGuests`, so single and bulk adds use one quota and one lock.
+ * Bulk variant of createDelegatedGuest for contacts picked on the device.
+ * Shares `insertDelegatedGuests`, so single and bulk adds use one quota and one lock.
  */
 export async function createDelegatedGuestsBulk(
   r: Extract<Resolved, { ok: true }>,
   input: unknown,
   makeToken: () => string,
-): Promise<BulkResult> {
+): Promise<BulkResult & { dead?: DelegateFailure }> {
   const { inv, hash } = r;
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
   if (!hasProFeatures(inv))
     return {
       ok: false,
@@ -560,16 +597,12 @@ export async function createDelegatedGuestsBulk(
         ok: false,
         error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
       };
-    const statuses = await insertDelegatedGuests(
-      inv.id,
-      items,
-      makeToken,
-      true,
-    );
+    const out = await insertDelegatedGuests(r, items, makeToken, true);
+    if (out.aborted) return dead(out.reason);
     return {
       ok: true,
-      statuses,
-      added: statuses.filter((s) => s === "added").length,
+      statuses: out.statuses,
+      added: out.statuses.filter((s) => s === "added").length,
     };
   } catch {
     return { ok: false, error: "Gagal menambah tamu. Silakan coba lagi." };
@@ -577,16 +610,18 @@ export async function createDelegatedGuestsBulk(
 }
 
 /**
- * Rename of a delegated guest: a single conditional UPDATE scoped to this
- * invitation's `dg` guests that have not been sent or opened. Owner guests and
- * other invitations never match.
+ * Rename of a delegated guest: one conditional UPDATE scoped to this
+ * invitation's `dg` guests that have not been sent or opened, ordered against
+ * every other write by the invitation lock. Owner guests and other invitations
+ * never match.
  */
 export async function renameDelegatedGuest(
   r: Extract<Resolved, { ok: true }>,
   guestId: unknown,
   name: unknown,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<WriteResult> {
   const { inv, hash } = r;
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
   if (!hasProFeatures(inv))
     return {
       ok: false,
@@ -601,28 +636,31 @@ export async function renameDelegatedGuest(
         ok: false,
         error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
       };
-    const changed = await db
-      .update(guestInvites)
-      .set({ guestName })
-      .where(
-        and(
-          eq(guestInvites.id, guestId),
-          delegatedOnly(inv.id),
-          eq(guestInvites.isSent, false),
-          isNull(guestInvites.openedAt),
-        ),
-      )
-      .returning({ id: guestInvites.id });
-    if (changed.length) return { ok: true };
-    const [exists] = await db
-      .select({ id: guestInvites.id })
-      .from(guestInvites)
-      .where(and(eq(guestInvites.id, guestId), delegatedOnly(inv.id)))
-      .limit(1);
-    return {
-      ok: false,
-      error: exists ? NAME_LOCKED_MESSAGE : "Tamu tidak ditemukan.",
-    };
+    const out = await withDelegateLock(r, async (tx): Promise<WriteResult> => {
+      const changed = await tx
+        .update(guestInvites)
+        .set({ guestName })
+        .where(
+          and(
+            eq(guestInvites.id, guestId),
+            delegatedOnly(inv.id),
+            eq(guestInvites.isSent, false),
+            isNull(guestInvites.openedAt),
+          ),
+        )
+        .returning({ id: guestInvites.id });
+      if (changed.length) return { ok: true };
+      const [exists] = await tx
+        .select({ id: guestInvites.id })
+        .from(guestInvites)
+        .where(and(eq(guestInvites.id, guestId), delegatedOnly(inv.id)))
+        .limit(1);
+      return {
+        ok: false,
+        error: exists ? NAME_LOCKED_MESSAGE : "Tamu tidak ditemukan.",
+      };
+    });
+    return out;
   } catch {
     return { ok: false, error: "Gagal menyimpan nama. Silakan coba lagi." };
   }
@@ -633,8 +671,9 @@ export async function setDelegatedGuestCategory(
   r: Extract<Resolved, { ok: true }>,
   guestId: unknown,
   category: unknown,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<WriteResult> {
   const { inv, hash } = r;
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
   if (!hasProFeatures(inv))
     return {
       ok: false,
@@ -647,23 +686,25 @@ export async function setDelegatedGuestCategory(
         ok: false,
         error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
       };
-    const known = await db
-      .select({ group: guestInvites.guestGroup })
-      .from(guestInvites)
-      .where(delegatedOnly(inv.id));
-    const changed = await db
-      .update(guestInvites)
-      .set({
-        guestGroup: canonicalCategory(
-          category,
-          known.map((row) => row.group),
-        ),
-      })
-      .where(and(eq(guestInvites.id, guestId), delegatedOnly(inv.id)))
-      .returning({ id: guestInvites.id });
-    return changed.length
-      ? { ok: true }
-      : { ok: false, error: "Tamu tidak ditemukan." };
+    return await withDelegateLock(r, async (tx): Promise<WriteResult> => {
+      const known = await tx
+        .select({ group: guestInvites.guestGroup })
+        .from(guestInvites)
+        .where(delegatedOnly(inv.id));
+      const changed = await tx
+        .update(guestInvites)
+        .set({
+          guestGroup: canonicalCategory(
+            category,
+            known.map((row) => row.group),
+          ),
+        })
+        .where(and(eq(guestInvites.id, guestId), delegatedOnly(inv.id)))
+        .returning({ id: guestInvites.id });
+      return changed.length
+        ? { ok: true }
+        : { ok: false, error: "Tamu tidak ditemukan." };
+    });
   } catch {
     return { ok: false, error: "Gagal menyimpan kategori. Silakan coba lagi." };
   }

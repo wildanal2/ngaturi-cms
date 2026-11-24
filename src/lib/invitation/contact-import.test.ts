@@ -7,7 +7,6 @@ import {
   buildBulkItems,
   classifyContacts,
   duplicateTracker,
-  findBulkDuplicates,
   normalizePhone,
   normalizePhones,
   parseVcard,
@@ -375,9 +374,14 @@ describe("server-side bulk sanitising", () => {
       ],
       10,
     )!;
-    expect(
-      findBulkDuplicates(items, [{ name: "X", phone: "+6281200001111" }]),
-    ).toEqual([true, true, false, true, false, true, false]);
+    const tracker = duplicateTracker([{ name: "X", phone: "+6281200001111" }]);
+    const flags = items.map((item) => {
+      if (!item.name) return false;
+      const dup = tracker.has(item);
+      tracker.add(item); // as if every item had been saved
+      return dup;
+    });
+    expect(flags).toEqual([true, true, false, true, false, true, false]);
   });
 });
 

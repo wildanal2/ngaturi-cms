@@ -3,13 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   after: vi.fn(),
   afterTasks: [] as Array<() => Promise<void>>,
-  getGuestByToken: vi.fn(),
+  openGuestByToken: vi.fn(),
   getPublicInvitation: vi.fn(),
   invitationSummary: vi.fn(),
   getSession: vi.fn(),
   headers: vi.fn(),
   insertValues: vi.fn(),
-  markGuestOpened: vi.fn(),
   notFound: vi.fn(),
   updateWhere: vi.fn(),
 }));
@@ -25,8 +24,7 @@ vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@/lib/auth/helpers", () => ({ getSession: mocks.getSession }));
 vi.mock("@/lib/invitation/query", () => ({
   getPublicInvitation: mocks.getPublicInvitation,
-  getGuestByToken: mocks.getGuestByToken,
-  markGuestOpened: mocks.markGuestOpened,
+  openGuestByToken: mocks.openGuestByToken,
   invitationSummary: mocks.invitationSummary,
 }));
 vi.mock("@/lib/db", () => ({
@@ -79,7 +77,7 @@ beforeEach(() => {
     venueName: null,
     venueAddress: null,
   });
-  mocks.getGuestByToken.mockResolvedValue(null);
+  mocks.openGuestByToken.mockResolvedValue(null);
   mocks.getSession.mockResolvedValue(null);
   mocks.headers.mockResolvedValue(
     new Headers({
@@ -90,7 +88,6 @@ beforeEach(() => {
   );
   mocks.insertValues.mockResolvedValue(undefined);
   mocks.updateWhere.mockResolvedValue(undefined);
-  mocks.markGuestOpened.mockResolvedValue(undefined);
   mocks.notFound.mockImplementation(() => {
     throw new Error("not-found");
   });
@@ -98,7 +95,7 @@ beforeEach(() => {
 
 describe("public invitation runtime flow", () => {
   it("renders an active personalized invitation and schedules bounded analytics once", async () => {
-    mocks.getGuestByToken.mockResolvedValue({
+    mocks.openGuestByToken.mockResolvedValue({
       id: "guest-1",
       name: "Tamu Satu",
     });
@@ -111,7 +108,7 @@ describe("public invitation runtime flow", () => {
     ).resolves.toBeTruthy();
 
     expect(mocks.getSession).not.toHaveBeenCalled();
-    expect(mocks.getGuestByToken).toHaveBeenCalledWith(
+    expect(mocks.openGuestByToken).toHaveBeenCalledWith(
       "invitation-1",
       "guest-token",
     );
@@ -130,8 +127,7 @@ describe("public invitation runtime flow", () => {
       }),
     );
     expect(mocks.updateWhere).toHaveBeenCalledOnce();
-    expect(mocks.markGuestOpened).toHaveBeenCalledOnce();
-    expect(mocks.markGuestOpened).toHaveBeenCalledWith("guest-1");
+    // The open is recorded atomically with the name read, not in the deferred task.
   });
 
   it("uses Cloudflare identity only inside a trusted Worker invocation", async () => {
