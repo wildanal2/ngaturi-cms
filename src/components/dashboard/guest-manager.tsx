@@ -118,7 +118,7 @@ export function GuestManager({
             readOnly={pickingContact}
             required
             placeholder="Nama tamu"
-            className="rounded-lg border border-line px-3 py-2 text-sm"
+            className="min-h-11 rounded-lg border border-line bg-paper px-3 py-2 text-base sm:text-sm"
           />
           <CategoryCombobox
             name="guest_group"
@@ -134,7 +134,7 @@ export function GuestManager({
             onChange={(event) => prefill.setPhone(event.target.value)}
             readOnly={pickingContact}
             placeholder="No. WhatsApp (opsional)"
-            className="rounded-lg border border-line px-3 py-2 text-sm"
+            className="min-h-11 rounded-lg border border-line bg-paper px-3 py-2 text-base sm:text-sm"
           />
           <input
             name="max_guests"
@@ -142,7 +142,7 @@ export function GuestManager({
             min={1}
             max={10}
             defaultValue={2}
-            className="rounded-lg border border-line px-3 py-2 text-sm"
+            className="min-h-11 rounded-lg border border-line bg-paper px-3 py-2 text-base sm:text-sm"
           />
           <ContactPhoneChoice
             prefill={prefill}
@@ -151,7 +151,7 @@ export function GuestManager({
           />
           <button
             disabled={pending || pickingContact}
-            className="rounded-full bg-forest px-4 py-2 text-sm font-medium text-cream disabled:opacity-60 sm:col-span-2"
+            className="min-h-11 rounded-full bg-forest px-4 py-2 text-sm font-medium text-cream disabled:opacity-60 sm:col-span-2"
           >
             Tambah tamu
           </button>

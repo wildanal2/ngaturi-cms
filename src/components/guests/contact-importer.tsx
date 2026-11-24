@@ -161,7 +161,7 @@ export function ContactImporter({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         disabled={disabled}
-        className="rounded-full border border-line px-4 py-2 hover:bg-cream-200 disabled:opacity-60"
+        className="min-h-11 rounded-full border border-line px-4 py-2 hover:bg-cream-200 disabled:opacity-60"
       >
         Impor kontak dari file (.vcf)
       </button>
@@ -179,7 +179,7 @@ export function ContactImporter({
             accept=".vcf,text/vcard,text/x-vcard,text/directory"
             aria-label="File kontak (.vcf)"
             onChange={(event) => void onFile(event.target.files?.[0])}
-            className="block w-full text-xs"
+            className="block w-full text-sm file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-full file:border file:border-line file:bg-paper file:px-4 file:py-2 file:text-sm hover:file:bg-cream-200"
           />
           {error ? (
             <p role="alert" className="text-xs text-wine">
@@ -210,12 +210,12 @@ export function ContactImporter({
                   onChange={(event) => setQuery(event.target.value)}
                   aria-label="Cari kontak"
                   placeholder="Cari nama atau nomor"
-                  className="w-full rounded-lg border border-line px-3 py-2 text-sm"
+                  className="min-h-11 w-full rounded-lg border border-line bg-paper px-3 py-2 text-base sm:text-sm"
                 />
                 <button
                   type="button"
                   onClick={selectVisible}
-                  className="rounded-full border border-line px-3 py-1.5 text-xs hover:bg-cream-200"
+                  className="min-h-11 rounded-full border border-line px-4 py-2 text-xs hover:bg-cream-200"
                 >
                   Pilih yang tampil
                 </button>
@@ -225,7 +225,7 @@ export function ContactImporter({
                     setSelected(new Set());
                     setConfirming(false);
                   }}
-                  className="rounded-full border border-line px-3 py-1.5 text-xs hover:bg-cream-200"
+                  className="min-h-11 rounded-full border border-line px-4 py-2 text-xs hover:bg-cream-200"
                 >
                   Kosongkan
                 </button>
@@ -238,19 +238,22 @@ export function ContactImporter({
                   return (
                     <li
                       key={c.id}
-                      className="flex flex-wrap items-center gap-2 rounded-lg border border-line px-3 py-2"
+                      className="flex flex-wrap items-center gap-1 rounded-lg border border-line py-1 pr-3"
                     >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        disabled={
-                          !selectable || (!checked && selected.size >= cap)
-                        }
-                        onChange={() => toggle(c)}
-                        aria-label={`Pilih ${c.name || "kontak tanpa nama"}`}
-                      />
+                      <label className="flex size-11 shrink-0 items-center justify-center">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={
+                            !selectable || (!checked && selected.size >= cap)
+                          }
+                          onChange={() => toggle(c)}
+                          aria-label={`Pilih ${c.name || "kontak tanpa nama"}`}
+                          className="size-5 accent-forest"
+                        />
+                      </label>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">
+                        <span className="block [overflow-wrap:anywhere] font-medium">
                           {c.name || "(tanpa nama)"}
                         </span>
                         {free.length > 1 ? (
@@ -264,7 +267,7 @@ export function ContactImporter({
                               }));
                             }}
                             aria-label={`Nomor untuk ${c.name}`}
-                            className="mt-1 w-full rounded border border-line bg-paper px-2 py-1 text-xs"
+                            className="mt-1 min-h-11 w-full rounded-lg border border-line bg-paper px-2 py-1 text-base sm:text-sm"
                           >
                             <option value="" disabled>
                               Pilih nomor
@@ -276,7 +279,7 @@ export function ContactImporter({
                             ))}
                           </select>
                         ) : (
-                          <span className="block truncate text-xs text-muted">
+                          <span className="block [overflow-wrap:anywhere] text-xs text-muted">
                             {c.phones[0] ?? "—"}
                           </span>
                         )}
@@ -331,7 +334,7 @@ export function ContactImporter({
                       ),
                     )
                   }
-                  className="w-16 rounded border border-line px-2 py-1"
+                  className="min-h-11 w-20 rounded-lg border border-line bg-paper px-2 py-1 text-base sm:text-sm"
                 />
               </label>
               <p role="status" className="text-xs text-ink-soft">
@@ -355,7 +358,7 @@ export function ContactImporter({
                     type="button"
                     onClick={() => setConfirming(false)}
                     disabled={submitting}
-                    className="rounded-full border border-line px-3 py-1.5 text-xs"
+                    className="min-h-11 rounded-full border border-line px-4 py-2 text-xs"
                   >
                     Batal
                   </button>
@@ -363,7 +366,7 @@ export function ContactImporter({
                     type="button"
                     onClick={() => void submit()}
                     disabled={submitting || !addable}
-                    className="rounded-full bg-forest px-3 py-1.5 text-xs font-medium text-cream disabled:opacity-60"
+                    className="min-h-11 rounded-full bg-forest px-4 py-2 text-xs font-medium text-cream disabled:opacity-60"
                   >
                     {submitting ? "Menyimpan…" : "Ya, tambahkan"}
                   </button>
@@ -373,7 +376,7 @@ export function ContactImporter({
                   type="button"
                   disabled={!addable || submitting || needChoice > 0}
                   onClick={() => setConfirming(true)}
-                  className="rounded-full bg-forest px-4 py-2 font-medium text-cream disabled:opacity-60"
+                  className="min-h-11 w-full rounded-full bg-forest px-4 py-2 font-medium text-cream disabled:opacity-60 sm:w-auto"
                 >
                   Tambahkan {addable} Tamu
                 </button>

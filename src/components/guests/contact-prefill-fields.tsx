@@ -16,7 +16,7 @@ export function ContactPickButton({
       type="button"
       onClick={prefill.choose}
       disabled={disabled || prefill.picking}
-      className="justify-self-start rounded-full border border-line px-4 py-2 text-sm hover:bg-cream-200 disabled:opacity-60 sm:col-span-2"
+      className="min-h-11 justify-self-start rounded-full border border-line px-4 py-2 text-sm hover:bg-cream-200 disabled:opacity-60 sm:col-span-2"
     >
       {prefill.picking ? "Membuka kontak…" : "Ambil dari Kontak HP"}
     </button>
@@ -40,7 +40,7 @@ export function ContactPhoneChoice({
           <select
             value={prefill.phones.includes(prefill.phone) ? prefill.phone : ""}
             onChange={(event) => prefill.selectPhone(event.target.value)}
-            className="w-full rounded-lg border border-line bg-paper px-3 py-2"
+            className="min-h-11 w-full rounded-lg border border-line bg-paper px-3 py-2 text-base sm:text-sm"
             disabled={disabled || prefill.picking}
           >
             <option value="" disabled>

@@ -9,15 +9,14 @@ import { requireUser } from "@/lib/auth/helpers";
 import { hasProFeatures } from "./entitlement";
 import {
   BULK_GUEST_MAX,
-  findBulkDuplicates,
   sanitizeBulk,
   type BulkItemStatus,
   type BulkResult,
 } from "./contact-import";
+import { insertGuestsLocked } from "./guest-writer";
 import {
   NAME_LOCKED_MESSAGE,
   canonicalCategory,
-  canonicalizeGroups,
   normalizeCategory,
 } from "./guest-list";
 
@@ -107,45 +106,25 @@ export async function createGuestInvitesBulk(
       error: `Daftar tamu tidak valid (1 sampai ${BULK_GUEST_MAX} kontak).`,
     };
 
-  const statuses: BulkItemStatus[] = [];
-  let added = 0;
+  let statuses: BulkItemStatus[];
   try {
-    const existing = await db
-      .select({
-        name: guestInvites.guestName,
-        phone: guestInvites.whatsappPhone,
-        group: guestInvites.guestGroup,
-      })
-      .from(guestInvites)
-      .where(eq(guestInvites.invitationId, invitationId));
-    const duplicates = findBulkDuplicates(items, existing);
-    const grouped = canonicalizeGroups(
+    // Same locked transaction as the delegate writer: duplicates are decided
+    // after the invitation lock, each insert has its own savepoint.
+    const out = await insertGuestsLocked({
+      database: db,
+      invitationId,
+      scope: undefined,
       items,
-      existing.map((row) => row.group),
-    );
-    for (const [i, item] of items.entries()) {
-      if (!item.name) statuses.push("invalid");
-      else if (duplicates[i]) statuses.push("duplicate");
-      else {
-        try {
-          await db.insert(guestInvites).values({
-            invitationId,
-            guestName: item.name,
-            slugToken: token(),
-            guestGroup: grouped[i].group,
-            maxGuests: item.maxGuests,
-            whatsappPhone: item.phone,
-          });
-          statuses.push("added");
-          added++;
-        } catch {
-          statuses.push("failed");
-        }
-      }
-    }
+      makeToken: token,
+      dedupe: true,
+      cap: null,
+    });
+    if (out.aborted) return { ok: false, error: "Gagal menyimpan tamu." };
+    statuses = out.statuses;
   } catch {
     return { ok: false, error: "Gagal menyimpan tamu. Silakan coba lagi." };
   }
+  const added = statuses.filter((status) => status === "added").length;
   if (added) revalidatePath(`/invitations/${invitationId}/guests`);
   return { ok: true, statuses, added };
 }
@@ -195,6 +174,8 @@ export async function renameGuestInvite(
       ),
     )
     .limit(1);
+  // Refused: the page re-reads, so a stale card shows the real status.
+  revalidatePath(`/invitations/${invitationId}/guests`);
   return {
     ok: false,
     error: exists ? NAME_LOCKED_MESSAGE : "Tamu tidak ditemukan.",

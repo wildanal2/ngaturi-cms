@@ -4,9 +4,10 @@ Pemilik membuat tautan `/kelola-tamu/<token>` agar pelanggan tanpa akun Ngaturi 
 
 ## Model izin
 
-- Scope tetap: `guests:create` + `rsvp:read`. Tidak ada scope lain yang dapat diminta dari browser.
-- Boleh: tambah tamu baru (nama, grup, WA opsional, maks 10 orang; batas 100 tamu/undangan), salin/kirim WA memakai template #23 milik pemilik, tandai terkirim, baca nama + status RSVP + jumlah.
-- Tidak boleh: dashboard pemilik, kontak/token/RSVP tamu lain, pesan RSVP, email/telepon/IP RSVP, ubah/hapus RSVP atau tamu, pengaturan undangan, moderasi guestbook, simpan template.
+- Scope tetap: `guests:create` + `rsvp:read`. Tidak ada scope lain yang dapat diminta dari browser. Server memeriksa scope: `guests:create` mencakup semua penulisan tamu delegasi (tambah, impor massal, edit nama, ubah/hapus kategori, tandai terkirim); tanpa scope itu grant hanya bisa membaca. `rsvp:read` mencakup daftar tamu dan status RSVP.
+- Boleh: tambah tamu baru (nama, kategori, WA opsional, maks 10 orang; **kuota total 999 tamu delegasi per undangan**; impor kontak maksimal **100 per proses**), edit nama selama tamu belum dikirim dan belum dibuka, ubah/hapus kategori kapan saja, salin/kirim WA memakai template #23 milik pemilik, tandai terkirim, baca nama + status RSVP + jumlah.
+- Tidak boleh: dashboard pemilik, kontak/token/RSVP/kategori tamu pemilik, pesan RSVP, email/telepon/IP RSVP, ubah/hapus RSVP, hapus tamu, pengaturan undangan, moderasi guestbook, simpan template.
+- **Daftar tamu delegasi dimiliki undangan, bukan grant.** Semua tamu `dg` pada satu undangan membentuk satu daftar; tautan baru (hasil "Buat tautan baru") mengakses seluruh daftar itu, termasuk tamu yang dibuat lewat tautan sebelumnya. Tidak ada isolasi per grant. Tautan lama yang dicabut/kedaluwarsa ditolak sepenuhnya.
 - Tamu "milik delegasi" dikenali dari token personal `dg` + 10 karakter (token pemilik tepat 10 karakter), sehingga tanpa migrasi DB.
 
 ## Penyimpanan & keamanan
@@ -15,8 +16,10 @@ Pemilik membuat tautan `/kelola-tamu/<token>` agar pelanggan tanpa akun Ngaturi 
 - Default 7 hari, maks 30 hari, tidak melebihi `invitations.expires_at`. Tautan ditampilkan sekali; membuat baru otomatis mencabut yang lama (diserialkan dengan kunci Redis).
 - Create/revoke hanya pemilik (`requireUser` + kepemilikan). Setiap baca/tulis delegasi lewat `resolveDelegate`; ID undangan selalu dari grant, bukan dari browser.
 - Pencabutan efektif langsung (tombstone 24 jam agar statusnya jelas) dan tidak menyentuh `guest_invites`, sehingga tautan RSVP personal tetap sah.
-- Rate limit: 120 req/menit per grant (token valid), 20 token tidak valid/10 menit per pemanggil (tidak pernah memblokir token valid), 20 tulis/menit dan 100 tamu per grant, 10 pembuatan tautan/jam per pemilik.
+- Rate limit: 120 req/menit per grant (token valid), 20 token tidak valid/10 menit per pemanggil (tidak pernah memblokir token valid), 20 tulis, 5 impor massal, dan 60 edit per menit per grant, 10 pembuatan tautan/jam per pemilik.
 - `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `noindex` (header + metadata); request-log dev mengabaikan `/kelola-tamu/`. Token RSVP tamu tidak pernah diterima sebagai token delegasi.
+- Penulisan (tambah, impor, edit, tandai terkirim) berjalan dalam satu transaksi PostgreSQL yang mengunci baris `invitations` (`FOR UPDATE`), lalu memvalidasi ulang grant di Redis (gagal tertutup) sebelum menulis: permintaan yang menunggu kunci saat grant dicabut/kedaluwarsa tidak menulis apa pun. Duplikat dan kuota dihitung setelah kunci dari baris tersimpan (tanpa penghitung Redis); tiap kontak impor memakai savepoint sehingga satu kegagalan tidak membatalkan yang lain, dan hanya tamu yang tersimpan yang dicatat sebagai duplikat. Impor massal pemilik memakai penulis yang sama (tanpa kuota; duplikat dicek terhadap semua tamu undangan). Penambahan manual satu tamu tidak memeriksa duplikat nomor (suami/istri boleh berbagi nomor).
+- Edit nama adalah satu `UPDATE` bersyarat (`is_sent = false AND opened_at IS NULL`). Halaman undangan personal mencatat pembukaan pertama pada pernyataan yang sama dengan pembacaan nama (`openGuestByToken`), sehingga nama yang ditampilkan ke tamu selalu nama final dan RSVP (yang mencocokkan nama + token) tidak berselisih dengan edit.
 - Rute berada di luar prefix yang dilindungi `proxy.ts`; proxy/layout dashboard tidak diubah.
 
 ## Kontrak Redis REST

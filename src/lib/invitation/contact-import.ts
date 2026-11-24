@@ -9,7 +9,11 @@
 export const VCF_MAX_BYTES = 2 * 1024 * 1024;
 export const VCF_MAX_CONTACTS = 2000;
 export const VCF_MAX_PHONES_PER_CONTACT = 10;
-/** Upper bound of guests written by one confirmation, enforced again on the server. */
+/**
+ * Upper bound of contacts written by ONE import confirmation, enforced again on
+ * the server. Not the delegate quota: that is DELEGATE_MAX_GUESTS (total per
+ * invitation).
+ */
 export const BULK_GUEST_MAX = 100;
 const NAME_MAX = 100;
 const PHONE_MIN_DIGITS = 8;
@@ -351,20 +355,6 @@ export function duplicateTracker(
       else names.add(nameKey(item.name));
     },
   };
-}
-
-/** Marks which items of a clean batch are duplicates of existing or earlier ones. */
-export function findBulkDuplicates(
-  items: CleanBulkItem[],
-  existing: { name?: string | null; phone: string | null }[],
-): boolean[] {
-  const tracker = duplicateTracker(existing);
-  return items.map((item) => {
-    if (!item.name) return false;
-    const dup = tracker.has(item);
-    tracker.add(item);
-    return dup;
-  });
 }
 
 /* ------------------------ review-list state helpers ------------------------ */

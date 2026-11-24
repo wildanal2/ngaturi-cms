@@ -122,6 +122,17 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
     }
   };
 
+  /**
+   * A copy of a resolved grant under its own hash (own rate-limit buckets), with
+   * the stored grant record copied so the writer's re-validation still passes.
+   */
+  const clone = async <T extends { hash: string }>(res: T, tag: string) => {
+    const hash = `${res.hash}-${tag}`;
+    const raw = await redisAdapter.get(`ngaturi:delegate:grant:v1:${res.hash}`);
+    await redisAdapter.set(`ngaturi:delegate:grant:v1:${hash}`, raw!, 600);
+    return { ...res, hash };
+  };
+
   it("issues a 256-bit token, stores only a hash, default 7d, max 30d", async () => {
     const r = await D.issueDelegateGrant(invA, undefined);
     if (!r.ok) throw new Error(r.error);
@@ -618,10 +629,8 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
     const dg = async (invId: string) =>
       (await guests(invId)).filter((g) => g.slugToken.startsWith("dg"));
     /** Distinct grants so the per-grant rate limiter never interferes. */
-    const as = (res: Awaited<ReturnType<typeof fresh>>["res"], i: number) => ({
-      ...res,
-      hash: `${res.hash}-p${i}`,
-    });
+    const as = (res: Awaited<ReturnType<typeof fresh>>["res"], i: number) =>
+      clone(res, `p${i}`);
     const items = (from: number, count: number, tag = "K") =>
       Array.from({ length: count }, (_, i) => ({
         name: `${tag} ${from + i}`,
@@ -726,16 +735,16 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
       await fillDg(inv.id, MAX() - 100);
       const jobs = [
         ...Array.from({ length: 25 }, (_, i) =>
-          D.createDelegatedGuestsBulk(
-            as(res, i),
-            items(i * 10, 10, "P"),
-            gen,
-          ).then((r) => (r.ok ? r.added : 0)),
+          as(res, i)
+            .then((c) =>
+              D.createDelegatedGuestsBulk(c, items(i * 10, 10, "P"), gen),
+            )
+            .then((r) => (r.ok ? r.added : 0)),
         ),
         ...Array.from({ length: 40 }, (_, i) =>
-          D.createDelegatedGuest(as(res, 100 + i), one(`S${i}`), gen).then(
-            (r) => (r.ok ? 1 : 0),
-          ),
+          as(res, 100 + i)
+            .then((c) => D.createDelegatedGuest(c, one(`S${i}`), gen))
+            .then((r) => (r.ok ? 1 : 0)),
         ),
       ];
       const added = (await Promise.all(jobs)).reduce<number>(
@@ -751,7 +760,7 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
       await fillDg(inv.id, MAX() - 1);
       const out = await Promise.all(
         Array.from({ length: 20 }, (_, i) =>
-          D.createDelegatedGuest(as(res, i), one(`R${i}`), gen),
+          as(res, i).then((c) => D.createDelegatedGuest(c, one(`R${i}`), gen)),
         ),
       );
       expect(out.filter((x) => x.ok)).toHaveLength(1);
@@ -806,7 +815,7 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
       const batch = items(0, 15, "D");
       const all = await Promise.all(
         Array.from({ length: 8 }, (_, i) =>
-          D.createDelegatedGuestsBulk(as(res, i), batch, gen),
+          as(res, i).then((c) => D.createDelegatedGuestsBulk(c, batch, gen)),
         ),
       );
       expect(all.reduce((a, r) => a + (r.ok ? r.added : 0), 0)).toBe(15);
@@ -911,7 +920,7 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
     type Res = Awaited<ReturnType<typeof fresh>>["res"];
     const add = async (res: Res, name: string, phone = "081355500001") => {
       const out = await D.createDelegatedGuestsBulk(
-        { ...res, hash: `${res.hash}-a${++n}` },
+        await clone(res, `a${++n}`),
         [{ name, phone }],
         gen,
       );
@@ -935,13 +944,9 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
           .where(eq(schema.guestInvites.id, id))
       )[0];
     const rename = (res: Res, id: unknown, name: unknown) =>
-      D.renameDelegatedGuest({ ...res, hash: `${res.hash}-e${++n}` }, id, name);
+      clone(res, `e${++n}`).then((c) => D.renameDelegatedGuest(c, id, name));
     const categorize = (res: Res, id: unknown, c: unknown) =>
-      D.setDelegatedGuestCategory(
-        { ...res, hash: `${res.hash}-c${++n}` },
-        id,
-        c,
-      );
+      clone(res, `c${++n}`).then((g) => D.setDelegatedGuestCategory(g, id, c));
 
     it("renames before send/open while id, token, phone, RSVP and status stay", async () => {
       const { inv, res } = await fresh();
@@ -970,7 +975,7 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
         rsvp: { status: "attending", guestCount: 2 },
       });
       // The personal link now resolves to the new name (what the invitation shows).
-      expect(await Q.getGuestByToken(inv.id, g.slugToken)).toMatchObject({
+      expect(await Q.openGuestByToken(inv.id, g.slugToken)).toMatchObject({
         id: g.id,
         name: "Nama   Baru",
       });
@@ -1030,7 +1035,7 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
         );
         const [renamed] = await Promise.all([
           rename(res, g.id, `Dibuka ${i}`),
-          Q.markGuestOpened(g.id),
+          Q.openGuestByToken(res.inv.id, g.slugToken),
         ]);
         const row = await get(g.id);
         expect(row.openedAt).not.toBeNull();
@@ -1334,6 +1339,429 @@ describe.skipIf(!run)("delegation (real PostgreSQL + Redis)", () => {
         view.guests.map((g) => [g.guestName, [g.isSent, g.opened]]),
       );
       combos.forEach((c, i) => expect(byName[`Kombinasi ${i}`]).toEqual(c));
+    });
+  });
+
+  describe("production hardening (shared locked writer)", () => {
+    let G: typeof import("./guests");
+    let W: typeof import("./guest-writer");
+    let Q: typeof import("./query");
+    let L: typeof import("./guest-list");
+    let AZ: typeof import("./guest-authorization");
+    beforeAll(async () => {
+      G = await import("./guests");
+      W = await import("./guest-writer");
+      Q = await import("./query");
+      L = await import("./guest-list");
+      AZ = await import("./guest-authorization");
+    });
+    const A32 = "abcdefghijkmnpqrstuvwxyz23456789";
+    let n = 0;
+    const gen = () => {
+      let v = ++n + 3_000_000;
+      let out = "";
+      for (let i = 0; i < 10; i++, v = Math.floor(v / 32))
+        out = A32[v % 32] + out;
+      return out;
+    };
+    let seq = 0;
+    async function fresh(owner = 0) {
+      const [inv] = await db
+        .insert(schema.invitations)
+        .values({
+          slug: `qa20h-${sfx}-${++seq}`,
+          userId: userIds[owner],
+          plan: "premium",
+          isPaid: true,
+          status: "published",
+          eventTitle: "Hardening",
+        })
+        .returning();
+      ctx.ip = `198.51.103.${seq}`;
+      ctx.user = userIds[owner];
+      await redisAdapter.delete("rl:delegate:issue:" + userIds[owner]);
+      const r = await D.issueDelegateGrant(inv, 7);
+      if (!r.ok) throw new Error(r.error);
+      const res = await D.resolveDelegate(r.token);
+      if (!res.ok) throw new Error("resolve");
+      return { inv, res, token: r.token };
+    }
+    const phone = (i: number) => `0818${String(10_000_000 + i)}`;
+    const items = (from: number, count: number, tag = "H") =>
+      Array.from({ length: count }, (_, i) => ({
+        name: `${tag} ${from + i}`,
+        phone: phone(from + i),
+      }));
+    const rows = (invId: string) =>
+      db
+        .select()
+        .from(schema.guestInvites)
+        .where(eq(schema.guestInvites.invitationId, invId));
+    const isDg = (t: string) => t.startsWith("dg") && t.length === 12;
+    const one = (name: string) => ({
+      name,
+      group: "",
+      phone: "",
+      maxGuests: 2,
+    });
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    /** Holds the invitation row lock on its own connection while `during` runs. */
+    async function holdingLock<T>(invId: string, during: () => Promise<T>) {
+      const holder = postgres(PG!, { max: 1 });
+      try {
+        let value!: T;
+        await holder.begin(async (tx) => {
+          await tx`select id from invitations where id = ${invId} for update`;
+          value = await during();
+        });
+        return value;
+      } finally {
+        await holder.end();
+      }
+    }
+    /** Starts `op`, proves it is blocked behind the lock, runs `between`, returns op's promise. */
+    async function blockedThen<T>(
+      invId: string,
+      op: () => Promise<T>,
+      between: () => Promise<void>,
+    ) {
+      let pending!: Promise<T>;
+      await holdingLock(invId, async () => {
+        pending = op();
+        const early = await Promise.race([
+          pending.then(() => "done"),
+          sleep(400).then(() => "blocked"),
+        ]);
+        expect(early).toBe("blocked");
+        await between();
+      });
+      return pending;
+    }
+
+    it("concurrent owner bulk imports create each contact once (duplicates decided after the lock)", async () => {
+      const { inv } = await fresh();
+      ctx.user = userIds[0];
+      const batch = items(0, 20);
+      const out = await Promise.all(
+        Array.from({ length: 8 }, () =>
+          G.createGuestInvitesBulk(inv.id, batch),
+        ),
+      );
+      expect(out.reduce((a, r) => a + (r.ok ? r.added : 0), 0)).toBe(20);
+      const all = await rows(inv.id);
+      expect(all).toHaveLength(20);
+      expect(new Set(all.map((g) => g.whatsappPhone)).size).toBe(20);
+    });
+
+    it("owner bulk is not limited by the delegate quota and keeps manual add policy (shared numbers allowed)", async () => {
+      const { inv, res } = await fresh();
+      ctx.user = userIds[0];
+      await fillDg(inv.id, D.DELEGATE_MAX_GUESTS);
+      const bulk = await G.createGuestInvitesBulk(inv.id, items(5000, 5));
+      expect(bulk).toMatchObject({ ok: true, added: 5 });
+      expect(
+        await D.createDelegatedGuest(res, one("Penuh"), gen),
+      ).toMatchObject({ ok: false });
+      // Manual add never blocks a legitimate guest who shares a number.
+      const fd = (name: string) => {
+        const f = new FormData();
+        f.set("guest_name", name);
+        f.set("whatsapp_phone", phone(5000));
+        return f;
+      };
+      expect(await G.createGuestInvite(inv.id, fd("Suami"))).toEqual({
+        ok: true,
+      });
+      expect(await G.createGuestInvite(inv.id, fd("Istri"))).toEqual({
+        ok: true,
+      });
+      const shared = (await rows(inv.id)).filter(
+        (g) => g.whatsappPhone === phone(5000),
+      );
+      expect(shared.map((g) => g.guestName).sort()).toEqual([
+        "H 5000",
+        "Istri",
+        "Suami",
+      ]);
+    });
+
+    it("concurrent owner and delegate writes keep both lists consistent and the quota intact", async () => {
+      const { inv, res } = await fresh();
+      ctx.user = userIds[0];
+      const ownerRuns = Array.from({ length: 4 }, () =>
+        G.createGuestInvitesBulk(inv.id, items(0, 30, "O")),
+      );
+      const delegRuns = Array.from({ length: 4 }, (_, i) =>
+        clone(res, `w${i}`).then((c) =>
+          D.createDelegatedGuestsBulk(c, items(15, 30, "D"), gen),
+        ),
+      );
+      const singles = Array.from({ length: 6 }, (_, i) =>
+        clone(res, `s${i}`).then((c) =>
+          D.createDelegatedGuest(c, one(`Single ${i}`), gen),
+        ),
+      );
+      await Promise.all([...ownerRuns, ...delegRuns, ...singles]);
+      const all = await rows(inv.id);
+      const owner = all.filter((g) => !isDg(g.slugToken));
+      const deleg = all.filter(
+        (g) => isDg(g.slugToken) && g.guestName.startsWith("D "),
+      );
+      expect(new Set(owner.map((g) => g.whatsappPhone)).size).toBe(
+        owner.length,
+      );
+      expect(new Set(deleg.map((g) => g.whatsappPhone)).size).toBe(
+        deleg.length,
+      );
+      expect(deleg).toHaveLength(30);
+      expect(all.filter((g) => isDg(g.slugToken)).length).toBeLessThanOrEqual(
+        D.DELEGATE_MAX_GUESTS,
+      );
+    });
+
+    it("the writer survives a failing row, never remembers an unsaved guest, and a retry adds only the rest", async () => {
+      const { inv } = await fresh();
+      await db.insert(schema.guestInvites).values({
+        invitationId: inv.id,
+        guestName: "Penghalang",
+        slugToken: "cccccccccc",
+      });
+      let call = 0;
+      const tokens = ["cccccccccc", gen(), gen(), gen()];
+      const out = await W.insertGuestsLocked({
+        database: db as never,
+        invitationId: inv.id,
+        scope: undefined,
+        items: [
+          { name: "Gagal", phone: phone(1), group: null, maxGuests: 2 },
+          { name: "Nomor Sama", phone: phone(1), group: null, maxGuests: 2 }, // not a duplicate: the first was never saved
+          { name: "Lain", phone: phone(2), group: null, maxGuests: 2 },
+          { name: "Lain Lagi", phone: phone(2), group: null, maxGuests: 2 }, // real duplicate of the one just saved
+        ],
+        makeToken: () => tokens[call++],
+        dedupe: true,
+        cap: null,
+      });
+      expect(out).toEqual({
+        aborted: false,
+        statuses: ["failed", "added", "added", "duplicate"],
+      });
+      const retry = await W.insertGuestsLocked({
+        database: db as never,
+        invitationId: inv.id,
+        scope: undefined,
+        items: [
+          { name: "Gagal", phone: phone(1), group: null, maxGuests: 2 },
+          { name: "Lain", phone: phone(2), group: null, maxGuests: 2 },
+        ],
+        makeToken: gen,
+        dedupe: true,
+        cap: null,
+      });
+      expect(retry).toEqual({
+        aborted: false,
+        statuses: ["duplicate", "duplicate"],
+      });
+      expect(
+        (await rows(inv.id)).filter((g) => g.guestName !== "Penghalang"),
+      ).toHaveLength(2);
+    });
+
+    const setup = async () => {
+      const f = await fresh();
+      await D.createDelegatedGuestsBulk(f.res, items(0, 1, "Tunggu"), gen);
+      const [g] = await rows(f.inv.id);
+      return { ...f, g };
+    };
+    const ops: [
+      string,
+      (f: Awaited<ReturnType<typeof setup>>) => Promise<unknown>,
+    ][] = [
+      ["bulk", (f) => D.createDelegatedGuestsBulk(f.res, items(100, 3), gen)],
+      ["single", (f) => D.createDelegatedGuest(f.res, one("Single"), gen)],
+      ["rename", (f) => D.renameDelegatedGuest(f.res, f.g.id, "Diubah")],
+      ["category", (f) => D.setDelegatedGuestCategory(f.res, f.g.id, "Kat")],
+      ["sent", (f) => D.markDelegatedGuestSentChecked(f.res, f.g.id)],
+    ];
+
+    it.each(ops)(
+      "a grant revoked while its %s request waited for the lock writes nothing",
+      async (label, op) => {
+        const f = await setup();
+        const out = (await blockedThen(
+          f.inv.id,
+          () => op(f),
+          async () => {
+            await D.revokeDelegateGrant(f.inv.id);
+          },
+        )) as { ok: boolean; dead?: string };
+        expect({ label, ok: out.ok, dead: out.dead }).toEqual({
+          label,
+          ok: false,
+          dead: "revoked",
+        });
+        const after = await rows(f.inv.id);
+        expect(after).toHaveLength(1);
+        expect(after[0]).toMatchObject({
+          guestName: "Tunggu 0",
+          guestGroup: null,
+          isSent: false,
+        });
+      },
+    );
+
+    it("a grant that expired while waiting for the lock writes nothing", async () => {
+      const f = await setup();
+      const key = `ngaturi:delegate:grant:v1:${f.res.hash}`;
+      const raw = (await redisAdapter.get(key))!;
+      const out = (await blockedThen(
+        f.inv.id,
+        () => D.createDelegatedGuestsBulk(f.res, items(200, 3), gen),
+        async () => {
+          await redisAdapter.set(
+            key,
+            JSON.stringify({
+              ...JSON.parse(raw),
+              expiresAt: new Date(Date.now() - 1000).toISOString(),
+            }),
+            600,
+          );
+        },
+      )) as { ok: boolean; dead?: string };
+      expect(out).toMatchObject({ ok: false, dead: "expired" });
+      expect(await rows(f.inv.id)).toHaveLength(1);
+    });
+
+    it("regenerating the link keeps the delegated list for the new grant and kills the old one", async () => {
+      const f = await setup();
+      ctx.ip = "198.51.103.200";
+      await redisAdapter.delete("rl:delegate:issue:" + userIds[0]);
+      const second = await D.issueDelegateGrant(f.inv, 7);
+      if (!second.ok) throw new Error(second.error);
+      const next = await D.resolveDelegate(second.token);
+      if (!next.ok) throw new Error("resolve");
+      expect(
+        (await D.loadDelegateView(next)).guests.map((x) => x.guestName),
+      ).toEqual(["Tunggu 0"]);
+      expect(await D.resolveDelegate(f.token)).toEqual({
+        ok: false,
+        reason: "revoked",
+      });
+      // Old grant object (already resolved before the swap) is refused too.
+      expect(await D.renameDelegatedGuest(f.res, f.g.id, "Lama")).toMatchObject(
+        { ok: false, dead: "revoked" },
+      );
+      expect(await D.renameDelegatedGuest(next, f.g.id, "Baru")).toEqual({
+        ok: true,
+      });
+      expect((await rows(f.inv.id))[0].guestName).toBe("Baru");
+    });
+
+    it("a grant without the guests:create scope can read but never write", async () => {
+      const f = await setup();
+      const key = `ngaturi:delegate:grant:v1:${f.res.hash}`;
+      const rec = JSON.parse((await redisAdapter.get(key))!);
+      await redisAdapter.set(
+        key,
+        JSON.stringify({ ...rec, scopes: ["rsvp:read"] }),
+        600,
+      );
+      const ro = await D.resolveDelegate(f.token);
+      if (!ro.ok) throw new Error("resolve");
+      expect((await D.loadDelegateView(ro)).guests).toHaveLength(1);
+      for (const r of [
+        await D.createDelegatedGuest(ro, one("X"), gen),
+        await D.createDelegatedGuestsBulk(ro, items(300, 2), gen),
+        await D.renameDelegatedGuest(ro, f.g.id, "X"),
+        await D.setDelegatedGuestCategory(ro, f.g.id, "X"),
+        await D.markDelegatedGuestSentChecked(ro, f.g.id),
+      ])
+        expect(r).toMatchObject({ ok: false });
+      expect(await D.markDelegatedGuestSent(ro, f.g.id)).toBe(false);
+      expect((await rows(f.inv.id))[0]).toMatchObject({
+        guestName: "Tunggu 0",
+        isSent: false,
+      });
+    });
+
+    it("the page read records the open atomically: the rendered name is always the final name", async () => {
+      const { inv, res } = await fresh();
+      for (let i = 0; i < 25; i++) {
+        await D.createDelegatedGuestsBulk(
+          await clone(res, `r${i}`),
+          items(400 + i, 1, `Nama${i}_`),
+          gen,
+        );
+        const g = (await rows(inv.id)).find(
+          (x) => x.guestName === `Nama${i}_ ${400 + i}`,
+        )!;
+        const [renamed, seen] = await Promise.all([
+          clone(res, `n${i}`).then((c) =>
+            D.renameDelegatedGuest(c, g.id, `Baru${i}`),
+          ),
+          Q.openGuestByToken(inv.id, g.slugToken),
+        ]);
+        const final = (await rows(inv.id)).find((x) => x.id === g.id)!;
+        expect(final.openedAt).not.toBeNull();
+        expect(seen?.name).toBe(final.guestName); // what the page shows == what RSVP will check
+        expect(final.guestName).toBe(
+          renamed.ok ? `Baru${i}` : `Nama${i}_ ${400 + i}`,
+        );
+        // RSVP authorization is unchanged: only the real name + token pass.
+        expect(
+          await AZ.authorizeGuest(
+            inv.id,
+            g.slugToken,
+            final.guestName,
+            db as never,
+          ),
+        ).toBeTruthy();
+        expect(
+          await AZ.authorizeGuest(
+            inv.id,
+            g.slugToken,
+            "Bukan Nama",
+            db as never,
+          ),
+        ).toBeUndefined();
+        expect(
+          await AZ.authorizeGuest(
+            inv.id,
+            "tokenpalsu1",
+            final.guestName,
+            db as never,
+          ),
+        ).toBeUndefined();
+      }
+    });
+
+    it("the open is recorded once and a later read does not move it", async () => {
+      const { inv, res } = await fresh();
+      await D.createDelegatedGuestsBulk(res, items(0, 1, "Buka"), gen);
+      const [g] = await rows(inv.id);
+      await Q.openGuestByToken(inv.id, g.slugToken);
+      const first = (await rows(inv.id))[0].openedAt!;
+      await sleep(20);
+      expect(await Q.openGuestByToken(inv.id, g.slugToken)).toMatchObject({
+        id: g.id,
+      });
+      expect((await rows(inv.id))[0].openedAt!.getTime()).toBe(first.getTime());
+      expect(await Q.openGuestByToken(inv.id, "tidakada12")).toBeNull();
+      expect(L.NAME_LOCKED_MESSAGE).toContain("dikirim atau dibuka");
+    });
+
+    it("measures a locked 100-contact transaction", async () => {
+      const { res } = await fresh();
+      const t0 = performance.now();
+      const out = await D.createDelegatedGuestsBulk(
+        res,
+        items(0, 100, "Ukur"),
+        gen,
+      );
+      const ms = performance.now() - t0;
+      expect(out).toMatchObject({ ok: true, added: 100 });
+      expect(ms).toBeLessThan(5000);
     });
   });
 });

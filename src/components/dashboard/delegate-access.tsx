@@ -86,10 +86,11 @@ export function DelegateAccess({
         </span>
       </div>
       <p className="text-sm text-ink-soft">
-        Beri pelanggan tautan untuk membuat tautan undangan per-tamu baru dan
-        melihat nama serta status RSVP tamu yang ia buat — tanpa akun Ngaturi.
-        Pelanggan tidak dapat melihat kontak, tautan, atau pesan tamu lain,
-        mengubah undangan, maupun menghapus data.
+        Beri pelanggan tautan untuk membuat tautan undangan per-tamu, mengubah
+        nama (selama belum dikirim/dibuka) dan kategori, serta melihat status
+        RSVP tamu yang dibuat lewat akses ini — tanpa akun Ngaturi. Pelanggan
+        tidak dapat melihat kontak, tautan, atau pesan tamu yang Anda buat
+        sendiri, mengubah undangan, maupun menghapus data.
       </p>
       {status.unavailable ? (
         <p role="alert" className="text-xs text-wine">
@@ -128,6 +129,11 @@ export function DelegateAccess({
           </p>
         </div>
       ) : null}
+      <p className="text-xs text-ink-soft">
+        Tautan baru memberi akses ke seluruh daftar tamu yang dibuat lewat akses
+        kelola pada undangan ini, termasuk tamu dari tautan sebelumnya. Tautan
+        lama otomatis dicabut; daftar tamu tidak ikut hilang.
+      </p>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <label className="flex items-center gap-2">
           <span className="text-ink-soft">Berlaku</span>
