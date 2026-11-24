@@ -3,11 +3,14 @@
 import { useState, useTransition } from "react";
 import { toast, Toaster } from "sonner";
 import { WhatsappMessageEditor } from "./whatsapp-message-editor";
+import { CategoryCombobox } from "@/components/guests/category-combobox";
 import { ContactImporter } from "@/components/guests/contact-importer";
+import { GuestList } from "@/components/guests/guest-list";
 import {
   ContactPhoneChoice,
   ContactPickButton,
 } from "@/components/guests/contact-prefill-fields";
+import { categoryOptions } from "@/lib/invitation/guest-list";
 import { useContactPrefill } from "@/components/guests/use-contact-prefill";
 import {
   renderWhatsappMessage,
@@ -19,6 +22,8 @@ import {
   createGuestInvitesBulk,
   deleteGuestInvite,
   markGuestSent,
+  renameGuestInvite,
+  setGuestCategory,
 } from "@/lib/invitation/guests";
 
 interface Guest {
@@ -50,7 +55,9 @@ export function GuestManager({
   const [pending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
   const [activeTemplate, setActiveTemplate] = useState(initialWhatsappTemplate);
+  const [category, setCategory] = useState("");
   const existingPhones = guests.map((guest) => guest.whatsappPhone);
+  const categories = categoryOptions(guests.map((guest) => guest.guestGroup));
   const prefill = useContactPrefill(existingPhones);
   const {
     name: guestName,
@@ -58,10 +65,10 @@ export function GuestManager({
     picking: pickingContact,
   } = prefill;
 
-  function link(g: Guest) {
+  function link(g: Pick<Guest, "slugToken">) {
     return `${baseUrl}?to=${g.slugToken}`;
   }
-  function waLink(g: Guest) {
+  function waLink(g: Pick<Guest, "slugToken" | "guestName" | "whatsappPhone">) {
     return whatsappUrl(
       renderWhatsappMessage(
         activeTemplate.message,
@@ -94,6 +101,7 @@ export function GuestManager({
                 toast.success("Tamu ditambahkan");
                 setFormKey((k) => k + 1);
                 prefill.reset();
+                setCategory("");
               } else {
                 toast.error(res.error ?? "Gagal");
               }
@@ -112,10 +120,12 @@ export function GuestManager({
             placeholder="Nama tamu"
             className="rounded-lg border border-line px-3 py-2 text-sm"
           />
-          <input
+          <CategoryCombobox
             name="guest_group"
-            placeholder="Grup (opsional): Keluarga, Kantor…"
-            className="rounded-lg border border-line px-3 py-2 text-sm"
+            value={category}
+            onChange={setCategory}
+            options={categories}
+            disabled={pending}
           />
           <input
             name="whatsapp_phone"
@@ -153,72 +163,34 @@ export function GuestManager({
             name: g.guestName,
             phone: g.whatsappPhone,
           }))}
+          categories={categories}
           remaining={null}
           disabled={pending}
           onConfirm={(items) => createGuestInvitesBulk(invitationId, items)}
         />
       ) : null}
 
-      <ul className="space-y-2">
-        {guests.map((g) => (
-          <li
-            key={g.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-paper p-4 text-sm"
-          >
-            <div>
-              <p className="font-medium">
-                {g.guestName}
-                {g.guestGroup ? (
-                  <span className="ml-2 text-xs text-muted">
-                    {g.guestGroup}
-                  </span>
-                ) : null}
-              </p>
-              <p className="text-xs text-muted">
-                Maks {g.maxGuests} tamu ·{" "}
-                {g.openedAt
-                  ? "sudah dibuka"
-                  : g.isSent
-                    ? "terkirim"
-                    : "belum dikirim"}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(link(g));
-                  toast.success("Tautan disalin");
-                }}
-                className="rounded-full border border-line px-3 py-1.5 hover:bg-cream-200"
-              >
-                Salin link
-              </button>
-              <a
-                href={waLink(g)}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() =>
-                  startTransition(() => markGuestSent(invitationId, g.id))
-                }
-                className="rounded-full bg-forest px-3 py-1.5 font-medium text-cream"
-              >
-                Kirim WA
-              </a>
-              <button
-                onClick={() =>
-                  startTransition(() => deleteGuestInvite(invitationId, g.id))
-                }
-                className="rounded-full border border-line px-3 py-1.5 text-wine hover:bg-cream-200"
-              >
-                Hapus
-              </button>
-            </div>
-          </li>
-        ))}
-        {guests.length === 0 ? (
-          <li className="text-muted">Belum ada tamu.</li>
-        ) : null}
-      </ul>
+      <GuestList
+        guests={guests.map((g) => ({ ...g, opened: g.openedAt !== null }))}
+        canEdit={canCreate}
+        nameMax={200}
+        busy={pending}
+        link={link}
+        waHref={waLink}
+        onSent={(g) => startTransition(() => markGuestSent(invitationId, g.id))}
+        onRename={async (g, name) => {
+          const res = await renameGuestInvite(invitationId, g.id, name);
+          return res.ok ? null : (res.error ?? "Gagal menyimpan nama.");
+        }}
+        onCategory={async (g, value) => {
+          const res = await setGuestCategory(invitationId, g.id, value);
+          return res.ok ? null : (res.error ?? "Gagal menyimpan kategori.");
+        }}
+        onDelete={(g) =>
+          startTransition(() => deleteGuestInvite(invitationId, g.id))
+        }
+        emptyText="Belum ada tamu."
+      />
     </div>
   );
 }

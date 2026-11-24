@@ -6,6 +6,8 @@ import { toast, Toaster } from "sonner";
 import {
   addDelegateGuest,
   addDelegateGuestsBulk,
+  renameDelegateGuest,
+  setDelegateGuestCategory,
   fetchDelegateView,
   markDelegateGuestSent,
   type DelegateResult,
@@ -21,7 +23,10 @@ import {
   validateWhatsappMessage,
   whatsappUrl,
 } from "@/lib/invitation/whatsapp-message";
+import { CategoryCombobox } from "@/components/guests/category-combobox";
 import { ContactImporter } from "@/components/guests/contact-importer";
+import { GuestList } from "@/components/guests/guest-list";
+import { categoryOptions } from "@/lib/invitation/guest-list";
 import {
   ContactPhoneChoice,
   ContactPickButton,
@@ -40,6 +45,7 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
   const [tab, setTab] = useState<"share" | "rsvp">("share");
   const [pending, startTransition] = useTransition();
   const [formKey, setFormKey] = useState(0);
+  const [category, setCategory] = useState("");
   const prefill = useContactPrefill(view.guests.map((g) => g.whatsappPhone));
   // Session-only edit of the reseller's message; never persisted or sent.
   const [draft, setDraft] = useState(initial.template.message);
@@ -69,9 +75,13 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
     );
   }
 
-  const link = (g: DelegateGuest) => `${view.baseUrl}?to=${g.slugToken}`;
+  const categories = categoryOptions(view.guests.map((g) => g.guestGroup));
+  const link = (g: Pick<DelegateGuest, "slugToken">) =>
+    `${view.baseUrl}?to=${g.slugToken}`;
   const draftError = validateWhatsappMessage(draft);
-  const wa = (g: DelegateGuest) =>
+  const wa = (
+    g: Pick<DelegateGuest, "slugToken" | "guestName" | "whatsappPhone">,
+  ) =>
     whatsappUrl(
       renderWhatsappMessage(draft, g.guestName, link(g), view.coupleNames),
       g.whatsappPhone,
@@ -135,6 +145,7 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
                       toast.success("Tamu ditambahkan");
                       setFormKey((k) => k + 1);
                       prefill.reset();
+                      setCategory("");
                     }
                   })
                 }
@@ -152,12 +163,12 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
                   placeholder="Nama tamu"
                   className={field}
                 />
-                <input
+                <CategoryCombobox
                   name="guest_group"
-                  aria-label="Grup"
-                  maxLength={100}
-                  placeholder="Grup (opsional)"
-                  className={field}
+                  value={category}
+                  onChange={setCategory}
+                  options={categories}
+                  disabled={pending}
                 />
                 <input
                   name="whatsapp_phone"
@@ -208,6 +219,7 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
                 name: g.guestName,
                 phone: g.whatsappPhone,
               }))}
+              categories={categories}
               remaining={view.limit - view.guests.length}
               disabled={pending}
               onConfirm={async (items) => {
@@ -231,82 +243,41 @@ export function DelegateManager({ initial }: { initial: DelegateView }) {
             sampleLink={`${view.baseUrl}?to=contoh`}
           />
 
-          <ul className="space-y-2">
-            {view.guests.map((g) => (
-              <li
-                key={g.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-paper p-4 text-sm"
-              >
-                <div>
-                  <p className="font-medium">
-                    {g.guestName}
-                    {g.guestGroup ? (
-                      <span className="ml-2 text-xs text-muted">
-                        {g.guestGroup}
-                      </span>
-                    ) : null}
-                  </p>
-                  <p className="text-xs text-muted">
-                    Maks {g.maxGuests} tamu ·{" "}
-                    {g.opened
-                      ? "sudah dibuka"
-                      : g.isSent
-                        ? "terkirim"
-                        : "belum dikirim"}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(link(g));
-                        toast.success("Tautan disalin");
-                      } catch {
-                        toast.error(
-                          "Gagal menyalin. Salin manual dari tombol Kirim WA.",
-                        );
-                      }
-                    }}
-                    className="rounded-full border border-line px-3 py-1.5 hover:bg-cream-200"
-                  >
-                    Salin link
-                  </button>
-                  {draftError ? (
-                    <button
-                      type="button"
-                      disabled
-                      title={draftError}
-                      className="rounded-full bg-forest px-3 py-1.5 font-medium text-cream opacity-50"
-                    >
-                      Kirim WA
-                    </button>
-                  ) : (
-                    <a
-                      href={wa(g)}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() =>
-                        startTransition(
-                          async () =>
-                            void apply(
-                              await markDelegateGuestSent(token, g.id),
-                            ),
-                        )
-                      }
-                      className="rounded-full bg-forest px-3 py-1.5 font-medium text-cream"
-                    >
-                      Kirim WA
-                    </a>
-                  )}
-                </div>
-              </li>
-            ))}
-            {view.guests.length === 0 ? (
-              <li className="rounded-xl border border-dashed border-line p-6 text-center text-muted">
-                Belum ada tamu. Tambahkan tamu pertama di atas.
-              </li>
-            ) : null}
-          </ul>
+          <GuestList
+            guests={view.guests.map((g) => ({ ...g }))}
+            quotaLimit={view.limit}
+            canEdit={view.canCreate}
+            nameMax={100}
+            busy={pending}
+            link={link}
+            waHref={draftError ? null : wa}
+            waDisabledReason={draftError ?? undefined}
+            onSent={(g) =>
+              startTransition(
+                async () =>
+                  void apply(await markDelegateGuestSent(token, g.id)),
+              )
+            }
+            onRename={async (g, name) => {
+              const res = await renameDelegateGuest(token, g.id, name);
+              if (!res.ok) {
+                setDead(res.reason);
+                return "Akses tidak lagi berlaku.";
+              }
+              setView(res.view);
+              return res.error ?? null;
+            }}
+            onCategory={async (g, value) => {
+              const res = await setDelegateGuestCategory(token, g.id, value);
+              if (!res.ok) {
+                setDead(res.reason);
+                return "Akses tidak lagi berlaku.";
+              }
+              setView(res.view);
+              return res.error ?? null;
+            }}
+            emptyText="Belum ada tamu. Tambahkan tamu pertama di atas."
+          />
         </section>
       ) : (
         <section className="space-y-4" aria-label="Konfirmasi RSVP">

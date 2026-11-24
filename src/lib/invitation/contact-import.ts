@@ -410,11 +410,13 @@ export function buildBulkItems(
   ready: Candidate[],
   choice: Record<number, string>,
   maxGuests: number,
+  group?: string | null,
 ): BulkGuestInput[] {
   return ready.map((c) => ({
     name: c.name,
     phone: chosenPhone(c, choice),
     maxGuests,
+    ...(group ? { group } : {}),
   }));
 }
 

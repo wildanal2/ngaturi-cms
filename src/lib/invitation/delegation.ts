@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { guestInvites, invitations, rsvpResponses } from "@/lib/db/schema";
@@ -7,12 +7,18 @@ import { redis } from "@/lib/redis";
 import { rateLimit } from "@/lib/rate-limit";
 import { trustedClientIp } from "@/lib/security/request-metadata";
 import {
+  BULK_GUEST_MAX,
   duplicateTracker,
   sanitizeBulk,
   type BulkItemStatus,
   type BulkResult,
   type CleanBulkItem,
 } from "./contact-import";
+import {
+  NAME_LOCKED_MESSAGE,
+  canonicalCategory,
+  canonicalizeGroups,
+} from "./guest-list";
 import { hasProFeatures } from "./entitlement";
 import {
   defaultWhatsappTemplate,
@@ -33,7 +39,8 @@ import { whatsappCoupleNames, type WhatsappTemplate } from "./whatsapp-message";
 export const DELEGATE_SCOPES = ["guests:create", "rsvp:read"] as const;
 export const DELEGATE_DEFAULT_DAYS = 7;
 export const DELEGATE_MAX_DAYS = 30;
-export const DELEGATE_MAX_GUESTS = 100;
+/** Total delegated guests per invitation (quota is not WhatsApp messages sent). */
+export const DELEGATE_MAX_GUESTS = 999;
 export const DELEGATE_GUEST_MAX_PARTY = 10;
 export const DELEGATE_TOKEN_PREFIX = "dg";
 const DAY = 86_400;
@@ -470,13 +477,19 @@ async function insertDelegatedGuests(
       .select({
         name: guestInvites.guestName,
         phone: guestInvites.whatsappPhone,
+        group: guestInvites.guestGroup,
       })
       .from(guestInvites)
       .where(delegatedOnly(invitationId));
     const tracker = duplicateTracker(existing);
+    // Spelling is matched only against this grant's own categories.
+    const grouped = canonicalizeGroups(
+      items,
+      existing.map((row) => row.group),
+    );
     let room = DELEGATE_MAX_GUESTS - existing.length;
     const statuses: BulkItemStatus[] = [];
-    for (const item of items) {
+    for (const [i, item] of items.entries()) {
       if (!item.name) {
         statuses.push("invalid");
       } else if (dedupe && tracker.has(item)) {
@@ -490,7 +503,7 @@ async function insertDelegatedGuests(
               invitationId,
               guestName: item.name,
               slugToken: DELEGATE_TOKEN_PREFIX + makeToken(),
-              guestGroup: item.group,
+              guestGroup: grouped[i].group,
               maxGuests: item.maxGuests,
               whatsappPhone: item.phone,
             }),
@@ -539,7 +552,7 @@ export async function createDelegatedGuestsBulk(
   if (!items)
     return {
       ok: false,
-      error: "Daftar tamu tidak valid (1 sampai 100 kontak).",
+      error: `Daftar tamu tidak valid (1 sampai ${BULK_GUEST_MAX} kontak).`,
     };
   try {
     if (!(await rateLimit(`delegate:bulk:${hash}`, 5, 60)))
@@ -560,5 +573,98 @@ export async function createDelegatedGuestsBulk(
     };
   } catch {
     return { ok: false, error: "Gagal menambah tamu. Silakan coba lagi." };
+  }
+}
+
+/**
+ * Rename of a delegated guest: a single conditional UPDATE scoped to this
+ * invitation's `dg` guests that have not been sent or opened. Owner guests and
+ * other invitations never match.
+ */
+export async function renameDelegatedGuest(
+  r: Extract<Resolved, { ok: true }>,
+  guestId: unknown,
+  name: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { inv, hash } = r;
+  if (!hasProFeatures(inv))
+    return {
+      ok: false,
+      error: "Perubahan tamu tidak tersedia untuk undangan ini saat ini.",
+    };
+  if (!isUuid(guestId)) return { ok: false, error: "Tamu tidak ditemukan." };
+  const guestName = cleanText(name, 100);
+  if (!guestName) return { ok: false, error: "Nama tamu wajib diisi." };
+  try {
+    if (!(await rateLimit(`delegate:edit:${hash}`, 60, 60)))
+      return {
+        ok: false,
+        error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
+      };
+    const changed = await db
+      .update(guestInvites)
+      .set({ guestName })
+      .where(
+        and(
+          eq(guestInvites.id, guestId),
+          delegatedOnly(inv.id),
+          eq(guestInvites.isSent, false),
+          isNull(guestInvites.openedAt),
+        ),
+      )
+      .returning({ id: guestInvites.id });
+    if (changed.length) return { ok: true };
+    const [exists] = await db
+      .select({ id: guestInvites.id })
+      .from(guestInvites)
+      .where(and(eq(guestInvites.id, guestId), delegatedOnly(inv.id)))
+      .limit(1);
+    return {
+      ok: false,
+      error: exists ? NAME_LOCKED_MESSAGE : "Tamu tidak ditemukan.",
+    };
+  } catch {
+    return { ok: false, error: "Gagal menyimpan nama. Silakan coba lagi." };
+  }
+}
+
+/** Category can change at any time; an empty value removes it. */
+export async function setDelegatedGuestCategory(
+  r: Extract<Resolved, { ok: true }>,
+  guestId: unknown,
+  category: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { inv, hash } = r;
+  if (!hasProFeatures(inv))
+    return {
+      ok: false,
+      error: "Perubahan tamu tidak tersedia untuk undangan ini saat ini.",
+    };
+  if (!isUuid(guestId)) return { ok: false, error: "Tamu tidak ditemukan." };
+  try {
+    if (!(await rateLimit(`delegate:edit:${hash}`, 60, 60)))
+      return {
+        ok: false,
+        error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
+      };
+    const known = await db
+      .select({ group: guestInvites.guestGroup })
+      .from(guestInvites)
+      .where(delegatedOnly(inv.id));
+    const changed = await db
+      .update(guestInvites)
+      .set({
+        guestGroup: canonicalCategory(
+          category,
+          known.map((row) => row.group),
+        ),
+      })
+      .where(and(eq(guestInvites.id, guestId), delegatedOnly(inv.id)))
+      .returning({ id: guestInvites.id });
+    return changed.length
+      ? { ok: true }
+      : { ok: false, error: "Tamu tidak ditemukan." };
+  } catch {
+    return { ok: false, error: "Gagal menyimpan kategori. Silakan coba lagi." };
   }
 }

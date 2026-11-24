@@ -435,3 +435,19 @@ describe("duplicate tracker", () => {
     ).toBe(true);
   });
 });
+
+describe("bulk category on import", () => {
+  it("attaches one category to every item only when set", () => {
+    const ready = classifyContacts(
+      [{ name: "A", phones: ["081200001111"] }],
+      [],
+    );
+    expect(buildBulkItems(ready, {}, 2, "Teman Kantor")).toEqual([
+      { name: "A", phone: "081200001111", maxGuests: 2, group: "Teman Kantor" },
+    ]);
+    expect(buildBulkItems(ready, {}, 2, "")).toEqual([
+      { name: "A", phone: "081200001111", maxGuests: 2 },
+    ]);
+    expect(buildBulkItems(ready, {}, 2)[0]).not.toHaveProperty("group");
+  });
+});

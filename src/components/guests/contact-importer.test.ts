@@ -26,7 +26,7 @@ describe("contact import never uploads raw contact files", () => {
     },
   );
   it("only the confirmed name/phone items go to the server callback", () => {
-    expect(sources.importer).toContain("onConfirm(buildBulkItems(");
+    expect(sources.importer).toMatch(/onConfirm\(\s*buildBulkItems\(/);
     expect(sources.importer).not.toMatch(/onConfirm\([^)]*(file|text)/);
   });
 });

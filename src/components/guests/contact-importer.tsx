@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { CategoryCombobox } from "./category-combobox";
+import { normalizeCategory } from "@/lib/invitation/guest-list";
 import {
   BULK_GUEST_MAX,
   buildBulkItems,
@@ -34,11 +36,14 @@ const STATUS_LABEL: Partial<Record<Candidate["status"], string>> = {
  */
 export function ContactImporter({
   existing,
+  categories,
   remaining,
   onConfirm,
   disabled,
 }: {
   existing: { name: string; phone: string | null }[];
+  /** Existing category names offered for the whole import. */
+  categories: string[];
   remaining: number | null;
   onConfirm: (items: BulkGuestInput[]) => Promise<BulkResult>;
   disabled?: boolean;
@@ -49,6 +54,7 @@ export function ContactImporter({
   const [choice, setChoice] = useState<Record<number, string>>({});
   const [query, setQuery] = useState("");
   const [maxGuests, setMaxGuests] = useState(2);
+  const [category, setCategory] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -128,7 +134,9 @@ export function ContactImporter({
     const sent = ready.slice(0, cap);
     let res: BulkResult;
     try {
-      res = await onConfirm(buildBulkItems(sent, choice, maxGuests));
+      res = await onConfirm(
+        buildBulkItems(sent, choice, maxGuests, normalizeCategory(category)),
+      );
     } catch {
       res = { ok: false, error: "Koneksi bermasalah. Silakan coba lagi." };
     }
@@ -298,6 +306,16 @@ export function ContactImporter({
                 </p>
               ) : null}
 
+              <CategoryCombobox
+                label="Kategori untuk semua yang dipilih (opsional)"
+                value={category}
+                onChange={(value) => {
+                  setCategory(value);
+                  setConfirming(false);
+                }}
+                options={categories}
+                disabled={submitting}
+              />
               <label className="flex items-center gap-2 text-xs">
                 Maks tamu per undangan
                 <input
@@ -327,8 +345,11 @@ export function ContactImporter({
               {confirming ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg bg-cream-200 p-3">
                   <span className="flex-1 text-xs">
-                    Tambahkan {addable} tamu ke daftar? Link pribadi dibuat,
-                    WhatsApp tidak dikirim otomatis.
+                    Tambahkan {addable} tamu
+                    {normalizeCategory(category)
+                      ? ` dengan kategori “${normalizeCategory(category)}”`
+                      : " tanpa kategori"}
+                    ? Link pribadi dibuat, WhatsApp tidak dikirim otomatis.
                   </span>
                   <button
                     type="button"

@@ -15,6 +15,8 @@ vi.mock("@/lib/invitation/guests", () => ({
   createGuestInvitesBulk: vi.fn(),
   deleteGuestInvite: vi.fn(),
   markGuestSent: vi.fn(),
+  renameGuestInvite: vi.fn(),
+  setGuestCategory: vi.fn(),
 }));
 vi.mock("@/lib/invitation/whatsapp-message-actions", () => ({
   saveWhatsappTemplate: vi.fn(),
@@ -161,5 +163,28 @@ describe("contact import entry point (owner)", () => {
   });
   it("hides import without creation entitlement", () => {
     expect(render(template, false)).not.toContain("Impor kontak");
+  });
+});
+
+describe("guest list features (owner)", () => {
+  const template = {
+    message: DEFAULT_WHATSAPP_MESSAGE,
+    source: "default" as const,
+    isCustom: false,
+  };
+  it("uses a category combobox in the add form and keeps the form field name", () => {
+    const html = render(template);
+    expect(html).toContain('role="combobox"');
+    expect(html).toContain('name="guest_group"');
+    expect(html).toContain("Daftar Tamu");
+    expect(html).toContain("Edit nama");
+    expect(html).toContain("Hapus");
+  });
+  it("is read-only for edits without entitlement but keeps sending and delete", () => {
+    const html = render(template, false);
+    expect(html).not.toContain("Edit nama");
+    expect(html).not.toContain("Ubah kategori");
+    expect(html).toContain("Kirim WA");
+    expect(html).toContain("Hapus");
   });
 });
