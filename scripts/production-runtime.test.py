@@ -90,6 +90,77 @@ class FakeDocker(r.Docker):
         self.events.append(('address',))
 
 
+class RealComposeBackend(r.Docker):
+    """Real `docker compose config` rendering of the shipped Compose files; no containers are started."""
+
+    def __init__(self):
+        pass
+
+    def command(self, args, env=None, **kwargs):
+        done = subprocess.run(args, env=env, capture_output=True, text=True, check=True)
+        return done.stdout
+
+
+@unittest.skipUnless(shutil.which('docker'), 'docker CLI required to render Compose')
+class ComposeMountContractTests(unittest.TestCase):
+    """The controller must accept exactly the read-only TLS bind mount, in old and new Compose files."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='ngaturi-compose-test-')
+        self.root = Path(self.temp.name) / 'runtime'
+        self.root.mkdir()
+        for name in ['scheduler.mjs', 'scheduler.crontab']:
+            (self.root / name).write_text('x\n')
+        (self.root / 'runtime.env').write_text('CRON_SECRET=fixture\n')
+        self.config = dict(NGATURI_PACKAGE=r.PACKAGE, NGATURI_PROJECT_NAME='ngaturi-prod', NGATURI_BIND_IP='127.0.0.1',
+                           NGATURI_PORT='18080', RUNTIME_ENV_FILE=str(self.root / 'runtime.env'),
+                           DEPLOY_STATE_DIR=str(self.root), SCHEDULER_ENABLED='true', PROBE_ATTEMPTS='1')
+        self.manifest = dict(image=r.PACKAGE + '@sha256:' + 'a' * 64)
+        self.backend = RealComposeBackend()
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def check(self, text):
+        directory = self.root / 'unit'
+        directory.mkdir(exist_ok=True)
+        (directory / 'compose.yml').write_text(text)
+        self.backend.validate_compose(self.root, directory, self.config, self.manifest)
+
+    def current(self):
+        return (REPO / 'ops/production/compose.yml').read_text()
+
+    def test_current_compose_with_tls_mounts_is_accepted(self):
+        self.check(self.current())
+
+    def test_v1_1_4_compose_without_tls_mount_is_still_accepted(self):
+        old = subprocess.run(['git', 'show', 'v1.1.4:ops/production/compose.yml'], cwd=REPO, capture_output=True, text=True)
+        if old.returncode:
+            self.skipTest('tag v1.1.4 is not available in this checkout')
+        self.check(old.stdout)
+
+    def test_bootstrap_manifest_still_needs_only_the_crontab(self):
+        self.manifest['bootstrap'] = True
+        self.check(self.current())
+
+    def test_other_or_writable_mounts_are_rejected(self):
+        text = self.current()
+        app_mount = '      - type: bind\n        source: ${NGATURI_DB_TLS_DIR:-/etc/ngaturi/tls}\n        target: /run/ngaturi/tls\n        read_only: true\n'
+        self.assertIn(app_mount, text)
+        for label, bad in {
+            'writable TLS': text.replace(app_mount, app_mount.replace('        read_only: true\n', ''), 1),
+            'extra app mount': text.replace(app_mount, app_mount + '      - /etc:/host-etc:ro\n', 1),
+            'other source': text.replace('/etc/ngaturi/tls}', '/home/someone}'),
+            'other target': text.replace('/run/ngaturi/tls', '/run/other', 1),
+        }.items():
+            with self.subTest(label), self.assertRaises(RuntimeError):
+                self.check(bad)
+
+    def test_operator_environment_cannot_redirect_the_tls_directory(self):
+        with patch.dict(os.environ, {'NGATURI_DB_TLS_DIR': '/home/someone'}), self.assertRaises(RuntimeError):
+            self.check(self.current())
+
+
 class RuntimeTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='ngaturi-unit-test-')
