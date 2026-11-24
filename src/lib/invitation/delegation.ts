@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { guestInvites, invitations, rsvpResponses } from "@/lib/db/schema";
@@ -6,7 +6,18 @@ import { env } from "@/lib/env";
 import { redis } from "@/lib/redis";
 import { rateLimit } from "@/lib/rate-limit";
 import { trustedClientIp } from "@/lib/security/request-metadata";
+import {
+  BULK_GUEST_MAX,
+  sanitizeBulk,
+  type BulkResult,
+  type CleanBulkItem,
+} from "./contact-import";
+import {
+  NAME_LOCKED_MESSAGE,
+  canonicalCategory,
+} from "./guest-list";
 import { hasProFeatures } from "./entitlement";
+import { insertGuestsLocked, lockInvitation, type Tx } from "./guest-writer";
 import {
   defaultWhatsappTemplate,
   readWhatsappTemplate,
@@ -26,7 +37,8 @@ import { whatsappCoupleNames, type WhatsappTemplate } from "./whatsapp-message";
 export const DELEGATE_SCOPES = ["guests:create", "rsvp:read"] as const;
 export const DELEGATE_DEFAULT_DAYS = 7;
 export const DELEGATE_MAX_DAYS = 30;
-export const DELEGATE_MAX_GUESTS = 100;
+/** Total delegated guests per invitation (quota is not WhatsApp messages sent). */
+export const DELEGATE_MAX_GUESTS = 999;
 export const DELEGATE_GUEST_MAX_PARTY = 10;
 export const DELEGATE_TOKEN_PREFIX = "dg";
 const DAY = 86_400;
@@ -313,11 +325,10 @@ export interface DelegateView {
   guests: DelegateGuest[];
 }
 
+/** Delegated guests: `dg` + 10 characters (owner tokens are exactly 10). */
+const delegatedScope = sql`${guestInvites.slugToken} like 'dg%' and length(${guestInvites.slugToken}) = 12`;
 const delegatedOnly = (invitationId: string) =>
-  and(
-    eq(guestInvites.invitationId, invitationId),
-    sql`${guestInvites.slugToken} like 'dg%' and length(${guestInvites.slugToken}) = 12`,
-  );
+  and(eq(guestInvites.invitationId, invitationId), delegatedScope);
 
 /** Explicit column lists: nothing private can leak by adding a column. */
 export async function loadDelegateView(
@@ -387,12 +398,56 @@ const cleanText = (v: unknown, max: number) =>
     .trim()
     .slice(0, max);
 
+/** Why a write was refused after the grant itself resolved. */
+export interface DelegateWriteFailure {
+  ok: false;
+  error: string;
+  /** The grant was revoked or expired while the request waited. */
+  dead?: DelegateFailure;
+}
+type WriteResult = { ok: true } | DelegateWriteFailure;
+
+const NO_WRITE: DelegateWriteFailure = {
+  ok: false,
+  error: "Akses ini tidak mengizinkan perubahan tamu.",
+};
+const hasScope = (record: GrantRecord, scope: string) =>
+  record.scopes.includes(scope);
+
+/**
+ * Re-reads the grant. A request may have resolved a valid grant and then waited
+ * for the invitation lock while the owner revoked or replaced it; the write must
+ * not go through in that case. Fails closed if Redis cannot be read.
+ */
+async function grantProblem(
+  r: Extract<Resolved, { ok: true }>,
+  now = new Date(),
+): Promise<DelegateFailure | null> {
+  const record = parseRecord(await redis.get(grantKey(r.hash)));
+  if (!record) return "invalid";
+  if (record.revoked) return "revoked";
+  if (Date.parse(record.expiresAt) <= now.getTime()) return "expired";
+  return null;
+}
+
+const FAILURE_MESSAGE: Partial<Record<DelegateFailure, string>> = {
+  revoked: "Akses telah dicabut.",
+  expired: "Akses sudah kedaluwarsa.",
+  invalid: "Akses tidak valid.",
+};
+const dead = (reason: DelegateFailure): DelegateWriteFailure => ({
+  ok: false,
+  error: FAILURE_MESSAGE[reason] ?? "Akses tidak valid.",
+  dead: reason,
+});
+
 export async function createDelegatedGuest(
   r: Extract<Resolved, { ok: true }>,
   input: { name: unknown; group: unknown; phone: unknown; maxGuests: unknown },
   makeToken: () => string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<WriteResult> {
   const { inv, hash } = r;
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
   if (!hasProFeatures(inv))
     return {
       ok: false,
@@ -413,40 +468,97 @@ export async function createDelegatedGuest(
         ok: false,
         error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
       };
-    const [{ n }] = await db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(guestInvites)
-      .where(delegatedOnly(inv.id));
-    if (n >= DELEGATE_MAX_GUESTS)
+    // Manual add keeps its existing policy: no duplicate check.
+    const out = await insertDelegatedGuests(
+      r,
+      [
+        {
+          name: guestName,
+          phone: phone || null,
+          group: cleanText(input.group, 100) || null,
+          maxGuests,
+        },
+      ],
+      makeToken,
+      false,
+    );
+    if (out.aborted) return dead(out.reason);
+    const [status] = out.statuses;
+    if (status === "limit")
       return {
         ok: false,
         error: `Batas ${DELEGATE_MAX_GUESTS} tamu tercapai.`,
       };
-    // Atomic per-grant ceiling, independent of the racy count above.
-    const ttl = Math.max(
-      1,
-      Math.ceil((Date.parse(r.record.expiresAt) - Date.now()) / 1000),
-    );
-    const used = await redis.incrementWithTtl(
-      `ngaturi:delegate:count:v1:${hash}`,
-      ttl,
-    );
-    if (used > DELEGATE_MAX_GUESTS)
-      return {
-        ok: false,
-        error: `Batas ${DELEGATE_MAX_GUESTS} tamu tercapai.`,
-      };
-    await db.insert(guestInvites).values({
-      invitationId: inv.id,
-      guestName,
-      slugToken: DELEGATE_TOKEN_PREFIX + makeToken(),
-      guestGroup: cleanText(input.group, 100) || null,
-      maxGuests,
-      whatsappPhone: phone || null,
-    });
-    return { ok: true };
+    return status === "added"
+      ? { ok: true }
+      : { ok: false, error: "Gagal menambah tamu. Silakan coba lagi." };
   } catch {
     return { ok: false, error: "Gagal menambah tamu. Silakan coba lagi." };
+  }
+}
+
+/**
+ * Delegated writer: the invitation-wide ceiling (DELEGATE_MAX_GUESTS, counted
+ * over every `dg` guest of the invitation from stored rows) and duplicate checks
+ * run inside the shared locked transaction, after re-validating the grant.
+ * Duplicates never look at the owner's guests.
+ */
+async function insertDelegatedGuests(
+  r: Extract<Resolved, { ok: true }>,
+  items: CleanBulkItem[],
+  makeToken: () => string,
+  dedupe: boolean,
+) {
+  const out = await insertGuestsLocked({
+    database: db,
+    invitationId: r.inv.id,
+    scope: delegatedScope,
+    items,
+    makeToken: () => DELEGATE_TOKEN_PREFIX + makeToken(),
+    dedupe,
+    cap: DELEGATE_MAX_GUESTS,
+    afterLock: () => grantProblem(r),
+  });
+  return out.aborted
+    ? { aborted: true as const, reason: out.reason as DelegateFailure }
+    : out;
+}
+
+/**
+ * Runs `fn` in the shared locked transaction (so it is ordered against bulk and
+ * other writes) after re-validating the grant.
+ */
+async function withDelegateLock<T>(
+  r: Extract<Resolved, { ok: true }>,
+  fn: (tx: Tx) => Promise<T>,
+): Promise<T | DelegateWriteFailure> {
+  return db.transaction(async (tx) => {
+    await lockInvitation(tx, r.inv.id);
+    const problem = await grantProblem(r);
+    return problem ? dead(problem) : fn(tx);
+  });
+}
+
+export async function markDelegatedGuestSentChecked(
+  r: Extract<Resolved, { ok: true }>,
+  guestId: unknown,
+): Promise<WriteResult> {
+  if (!isUuid(guestId)) return { ok: false, error: "Tamu tidak ditemukan." };
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
+  try {
+    const res = await withDelegateLock(r, (tx) =>
+      tx
+        .update(guestInvites)
+        .set({ isSent: true, sentAt: new Date() })
+        .where(and(eq(guestInvites.id, guestId), delegatedOnly(r.inv.id)))
+        .returning({ id: guestInvites.id }),
+    );
+    if (!Array.isArray(res)) return res;
+    return res.length > 0
+      ? { ok: true }
+      : { ok: false, error: "Tamu tidak ditemukan." };
+  } catch {
+    return { ok: false, error: "Gagal menyimpan status. Silakan coba lagi." };
   }
 }
 
@@ -454,11 +566,146 @@ export async function markDelegatedGuestSent(
   r: Extract<Resolved, { ok: true }>,
   guestId: unknown,
 ): Promise<boolean> {
-  if (!isUuid(guestId)) return false;
-  const res = await db
-    .update(guestInvites)
-    .set({ isSent: true, sentAt: new Date() })
-    .where(and(eq(guestInvites.id, guestId), delegatedOnly(r.inv.id)))
-    .returning({ id: guestInvites.id });
-  return res.length > 0;
+  return (await markDelegatedGuestSentChecked(r, guestId)).ok;
+}
+
+/**
+ * Bulk variant of createDelegatedGuest for contacts picked on the device.
+ * Shares `insertDelegatedGuests`, so single and bulk adds use one quota and one lock.
+ */
+export async function createDelegatedGuestsBulk(
+  r: Extract<Resolved, { ok: true }>,
+  input: unknown,
+  makeToken: () => string,
+): Promise<BulkResult & { dead?: DelegateFailure }> {
+  const { inv, hash } = r;
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
+  if (!hasProFeatures(inv))
+    return {
+      ok: false,
+      error: "Penambahan tamu tidak tersedia untuk undangan ini saat ini.",
+    };
+  const items = sanitizeBulk(input, DELEGATE_GUEST_MAX_PARTY);
+  if (!items)
+    return {
+      ok: false,
+      error: `Daftar tamu tidak valid (1 sampai ${BULK_GUEST_MAX} kontak).`,
+    };
+  try {
+    if (!(await rateLimit(`delegate:bulk:${hash}`, 5, 60)))
+      return {
+        ok: false,
+        error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
+      };
+    const out = await insertDelegatedGuests(r, items, makeToken, true);
+    if (out.aborted) return dead(out.reason);
+    return {
+      ok: true,
+      statuses: out.statuses,
+      added: out.statuses.filter((s) => s === "added").length,
+    };
+  } catch {
+    return { ok: false, error: "Gagal menambah tamu. Silakan coba lagi." };
+  }
+}
+
+/**
+ * Rename of a delegated guest: one conditional UPDATE scoped to this
+ * invitation's `dg` guests that have not been sent or opened, ordered against
+ * every other write by the invitation lock. Owner guests and other invitations
+ * never match.
+ */
+export async function renameDelegatedGuest(
+  r: Extract<Resolved, { ok: true }>,
+  guestId: unknown,
+  name: unknown,
+): Promise<WriteResult> {
+  const { inv, hash } = r;
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
+  if (!hasProFeatures(inv))
+    return {
+      ok: false,
+      error: "Perubahan tamu tidak tersedia untuk undangan ini saat ini.",
+    };
+  if (!isUuid(guestId)) return { ok: false, error: "Tamu tidak ditemukan." };
+  const guestName = cleanText(name, 100);
+  if (!guestName) return { ok: false, error: "Nama tamu wajib diisi." };
+  try {
+    if (!(await rateLimit(`delegate:edit:${hash}`, 60, 60)))
+      return {
+        ok: false,
+        error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
+      };
+    const out = await withDelegateLock(r, async (tx): Promise<WriteResult> => {
+      const changed = await tx
+        .update(guestInvites)
+        .set({ guestName })
+        .where(
+          and(
+            eq(guestInvites.id, guestId),
+            delegatedOnly(inv.id),
+            eq(guestInvites.isSent, false),
+            isNull(guestInvites.openedAt),
+          ),
+        )
+        .returning({ id: guestInvites.id });
+      if (changed.length) return { ok: true };
+      const [exists] = await tx
+        .select({ id: guestInvites.id })
+        .from(guestInvites)
+        .where(and(eq(guestInvites.id, guestId), delegatedOnly(inv.id)))
+        .limit(1);
+      return {
+        ok: false,
+        error: exists ? NAME_LOCKED_MESSAGE : "Tamu tidak ditemukan.",
+      };
+    });
+    return out;
+  } catch {
+    return { ok: false, error: "Gagal menyimpan nama. Silakan coba lagi." };
+  }
+}
+
+/** Category can change at any time; an empty value removes it. */
+export async function setDelegatedGuestCategory(
+  r: Extract<Resolved, { ok: true }>,
+  guestId: unknown,
+  category: unknown,
+): Promise<WriteResult> {
+  const { inv, hash } = r;
+  if (!hasScope(r.record, "guests:create")) return NO_WRITE;
+  if (!hasProFeatures(inv))
+    return {
+      ok: false,
+      error: "Perubahan tamu tidak tersedia untuk undangan ini saat ini.",
+    };
+  if (!isUuid(guestId)) return { ok: false, error: "Tamu tidak ditemukan." };
+  try {
+    if (!(await rateLimit(`delegate:edit:${hash}`, 60, 60)))
+      return {
+        ok: false,
+        error: "Terlalu cepat. Tunggu sebentar lalu coba lagi.",
+      };
+    return await withDelegateLock(r, async (tx): Promise<WriteResult> => {
+      const known = await tx
+        .select({ group: guestInvites.guestGroup })
+        .from(guestInvites)
+        .where(delegatedOnly(inv.id));
+      const changed = await tx
+        .update(guestInvites)
+        .set({
+          guestGroup: canonicalCategory(
+            category,
+            known.map((row) => row.group),
+          ),
+        })
+        .where(and(eq(guestInvites.id, guestId), delegatedOnly(inv.id)))
+        .returning({ id: guestInvites.id });
+      return changed.length
+        ? { ok: true }
+        : { ok: false, error: "Tamu tidak ditemukan." };
+    });
+  } catch {
+    return { ok: false, error: "Gagal menyimpan kategori. Silakan coba lagi." };
+  }
 }

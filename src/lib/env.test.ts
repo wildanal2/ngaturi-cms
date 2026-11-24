@@ -70,6 +70,22 @@ describe("runtime provider environment", () => {
     await expect(readEnv()).rejects.toThrow("Invalid environment variables");
   });
 
+  it("treats DATABASE_TLS_SERVERNAME as optional and validates it", async () => {
+    vi.stubEnv("DATABASE_TLS_SERVERNAME", undefined);
+    expect((await readEnv()).DATABASE_TLS_SERVERNAME).toBeUndefined();
+    vi.resetModules();
+    vi.stubEnv("DATABASE_TLS_SERVERNAME", "  ");
+    expect((await readEnv()).DATABASE_TLS_SERVERNAME).toBeUndefined();
+    vi.resetModules();
+    vi.stubEnv("DATABASE_TLS_SERVERNAME", "localhost.localdomain");
+    expect((await readEnv()).DATABASE_TLS_SERVERNAME).toBe(
+      "localhost.localdomain",
+    );
+    vi.resetModules();
+    vi.stubEnv("DATABASE_TLS_SERVERNAME", "bad name/with space");
+    await expect(readEnv()).rejects.toThrow("Invalid environment variables");
+  });
+
   it("accepts an explicit pool bound", async () => {
     vi.stubEnv("DATABASE_POOL_SIZE", "3");
     expect((await readEnv()).DATABASE_POOL_SIZE).toBe(3);

@@ -1,3 +1,5 @@
+import { phoneKey } from "./contact-import";
+
 interface Contact {
   name?: string[];
   tel?: string[];
@@ -24,7 +26,7 @@ export function getContactPicker(): ContactPicker | null {
 
 /** Comparison only; leave stored numbers and the existing WA sender untouched. */
 export function contactPhoneKey(phone: string): string {
-  return phone.replace(/[^0-9]/g, "").replace(/^0/, "62");
+  return phoneKey(phone);
 }
 
 export function isDuplicateContactPhone(
@@ -69,4 +71,31 @@ export async function pickGuestContact(picker: ContactPicker) {
       return null;
     throw error;
   }
+}
+
+export type PickedFill =
+  | { kind: "duplicate" }
+  | { kind: "fill"; name: string; phone: string; phones: string[] };
+
+/**
+ * What the form should show for a picked contact. Every field comes from this
+ * contact only: a missing name or number clears the field rather than keeping
+ * the previous contact's value. A lone number that already belongs to a guest
+ * leaves the form untouched.
+ */
+export function fillFromContact(
+  contact: { name: string; phones: string[] },
+  existing: (string | null)[],
+): PickedFill {
+  if (
+    contact.phones.length === 1 &&
+    isDuplicateContactPhone(contact.phones[0], existing)
+  )
+    return { kind: "duplicate" };
+  return {
+    kind: "fill",
+    name: contact.name,
+    phone: contact.phones.length === 1 ? contact.phones[0] : "",
+    phones: contact.phones.length > 1 ? contact.phones : [],
+  };
 }

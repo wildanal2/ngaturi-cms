@@ -122,7 +122,7 @@ export function WhatsappMessageEditor({
           rows={8}
           aria-describedby="whatsapp-message-hint"
           aria-invalid={!!error}
-          className="w-full rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-60"
+          className="w-full rounded-lg border border-line px-3 py-2 text-base sm:text-sm disabled:opacity-60"
         />
         <div className="flex flex-wrap justify-between gap-2 text-xs text-muted">
           <p id="whatsapp-message-hint">

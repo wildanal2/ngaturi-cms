@@ -39,7 +39,7 @@
     "@upstash/redis": "^1.39.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "@vinext/cloudflare": "^1.0.0-beta.9",
+    "@vinext/cloudflare": "^1.4.0",
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.7.18",
     "clsx": "^2.1.1",
@@ -59,13 +59,13 @@
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
     "three": "^0.186.0",
-    "vinext": "^1.0.0-beta.11",
+    "vinext": "^1.4.6",
     "zod": "^4.6.7",
     "zundo": "^2.3.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.57.2",
+    "@cloudflare/vite-plugin": "^1.70.1",
     "@eslint/eslintrc": "^3.3.6",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24",
@@ -84,15 +84,22 @@
     "typescript": "^5",
     "vite": "^8.3.6",
     "vitest": "^5.1.0",
-    "wrangler": "^4.136.2"
+    "wrangler": "^4.167.0"
+  },
+  "overrides": {
+    "satori": {
+      "fflate": "0.7.5"
+    },
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
   },
   "allowScripts": {
-    "esbuild@0.18.20": true,
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true,
-    "esbuild@0.28.1": true,
-    "workerd@1.20260921.1": true,
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "workerd@1.20261117.1": true,
+    "workerd@1.20261123.1": true
   },
   "type": "module"
 }
