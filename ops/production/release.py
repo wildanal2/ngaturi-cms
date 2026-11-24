@@ -41,10 +41,19 @@ RELEASE_ASSET = 'ngaturi-production-ops.tar.gz'
 MAX_RELEASE_ASSET_BYTES = 8 * 1024 * 1024
 MAX_RELEASE_METADATA_BYTES = 1024 * 1024
 RELEASE_TAG_PATTERN = r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+# Bump when the controller must accept something older controllers reject. An installed controller is never
+# replaced by an older one (a rollback must not reinstall a controller that rejects the current/previous unit).
+# 1 = releases without this marker (<= v1.2.0), 2 = accepts the read-only TLS bind mount.
+CONTROLLER_REV = 2
 TLS_TARGET = '/run/ngaturi/tls'
 SCHEDULER_TARGETS = {'/app/ops/production/scheduler.mjs', '/app/ops/production/scheduler.crontab'}
 CONFIG_KEYS = {'NGATURI_PACKAGE', 'NGATURI_PROJECT_NAME', 'NGATURI_BIND_IP', 'NGATURI_PORT',
                'RUNTIME_ENV_FILE', 'DEPLOY_STATE_DIR', 'SCHEDULER_ENABLED', 'PROBE_ATTEMPTS'}
+
+
+def controller_rev(path):
+    match = re.search(r'^CONTROLLER_REV\s*=\s*(\d+)', Path(path).read_text(), re.M)
+    return int(match.group(1)) if match else 1
 
 
 def require(condition, message):
@@ -461,6 +470,9 @@ class Manager:
         require(not manifest.get('bootstrap'), 'cannot install a legacy deployment controller')
         # Keep a guarded management entry point even when the application rolls back to legacy v1.1.0.
         # The original scripts remain intact inside its complete immutable release snapshot.
+        installed = self.state / 'controller' / 'release.py'
+        if installed.is_file() and controller_rev(installed) > controller_rev(directory / 'release.py'):
+            return  # never downgrade the management controller
         atomic_link(self.state / 'controller', directory)
         for name in ['deploy.sh', 'rollback.sh']:
             atomic_link(self.root / name, self.state / 'controller' / name)

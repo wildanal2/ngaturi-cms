@@ -156,6 +156,21 @@ class ComposeMountContractTests(unittest.TestCase):
             with self.subTest(label), self.assertRaises(RuntimeError):
                 self.check(bad)
 
+    def test_scheduler_mount_violations_are_rejected(self):
+        text = self.current()
+        mount = '      - type: bind\n        source: ${NGATURI_DB_TLS_DIR:-/etc/ngaturi/tls}\n        target: /run/ngaturi/tls\n        read_only: true\n'
+        first = text.index(mount)
+        second = text.index(mount, first + 1)  # the scheduler's copy
+        head, tail = text[:second], text[second + len(mount):]
+        for label, replacement in {
+            'extra mount': mount + '      - /etc:/host-etc:ro\n',
+            'writable TLS': mount.replace('        read_only: true\n', ''),
+            'wrong source': mount.replace('${NGATURI_DB_TLS_DIR:-/etc/ngaturi/tls}', '/home/someone'),
+            'wrong target': mount.replace('/run/ngaturi/tls', '/run/other'),
+        }.items():
+            with self.subTest(label), self.assertRaises(RuntimeError):
+                self.check(head + replacement + tail)
+
     def test_operator_environment_cannot_redirect_the_tls_directory(self):
         with patch.dict(os.environ, {'NGATURI_DB_TLS_DIR': '/home/someone'}), self.assertRaises(RuntimeError):
             self.check(self.current())
@@ -580,6 +595,115 @@ class RuntimeTests(unittest.TestCase):
             self.deploy()
         self.assertFalse(any(e[0] == 'start' for e in self.backend.events))
         self.assertEqual((self.root / 'scheduler.crontab').read_bytes(), self.original['scheduler.crontab'])
+
+
+def load_controller(path, name):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def lifecycle_backend(module, shared):
+    """FakeDocker lifecycle on top of a controller module's own Docker class, with real Compose rendering."""
+    skipped = {'validate_compose', 'command', '__init__', '__dict__', '__weakref__', '__module__', '__doc__'}
+
+    def command(self, args, env=None, **kwargs):
+        if args[:2] == ['docker', 'compose']:
+            return subprocess.run(args, env=env, capture_output=True, text=True, check=True).stdout
+        return FakeDocker.command(self, args, env, **kwargs)
+
+    namespace = {k: v for k, v in FakeDocker.__dict__.items() if k not in skipped}
+    def validate_compose(self, root, directory, config, manifest):
+        if manifest.get('bootstrap'):  # the audited v1.1.0 snapshot is a text fixture, not a Compose file
+            return FakeDocker.validate_compose(self, root, directory, config, manifest)
+        return module.Docker.validate_compose(self, root, directory, config, manifest)
+
+    backend = type('LifecycleBackend', (module.Docker,), {**namespace, 'command': command,
+                                                          'validate_compose': validate_compose})()
+    backend.__dict__.update(shared)
+    return backend
+
+
+@unittest.skipUnless(shutil.which('docker'), 'docker CLI required to render Compose')
+class ControllerLifecycleTests(unittest.TestCase):
+    """v1.1.4 -> v1.2.1 -> rollback -> recovery -> redeploy, always driven by the controller that is really installed."""
+
+    OLD = 'v1.1.4'
+    tearDown = RuntimeTests.tearDown
+    image = RuntimeTests.image
+    artifact_for = RuntimeTests.artifact_for
+
+    def setUp(self):
+        old = subprocess.run(['git', 'show', self.OLD + ':ops/production/release.py'], cwd=REPO, capture_output=True, text=True)
+        if old.returncode:
+            self.skipTest('tag v1.1.4 is not available in this checkout')
+        RuntimeTests.setUp(self)
+        self.old_source = old.stdout
+        self.shared = None
+
+    def old_alter(self, directory):
+        (directory / 'release.py').write_text(self.old_source)
+        compose = subprocess.run(['git', 'show', self.OLD + ':ops/production/compose.yml'], cwd=REPO, capture_output=True, text=True)
+        (directory / 'compose.yml').write_text(compose.stdout)
+
+    def backend_for(self, module):
+        backend = lifecycle_backend(module, self.shared if self.shared is not None else self.backend.__dict__)
+        self.shared = backend.__dict__
+        self.backend = backend
+        return backend
+
+    def manager_of(self, module):
+        return module.Manager(self.root, self.state, self.backend_for(module), expected_runtime=self.root, baseline_hashes=self.pins)
+
+    def installed(self):
+        return self.manager_of(load_controller(self.state / 'controller' / 'release.py', 'installed_controller'))
+
+    def start_at_v1_1_4(self):
+        (self.directory / 'old_release.py').write_text(self.old_source)
+        old_module = load_controller(self.directory / 'old_release.py', 'old_controller')
+        artifact, _ = self.artifact_for(self.OLD, 'c', self.old_alter)
+        self.manager_of(old_module).execute(self.OLD, artifact)
+        self.v121, _ = self.artifact_for('v1.2.1', 'd')
+
+    def assert_unit(self, tag):
+        manager = self.installed()
+        _, manifest, _ = manager.unit(manager.read_state()['current'])
+        self.assertEqual(manifest['git_tag'], tag)
+        compose = (self.root / 'compose.yml').read_text()
+        self.assertEqual('/run/ngaturi/tls' in compose, tag != self.OLD, 'compose/ops of another release is mixed in')
+
+    def test_upgrade_rollback_recover_and_redeploy_with_the_installed_controller(self):
+        self.start_at_v1_1_4()
+        self.assert_unit(self.OLD)
+        self.manager_of(r).execute('v1.2.1', self.v121)  # staged new controller
+        self.assert_unit('v1.2.1')
+        self.assertEqual(r.controller_rev(self.state / 'controller' / 'release.py'), r.CONTROLLER_REV)
+        self.installed().execute(mode='rollback')
+        self.assert_unit(self.OLD)
+        # The rollback must not have reinstalled the older controller.
+        self.assertEqual(r.controller_rev(self.state / 'controller' / 'release.py'), r.CONTROLLER_REV)
+        self.installed().execute(mode='recover')  # simulated reboot recovery
+        self.assert_unit(self.OLD)
+        self.installed().execute('v1.2.1', self.v121)
+        self.assert_unit('v1.2.1')
+        self.installed().execute(mode='rollback')
+        self.assert_unit(self.OLD)
+        self.assertFalse((self.state / 'pending.json').exists())
+
+    def test_failed_deploy_after_rollback_restores_v1_1_4(self):
+        self.start_at_v1_1_4()
+        self.manager_of(r).execute('v1.2.1', self.v121)
+        self.installed().execute(mode='rollback')
+        manager = self.installed()
+        image = next(i for i in self.backend.images if i.endswith('d' * 64))
+        self.backend.failure = ('start', image, 'app', RuntimeError('app failed to start'))
+        with self.assertRaises(RuntimeError):
+            manager.execute('v1.2.1', self.v121)
+        self.assert_unit(self.OLD)
+        self.assertFalse((self.state / 'pending.json').exists())
+        self.installed().execute(mode='recover')
+        self.assert_unit(self.OLD)
 
 
 if __name__ == '__main__':
