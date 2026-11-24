@@ -41,8 +41,19 @@ RELEASE_ASSET = 'ngaturi-production-ops.tar.gz'
 MAX_RELEASE_ASSET_BYTES = 8 * 1024 * 1024
 MAX_RELEASE_METADATA_BYTES = 1024 * 1024
 RELEASE_TAG_PATTERN = r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)'
+# Bump when the controller must accept something older controllers reject. An installed controller is never
+# replaced by an older one (a rollback must not reinstall a controller that rejects the current/previous unit).
+# 1 = releases without this marker (<= v1.2.0), 2 = accepts the read-only TLS bind mount.
+CONTROLLER_REV = 2
+TLS_TARGET = '/run/ngaturi/tls'
+SCHEDULER_TARGETS = {'/app/ops/production/scheduler.mjs', '/app/ops/production/scheduler.crontab'}
 CONFIG_KEYS = {'NGATURI_PACKAGE', 'NGATURI_PROJECT_NAME', 'NGATURI_BIND_IP', 'NGATURI_PORT',
                'RUNTIME_ENV_FILE', 'DEPLOY_STATE_DIR', 'SCHEDULER_ENABLED', 'PROBE_ATTEMPTS'}
+
+
+def controller_rev(path):
+    match = re.search(r'^CONTROLLER_REV\s*=\s*(\d+)', Path(path).read_text(), re.M)
+    return int(match.group(1)) if match else 1
 
 
 def require(condition, message):
@@ -277,8 +288,21 @@ class Docker:
         check = ' '.join(app['healthcheck']['test'])
         require('/api/health' in check and '/api/ready' not in check, 'recurring healthcheck must be DB-free')
         require(not scheduler.get('healthcheck'), 'unexpected scheduler dependency probe')
-        require(not app.get('volumes'), 'unexpected application mount')
-        mounts = {Path(m['target']).name: m for m in scheduler.get('volumes', [])}
+        # The only non-scheduler mount allowed is the optional read-only private-CA directory
+        # (docker/compose.yml of v1.2.0+). Releases without it (<= v1.1.4) must still validate.
+        tls_source = '/etc/ngaturi/tls'
+
+        def is_tls(m):
+            return (m.get('type') == 'bind' and m.get('target') == TLS_TARGET and m.get('read_only') is True
+                    and m.get('source') == tls_source)
+
+        app_mounts = app.get('volumes') or []
+        require(all(is_tls(m) for m in app_mounts) and len(app_mounts) <= 1, 'unexpected application mount')
+        scheduler_mounts = scheduler.get('volumes') or []
+        require(sum(is_tls(m) for m in scheduler_mounts) <= 1, 'unexpected scheduler TLS mount')
+        files = [m for m in scheduler_mounts if not is_tls(m)]
+        require(all(m.get('target') in SCHEDULER_TARGETS for m in files), 'unexpected scheduler mount')
+        mounts = {Path(m['target']).name: m for m in files}
         needed = ['scheduler.crontab'] if manifest.get('bootstrap') else ['scheduler.mjs', 'scheduler.crontab']
         for name in needed:
             require(name in mounts and mounts[name].get('read_only') and mounts[name]['source'] == str(root / name),
@@ -446,6 +470,9 @@ class Manager:
         require(not manifest.get('bootstrap'), 'cannot install a legacy deployment controller')
         # Keep a guarded management entry point even when the application rolls back to legacy v1.1.0.
         # The original scripts remain intact inside its complete immutable release snapshot.
+        installed = self.state / 'controller' / 'release.py'
+        if installed.is_file() and controller_rev(installed) > controller_rev(directory / 'release.py'):
+            return  # never downgrade the management controller
         atomic_link(self.state / 'controller', directory)
         for name in ['deploy.sh', 'rollback.sh']:
             atomic_link(self.root / name, self.state / 'controller' / name)
