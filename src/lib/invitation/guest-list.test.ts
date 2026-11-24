@@ -125,6 +125,9 @@ describe("search and filters", () => {
     ]);
     expect(ids(filterGuests(guests, f({ query: "415 555" })))).toEqual(["4"]);
     expect(ids(filterGuests(guests, f({ query: "12" })))).toEqual([]); // short digits are not a phone search
+    // A name that merely contains digits is not a phone search.
+    expect(ids(filterGuests(guests, f({ query: "Budi 7001" })))).toEqual([]);
+    expect(ids(filterGuests(guests, f({ query: "Citra 3456" })))).toEqual([]);
     expect(filterGuests(guests, f({ query: "tidak ada" }))).toEqual([]);
   });
   it("filters by category, treating spellings as one and 'none' as uncategorised", () => {
