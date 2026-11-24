@@ -125,8 +125,12 @@ function matchesQuery(guest: ListGuest, query: string): boolean {
   const q = fold(query.trim());
   if (!q) return true;
   if (fold(guest.guestName).includes(q)) return true;
+  // Only a phone-shaped query (digits and phone punctuation) searches numbers; a
+  // name with digits ("Owner Guest 003", "Budi 2024") must not match every phone
+  // that happens to contain those digits.
+  if (!/^[\d\s+().-]+$/.test(q) || !guest.whatsappPhone) return false;
   const digits = q.replace(/\D/g, "");
-  if (digits.length < 3 || !guest.whatsappPhone) return false;
+  if (digits.length < 3) return false;
   const own = guest.whatsappPhone.replace(/\D/g, "");
   const key = phoneKey(guest.whatsappPhone);
   const wanted = digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
