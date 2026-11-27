@@ -19,13 +19,10 @@ const openingArt = [
 export const loadingAssetProviders: Record<string, LoadingAssetProvider> = {
   "lakon-kencana": (root) => ({
     images: [
+      // Wait on the rendered candidates without downloading the originals too.
       ...root.querySelectorAll<HTMLImageElement>(
-        "[data-lakon-cover] img, [data-lakon-scene='hero'] img",
+        "[data-lakon-cover] img, [data-lakon-scene='hero'] img, img[data-lakon-art]",
       ),
-    ],
-    imageUrls: [
-      "/themes/lakon-kencana/gunungan.webp",
-      "/themes/lakon-kencana/wayang-pair.webp",
     ],
     fonts: ["--font-cormorant", "--font-inter"].flatMap((variable) => {
       const family = getComputedStyle(root).getPropertyValue(variable).trim();
