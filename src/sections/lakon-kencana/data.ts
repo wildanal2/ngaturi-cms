@@ -9,6 +9,16 @@ export const LAKON_ID = "lakon-kencana";
 export const LAKON_ASSETS = "/themes/lakon-kencana";
 export const LAKON_OPEN_MS = 900;
 
+export const LAKON_GALLERY_DEMO_IMAGES = [
+  { name: "portrait", caption: "Sepasang cerita" },
+  { name: "rings", caption: "Sebuah janji" },
+  { name: "couple", caption: "Menuju hari bahagia" },
+].map(({ name, caption }) => ({
+  url: `${LAKON_ASSETS}/demo-${name}.webp`,
+  full_url: `${LAKON_ASSETS}/demo-${name}-full.webp`,
+  caption,
+}));
+
 // Pure display formatting; importing shared.tsx also imports unrelated theme CSS.
 export function lakonTimeRange(start?: string, end?: string) {
   return start ? (end ? `${start} – ${end} WIB` : `${start} WIB`) : "";
@@ -37,6 +47,21 @@ export function imageUrl(value: unknown) {
   const src = text(value);
   return src.startsWith("/") && !src.startsWith("//") ? src : externalUrl(src);
 }
+
+function imagePath(src: string) {
+  return src.startsWith("/") ? src.split(/[?#]/, 1)[0] : new URL(src).pathname;
+}
+
+export function lakonGalleryFullUrl(url: string, value: unknown) {
+  const full = imageUrl(value);
+  if (!full) return url;
+
+  // Older Builder saves can pair a replacement photo with a bundled original.
+  const fullPath = imagePath(full);
+  const demo = LAKON_GALLERY_DEMO_IMAGES.find((i) => i.full_url === fullPath);
+  return demo && demo.url !== imagePath(url) ? url : full;
+}
+
 export function splitNames(value: string) {
   const names = (
     value.includes("&")

@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 import type { SectionRenderProps } from "../types";
 import { lockLightboxScroll } from "../serambi-delima/lightbox-scroll";
 import { cancelCinematicScroll } from "../cinematic/scroll";
-import { imageUrl, records, text } from "./data";
+import { imageUrl, lakonGalleryFullUrl, records, text } from "./data";
 import { Entrance } from "./presentation";
 import { Photo, Section } from "./primitives";
 import styles from "./lakon-kencana.module.css";
@@ -15,7 +15,13 @@ export function GalleryLakon({ props }: SectionRenderProps) {
   const images: Image[] = records(props.images).flatMap((i) => {
     const url = imageUrl(i.url);
     return url
-      ? [{ url, full: imageUrl(i.full_url) || url, caption: text(i.caption) }]
+      ? [
+          {
+            url,
+            full: lakonGalleryFullUrl(url, i.full_url),
+            caption: text(i.caption),
+          },
+        ]
       : [];
   });
   const [selected, setSelected] = useState(0);

@@ -3,6 +3,7 @@ import { temporal } from "zundo";
 import { useStore } from "zustand";
 import type { GlobalSettings, SectionData } from "@/sections/types";
 import { SectionRegistry, variantDefaultProps } from "@/sections/registry";
+import { LAKON_ID, record } from "@/sections/lakon-kencana/data";
 import { DEFAULT_DEVICE } from "@/components/builder/devices";
 import {
   canEditSectionVariant,
@@ -262,9 +263,16 @@ export const useBuilder = create<BuilderState>()(
           ) {
             return s;
           }
+          const props = setDeep(section.props, key, value);
+          if (section.type === "gallery" && section.variant === LAKON_ID) {
+            const imagePath = /^images\.\d+(?=\.url$)/.exec(key)?.[0];
+            if (imagePath && getDeep(section.props, key) !== value) {
+              delete record(getDeep(props, imagePath)).full_url;
+            }
+          }
           return {
             sections: s.sections.map((x) =>
-              x.id === id ? { ...x, props: setDeep(x.props, key, value) } : x,
+              x.id === id ? { ...x, props } : x,
             ),
             dirty: true,
           };
