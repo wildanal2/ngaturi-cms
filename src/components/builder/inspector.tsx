@@ -3,6 +3,7 @@
 import { canonicalTemplateId } from "@/lib/templates/identity";
 import { useBuilder, getDeep, setDeep } from "@/stores/builder-store";
 import { SectionRegistry } from "@/sections/registry";
+import { LAKON_ID } from "@/sections/lakon-kencana/data";
 import { FieldRenderer, type FieldContext } from "./field-editors";
 import { ThemePanel } from "./theme-panel";
 import { VariantThumb } from "./variant-thumb";
@@ -49,6 +50,8 @@ export function Inspector({
     compositionPolicy,
     section.type,
   );
+  const isLakonGallery =
+    section.type === "gallery" && section.variant === LAKON_ID;
 
   const ctx: FieldContext = {
     invitationId,
@@ -56,8 +59,9 @@ export function Inspector({
     premiumFeatures,
     read: (path) => getDeep(section.props, path),
     write: (path, value) => {
-      if (!path.includes(".")) setProp(section.id, path, value);
-      else setProps(section.id, setDeep(section.props, path, value));
+      if (isLakonGallery || !path.includes(".")) {
+        setProp(section.id, path, value);
+      } else setProps(section.id, setDeep(section.props, path, value));
     },
   };
 

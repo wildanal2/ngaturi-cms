@@ -28,7 +28,7 @@ import {
   countdownFields,
   musicPickerField,
 } from "../fields";
-import { LAKON_ASSETS } from "./data";
+import { LAKON_ASSETS, LAKON_GALLERY_DEMO_IMAGES } from "./data";
 
 // Metadata stays usable on the server; lazy rendering belongs to a client boundary.
 import {
@@ -350,23 +350,7 @@ export const lakonVariants: Record<string, VariantDefinition> = {
       intro:
         "Sebagaimana wayang di sisi kelir, kenangan ini menjadi saksi perjalanan kami.",
       columns: 3,
-      images: [
-        {
-          url: `${LAKON_ASSETS}/demo-portrait.webp`,
-          full_url: `${LAKON_ASSETS}/demo-portrait-full.webp`,
-          caption: "Sepasang cerita",
-        },
-        {
-          url: `${LAKON_ASSETS}/demo-rings.webp`,
-          full_url: `${LAKON_ASSETS}/demo-rings-full.webp`,
-          caption: "Sebuah janji",
-        },
-        {
-          url: `${LAKON_ASSETS}/demo-couple.webp`,
-          full_url: `${LAKON_ASSETS}/demo-couple-full.webp`,
-          caption: "Menuju hari bahagia",
-        },
-      ],
+      images: LAKON_GALLERY_DEMO_IMAGES,
     },
   }),
   rsvp: variant({
