@@ -6,6 +6,28 @@ import { LAKON_ASSETS, imageUrl } from "./data";
 import { Entrance, useLakonParallax } from "./presentation";
 import styles from "./lakon-kencana.module.css";
 
+// Share one candidate across placements at each viewport and DPR. Size it for
+// the largest placement: the draggable gunungan or story fallback, and the
+// full sprite behind the cover shadows or portrait cards (including stacking).
+const GUNUNGAN_SIZES =
+  "(min-width: 650px) 320px, max(155px, min(52vw, 240px), min(calc(65vw - 28.6px), 221px))";
+const WAYANG_SIZES =
+  "(max-width: 335px) min(calc(200vw - 120px), 488px), " +
+  "(max-width: 649px) max(min(calc(100vw - 74px), 360px), calc(100vw - 90px)), " +
+  "min(calc(100vw - 168px), 616px)";
+
+const GUNUNGAN_SRC_SET =
+  `${LAKON_ASSETS}/gunungan-v1-240w.webp 240w, ` +
+  `${LAKON_ASSETS}/gunungan-v1-400w.webp 400w, ` +
+  `${LAKON_ASSETS}/gunungan-v1-480w.webp 480w, ` +
+  `${LAKON_ASSETS}/gunungan.webp 600w`;
+const WAYANG_SRC_SET =
+  `${LAKON_ASSETS}/wayang-pair-v1-420w.webp 420w, ` +
+  `${LAKON_ASSETS}/wayang-pair-v1-600w.webp 600w, ` +
+  `${LAKON_ASSETS}/wayang-pair-v1-660w.webp 660w, ` +
+  `${LAKON_ASSETS}/wayang-pair-v1-960w.webp 960w, ` +
+  `${LAKON_ASSETS}/wayang-pair.webp 1200w`;
+
 export function Flourish({ className = "" }: { className?: string }) {
   return (
     <img
@@ -29,6 +51,9 @@ export function Corners() {
 export function Gunungan({ className = "" }: { className?: string }) {
   return (
     <img
+      data-lakon-art
+      sizes={GUNUNGAN_SIZES}
+      srcSet={GUNUNGAN_SRC_SET}
       src={`${LAKON_ASSETS}/gunungan.webp`}
       width={512}
       height={768}
@@ -57,6 +82,9 @@ export function Puppet({
       aria-hidden="true"
     >
       <img
+        data-lakon-art
+        sizes={WAYANG_SIZES}
+        srcSet={WAYANG_SRC_SET}
         src={`${LAKON_ASSETS}/wayang-pair.webp`}
         alt=""
         width={1536}
